@@ -1,6 +1,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:skyscraper/providers/timeline_provider.dart';
 import 'package:skyscraper/widgets/post_card.dart';
 
@@ -58,6 +59,12 @@ class _TimelineScreenState extends ConsumerState<TimelineScreen> {
             ),
           );
         },
+      ),
+    floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          context.push('/create_post');
+        },
+        child: const Icon(Icons.add),
       ),
     );
   }

@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 class MainShell extends StatelessWidget {
-  const MainShell({super.key, required this.child});
+  const MainShell({
+    super.key,
+    required this.child,
+  });
 
   final Widget child;
 
@@ -16,7 +19,7 @@ class MainShell extends StatelessWidget {
         items: const [
           BottomNavigationBarItem(
             icon: Icon(Icons.home),
-            label: 'Timeline',
+            label: 'Home',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.search),
@@ -31,12 +34,13 @@ class MainShell extends StatelessWidget {
             label: 'Profile',
           ),
         ],
+        type: BottomNavigationBarType.fixed, // ラベルを常に表示
       ),
     );
   }
 
   int _calculateSelectedIndex(BuildContext context) {
-    final location = GoRouterState.of(context).uri.toString();
+    final String location = GoRouterState.of(context).uri.toString();
     if (location.startsWith('/timeline')) {
       return 0;
     }
@@ -55,16 +59,16 @@ class MainShell extends StatelessWidget {
   void _onItemTapped(int index, BuildContext context) {
     switch (index) {
       case 0:
-        GoRouter.of(context).go('/timeline');
+        context.go('/timeline');
         break;
       case 1:
-        // TODO: Implement Search Screen
+        context.go('/search');
         break;
       case 2:
-        // TODO: Implement Notifications Screen
+        context.go('/notifications');
         break;
       case 3:
-        // TODO: Implement Profile Screen
+        context.go('/profile');
         break;
     }
   }

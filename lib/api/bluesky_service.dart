@@ -1,5 +1,8 @@
 
+import 'dart:typed_data';
+
 import 'package:bluesky/bluesky.dart' as bsky;
+import 'package:atproto/atproto.dart' as atp;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:skyscraper/providers/bluesky_provider.dart';
 
@@ -19,6 +22,22 @@ class BlueskyService {
       cursor: cursor,
       limit: limit,
     );
+    return response.data;
+  }
+
+  Future<atp.StrongRef> createPost(
+    String text, {
+    bsky.Embed? embed,
+  }) async {
+    final response = await _bluesky.feed.post(
+      text: text,
+      embed: embed,
+    );
+    return response.data;
+  }
+
+  Future<atp.BlobData> uploadBlob(Uint8List bytes) async {
+    final response = await _bluesky.atproto.repo.uploadBlob(bytes);
     return response.data;
   }
 }
