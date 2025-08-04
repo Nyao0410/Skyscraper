@@ -1,22 +1,22 @@
 
 import 'dart:async';
 
-import 'package:bluesky/bluesky.dart' as bsky;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:skyscraper/api/bluesky_service.dart';
+import 'package:skyscraper/models/post.dart';
 
-final timelineProvider = AsyncNotifierProvider<TimelineNotifier, List<bsky.FeedView>>(
+final timelineProvider = AsyncNotifierProvider<TimelineNotifier, List<Post>>(
   () => TimelineNotifier(),
 );
 
-class TimelineNotifier extends AsyncNotifier<List<bsky.FeedView>> {
+class TimelineNotifier extends AsyncNotifier<List<Post>> {
   String? _cursor;
 
   @override
-  Future<List<bsky.FeedView>> build() async {
+  Future<List<Post>> build() async {
     final response = await ref.watch(blueskyServiceProvider).getTimeline(limit: 20);
     _cursor = response.cursor;
-    return response.feed;
+    return response.feed.map((e) => Post.fromFeedView(e)).toList();
   }
 
   Future<void> fetchNextPage() async {
@@ -33,6 +33,7 @@ class TimelineNotifier extends AsyncNotifier<List<bsky.FeedView>> {
 
     _cursor = response.cursor;
     final currentState = state.value ?? [];
-    state = AsyncValue.data([...currentState, ...response.feed]);
+    final newPosts = response.feed.map((e) => Post.fromFeedView(e)).toList();
+    state = AsyncValue.data([...currentState, ...newPosts]);
   }
 }

@@ -43,17 +43,17 @@ class _TimelineScreenState extends ConsumerState<TimelineScreen> {
       body: timeline.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (err, stack) => Center(child: Text('Error: $err')),
-        data: (feed) {
+        data: (posts) {
           return RefreshIndicator(
             onRefresh: () => ref.refresh(timelineProvider.future),
             child: ListView.builder(
               controller: _scrollController,
-              itemCount: feed.length + 1,
+              itemCount: posts.length + 1,
               itemBuilder: (context, index) {
-                if (index == feed.length) {
+                if (index == posts.length) {
                   return const Center(child: CircularProgressIndicator());
                 }
-                final post = feed[index].post;
+                final post = posts[index];
                 return PostCard(post: post);
               },
             ),

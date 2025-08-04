@@ -1,4 +1,5 @@
 
+import 'package:bluesky/bluesky.dart' as bsky;
 import 'package:freezed_annotation/freezed_annotation.dart';
 
 part 'post.freezed.dart';
@@ -13,6 +14,14 @@ class Post with _$Post {
   }) = _Post;
 
   factory Post.fromJson(Map<String, dynamic> json) => _$PostFromJson(json);
+
+  factory Post.fromFeedView(bsky.FeedView feedView) {
+    return Post(
+      author: Actor.fromActorBasic(feedView.post.author),
+      text: feedView.post.record.text,
+      createdAt: feedView.post.record.createdAt,
+    );
+  }
 }
 
 @freezed
@@ -25,4 +34,13 @@ class Actor with _$Actor {
   }) = _Actor;
 
   factory Actor.fromJson(Map<String, dynamic> json) => _$ActorFromJson(json);
+
+  factory Actor.fromActorBasic(bsky.ActorBasic actor) {
+    return Actor(
+      did: actor.did,
+      handle: actor.handle,
+      displayName: actor.displayName,
+      avatar: actor.avatar,
+    );
+  }
 }

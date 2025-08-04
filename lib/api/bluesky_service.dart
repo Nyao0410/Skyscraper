@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import 'package:bluesky/bluesky.dart' as bsky;
 import 'package:atproto/atproto.dart' as atp;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:skyscraper/models/post.dart';
 import 'package:skyscraper/providers/bluesky_provider.dart';
 
 final blueskyServiceProvider = Provider<BlueskyService>((ref) {
