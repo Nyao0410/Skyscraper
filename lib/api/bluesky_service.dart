@@ -5,6 +5,7 @@ import 'package:bluesky/bluesky.dart' as bsky;
 import 'package:atproto/atproto.dart' as atp;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:skyscraper/models/post.dart';
+import 'package:skyscraper/models/timeline.dart';
 import 'package:skyscraper/providers/bluesky_provider.dart';
 
 final blueskyServiceProvider = Provider<BlueskyService>((ref) {
@@ -15,7 +16,7 @@ class BlueskyService {
   BlueskyService(this._bluesky);
   final bsky.Bluesky _bluesky;
 
-  Future<bsky.Feed> getTimeline({
+  Future<Timeline> findTimeline({
     String? cursor,
     int? limit,
   }) async {
@@ -23,7 +24,15 @@ class BlueskyService {
       cursor: cursor,
       limit: limit,
     );
-    return response.data;
+
+    final posts = response.data.feed
+        .map((feedView) => Post.fromFeedView(feedView))
+        .toList();
+
+    return Timeline(
+      posts: posts,
+      cursor: response.data.cursor,
+    );
   }
 
   Future<atp.StrongRef> createPost(

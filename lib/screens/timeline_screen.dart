@@ -19,8 +19,8 @@ class _TimelineScreenState extends ConsumerState<TimelineScreen> {
   void initState() {
     super.initState();
     _scrollController.addListener(() {
-      if (_scrollController.position.pixels ==
-          _scrollController.position.maxScrollExtent) {
+      if (_scrollController.position.pixels >=
+          _scrollController.position.maxScrollExtent * 0.9) {
         ref.read(timelineProvider.notifier).fetchNextPage();
       }
     });
@@ -43,24 +43,24 @@ class _TimelineScreenState extends ConsumerState<TimelineScreen> {
       body: timeline.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (err, stack) => Center(child: Text('Error: $err')),
-        data: (posts) {
+        data: (timelineData) {
           return RefreshIndicator(
-            onRefresh: () => ref.refresh(timelineProvider.future),
+            onRefresh: () => ref.read(timelineProvider.notifier).pullToRefresh(),
             child: ListView.builder(
               controller: _scrollController,
-              itemCount: posts.length + 1,
+              itemCount: timelineData.posts.length + (timelineData.cursor != null ? 1 : 0),
               itemBuilder: (context, index) {
-                if (index == posts.length) {
+                if (index == timelineData.posts.length) {
                   return const Center(child: CircularProgressIndicator());
                 }
-                final post = posts[index];
+                final post = timelineData.posts[index];
                 return PostCard(post: post);
               },
             ),
           );
         },
       ),
-    floatingActionButton: FloatingActionButton(
+      floatingActionButton: FloatingActionButton(
         onPressed: () {
           context.push('/create_post');
         },

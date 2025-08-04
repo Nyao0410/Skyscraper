@@ -3,37 +3,43 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:skyscraper/api/bluesky_service.dart';
-import 'package:skyscraper/models/post.dart';
+import 'package:skyscraper/models/timeline.dart';
 
-final timelineProvider = AsyncNotifierProvider<TimelineNotifier, List<Post>>(
+final timelineProvider = AsyncNotifierProvider<TimelineNotifier, Timeline>(
   () => TimelineNotifier(),
 );
 
-class TimelineNotifier extends AsyncNotifier<List<Post>> {
-  String? _cursor;
-
+class TimelineNotifier extends AsyncNotifier<Timeline> {
   @override
-  Future<List<Post>> build() async {
-    final response = await ref.watch(blueskyServiceProvider).getTimeline(limit: 20);
-    _cursor = response.cursor;
-    return response.feed.map((e) => Post.fromFeedView(e)).toList();
+  Future<Timeline> build() async {
+    return ref.watch(blueskyServiceProvider).findTimeline(limit: 20);
   }
 
   Future<void> fetchNextPage() async {
-    if (state.isLoading || _cursor == null) {
+    if (state.isLoading || state.value == null || state.value!.cursor == null) {
       return;
     }
 
+    final currentState = state.value!;
     state = const AsyncValue.loading();
 
-    final response = await ref.watch(blueskyServiceProvider).getTimeline(
-          cursor: _cursor,
+    final response = await ref.watch(blueskyServiceProvider).findTimeline(
+          cursor: currentState.cursor,
           limit: 20,
         );
 
-    _cursor = response.cursor;
-    final currentState = state.value ?? [];
-    final newPosts = response.feed.map((e) => Post.fromFeedView(e)).toList();
-    state = AsyncValue.data([...currentState, ...newPosts]);
+    state = AsyncValue.data(
+      currentState.copyWith(
+        posts: [...currentState.posts, ...response.posts],
+        cursor: response.cursor,
+      ),
+    );
+  }
+
+  Future<void> pullToRefresh() async {
+    state = const AsyncValue.loading();
+    state = await AsyncValue.guard(
+      () => ref.watch(blueskyServiceProvider).findTimeline(limit: 20),
+    );
   }
 }
