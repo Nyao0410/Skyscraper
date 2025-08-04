@@ -23,6 +23,8 @@ class PostCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isLiked = post.viewer?.like != null;
+
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
       child: InkWell(
@@ -79,9 +81,13 @@ class PostCard extends StatelessWidget {
                     onPressed: onTapRepost,
                   ),
                   IconButton(
-                    icon: const Icon(Icons.favorite_border),
+                    icon: Icon(
+                      isLiked ? Icons.favorite : Icons.favorite_border,
+                      color: isLiked ? Colors.red : null,
+                    ),
                     onPressed: onTapLike,
                   ),
+                  Text('${post.likeCount}'),
                   IconButton(
                     icon: const Icon(Icons.more_horiz),
                     onPressed: () {}, // Not implemented yet

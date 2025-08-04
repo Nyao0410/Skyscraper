@@ -90,4 +90,23 @@ class MockBlueskyService extends _i1.Mock implements _i4.BlueskyService {
             ),
           )
           as _i5.Future<_i3.BlobData>);
+
+  @override
+  _i5.Future<_i3.StrongRef> likePost(String? uri, String? cid) =>
+      (super.noSuchMethod(
+            Invocation.method(#likePost, [uri, cid]),
+            returnValue: _i5.Future<_i3.StrongRef>.value(
+              _FakeStrongRef_1(this, Invocation.method(#likePost, [uri, cid])),
+            ),
+          )
+          as _i5.Future<_i3.StrongRef>);
+
+  @override
+  _i5.Future<void> deleteLike(String? uri) =>
+      (super.noSuchMethod(
+            Invocation.method(#deleteLike, [uri]),
+            returnValue: _i5.Future<void>.value(),
+            returnValueForMissingStub: _i5.Future<void>.value(),
+          )
+          as _i5.Future<void>);
 }

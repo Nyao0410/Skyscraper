@@ -11,6 +11,10 @@ class Post with _$Post {
     required Actor author,
     required String text,
     required DateTime createdAt,
+    @Default(0) int likeCount,
+    PostViewer? viewer,
+    required String uri,
+    required String cid,
   }) = _Post;
 
   factory Post.fromJson(Map<String, dynamic> json) => _$PostFromJson(json);
@@ -20,6 +24,12 @@ class Post with _$Post {
       author: Actor.fromActorBasic(feedView.post.author),
       text: feedView.post.record.text,
       createdAt: feedView.post.record.createdAt,
+      likeCount: feedView.post.likeCount ?? 0,
+      viewer: feedView.post.viewer != null
+          ? PostViewer.fromPostViewer(feedView.post.viewer!)
+          : null,
+      uri: feedView.post.uri.toString(),
+      cid: feedView.post.cid,
     );
   }
 }
@@ -41,6 +51,22 @@ class Actor with _$Actor {
       handle: actor.handle,
       displayName: actor.displayName,
       avatar: actor.avatar,
+    );
+  }
+}
+
+@freezed
+class PostViewer with _$PostViewer {
+  const factory PostViewer({
+    String? like,
+  }) = _PostViewer;
+
+  factory PostViewer.fromJson(Map<String, dynamic> json) =>
+      _$PostViewerFromJson(json);
+
+  factory PostViewer.fromPostViewer(bsky.PostViewer viewer) {
+    return PostViewer(
+      like: viewer.like?.toString(),
     );
   }
 }

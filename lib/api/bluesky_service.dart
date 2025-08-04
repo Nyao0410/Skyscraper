@@ -1,8 +1,11 @@
 
+
 import 'dart:typed_data';
 
 import 'package:bluesky/bluesky.dart' as bsky;
 import 'package:atproto/atproto.dart' as atp;
+import 'package:atproto_core/atproto_core.dart' as atp_core;
+import 'package:nsid/nsid.dart' as nsid;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:skyscraper/models/post.dart';
 import 'package:skyscraper/models/timeline.dart';
@@ -50,4 +53,23 @@ class BlueskyService {
     final response = await _bluesky.atproto.repo.uploadBlob(bytes);
     return response.data;
   }
+
+  Future<atp.StrongRef> likePost(String uri, String cid) async {
+    final response = await _bluesky.atproto.repo.createRecord(
+      collection: nsid.NSID.parse('app.bsky.feed.like'),
+      record: {
+        'subject': {
+          'uri': uri,
+          'cid': cid,
+        },
+        'createdAt': DateTime.now().toUtc().toIso8601String(),
+      },
+    );
+    return response.data;
+  }
+
+  Future<void> deleteLike(String uri) async {
+    await _bluesky.atproto.repo.deleteRecord(uri: atp_core.AtUri.parse(uri));
+  }
 }
+

@@ -24,6 +24,10 @@ mixin _$Post {
   Actor get author => throw _privateConstructorUsedError;
   String get text => throw _privateConstructorUsedError;
   DateTime get createdAt => throw _privateConstructorUsedError;
+  int get likeCount => throw _privateConstructorUsedError;
+  PostViewer? get viewer => throw _privateConstructorUsedError;
+  String get uri => throw _privateConstructorUsedError;
+  String get cid => throw _privateConstructorUsedError;
 
   /// Serializes this Post to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
@@ -39,9 +43,18 @@ abstract class $PostCopyWith<$Res> {
   factory $PostCopyWith(Post value, $Res Function(Post) then) =
       _$PostCopyWithImpl<$Res, Post>;
   @useResult
-  $Res call({Actor author, String text, DateTime createdAt});
+  $Res call({
+    Actor author,
+    String text,
+    DateTime createdAt,
+    int likeCount,
+    PostViewer? viewer,
+    String uri,
+    String cid,
+  });
 
   $ActorCopyWith<$Res> get author;
+  $PostViewerCopyWith<$Res>? get viewer;
 }
 
 /// @nodoc
@@ -62,6 +75,10 @@ class _$PostCopyWithImpl<$Res, $Val extends Post>
     Object? author = null,
     Object? text = null,
     Object? createdAt = null,
+    Object? likeCount = null,
+    Object? viewer = freezed,
+    Object? uri = null,
+    Object? cid = null,
   }) {
     return _then(
       _value.copyWith(
@@ -77,6 +94,22 @@ class _$PostCopyWithImpl<$Res, $Val extends Post>
                 ? _value.createdAt
                 : createdAt // ignore: cast_nullable_to_non_nullable
                       as DateTime,
+            likeCount: null == likeCount
+                ? _value.likeCount
+                : likeCount // ignore: cast_nullable_to_non_nullable
+                      as int,
+            viewer: freezed == viewer
+                ? _value.viewer
+                : viewer // ignore: cast_nullable_to_non_nullable
+                      as PostViewer?,
+            uri: null == uri
+                ? _value.uri
+                : uri // ignore: cast_nullable_to_non_nullable
+                      as String,
+            cid: null == cid
+                ? _value.cid
+                : cid // ignore: cast_nullable_to_non_nullable
+                      as String,
           )
           as $Val,
     );
@@ -91,6 +124,20 @@ class _$PostCopyWithImpl<$Res, $Val extends Post>
       return _then(_value.copyWith(author: value) as $Val);
     });
   }
+
+  /// Create a copy of Post
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @pragma('vm:prefer-inline')
+  $PostViewerCopyWith<$Res>? get viewer {
+    if (_value.viewer == null) {
+      return null;
+    }
+
+    return $PostViewerCopyWith<$Res>(_value.viewer!, (value) {
+      return _then(_value.copyWith(viewer: value) as $Val);
+    });
+  }
 }
 
 /// @nodoc
@@ -101,10 +148,20 @@ abstract class _$$PostImplCopyWith<$Res> implements $PostCopyWith<$Res> {
   ) = __$$PostImplCopyWithImpl<$Res>;
   @override
   @useResult
-  $Res call({Actor author, String text, DateTime createdAt});
+  $Res call({
+    Actor author,
+    String text,
+    DateTime createdAt,
+    int likeCount,
+    PostViewer? viewer,
+    String uri,
+    String cid,
+  });
 
   @override
   $ActorCopyWith<$Res> get author;
+  @override
+  $PostViewerCopyWith<$Res>? get viewer;
 }
 
 /// @nodoc
@@ -122,6 +179,10 @@ class __$$PostImplCopyWithImpl<$Res>
     Object? author = null,
     Object? text = null,
     Object? createdAt = null,
+    Object? likeCount = null,
+    Object? viewer = freezed,
+    Object? uri = null,
+    Object? cid = null,
   }) {
     return _then(
       _$PostImpl(
@@ -137,6 +198,22 @@ class __$$PostImplCopyWithImpl<$Res>
             ? _value.createdAt
             : createdAt // ignore: cast_nullable_to_non_nullable
                   as DateTime,
+        likeCount: null == likeCount
+            ? _value.likeCount
+            : likeCount // ignore: cast_nullable_to_non_nullable
+                  as int,
+        viewer: freezed == viewer
+            ? _value.viewer
+            : viewer // ignore: cast_nullable_to_non_nullable
+                  as PostViewer?,
+        uri: null == uri
+            ? _value.uri
+            : uri // ignore: cast_nullable_to_non_nullable
+                  as String,
+        cid: null == cid
+            ? _value.cid
+            : cid // ignore: cast_nullable_to_non_nullable
+                  as String,
       ),
     );
   }
@@ -149,6 +226,10 @@ class _$PostImpl implements _Post {
     required this.author,
     required this.text,
     required this.createdAt,
+    this.likeCount = 0,
+    this.viewer,
+    required this.uri,
+    required this.cid,
   });
 
   factory _$PostImpl.fromJson(Map<String, dynamic> json) =>
@@ -160,10 +241,19 @@ class _$PostImpl implements _Post {
   final String text;
   @override
   final DateTime createdAt;
+  @override
+  @JsonKey()
+  final int likeCount;
+  @override
+  final PostViewer? viewer;
+  @override
+  final String uri;
+  @override
+  final String cid;
 
   @override
   String toString() {
-    return 'Post(author: $author, text: $text, createdAt: $createdAt)';
+    return 'Post(author: $author, text: $text, createdAt: $createdAt, likeCount: $likeCount, viewer: $viewer, uri: $uri, cid: $cid)';
   }
 
   @override
@@ -174,12 +264,26 @@ class _$PostImpl implements _Post {
             (identical(other.author, author) || other.author == author) &&
             (identical(other.text, text) || other.text == text) &&
             (identical(other.createdAt, createdAt) ||
-                other.createdAt == createdAt));
+                other.createdAt == createdAt) &&
+            (identical(other.likeCount, likeCount) ||
+                other.likeCount == likeCount) &&
+            (identical(other.viewer, viewer) || other.viewer == viewer) &&
+            (identical(other.uri, uri) || other.uri == uri) &&
+            (identical(other.cid, cid) || other.cid == cid));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
   @override
-  int get hashCode => Object.hash(runtimeType, author, text, createdAt);
+  int get hashCode => Object.hash(
+    runtimeType,
+    author,
+    text,
+    createdAt,
+    likeCount,
+    viewer,
+    uri,
+    cid,
+  );
 
   /// Create a copy of Post
   /// with the given fields replaced by the non-null parameter values.
@@ -200,6 +304,10 @@ abstract class _Post implements Post {
     required final Actor author,
     required final String text,
     required final DateTime createdAt,
+    final int likeCount,
+    final PostViewer? viewer,
+    required final String uri,
+    required final String cid,
   }) = _$PostImpl;
 
   factory _Post.fromJson(Map<String, dynamic> json) = _$PostImpl.fromJson;
@@ -210,6 +318,14 @@ abstract class _Post implements Post {
   String get text;
   @override
   DateTime get createdAt;
+  @override
+  int get likeCount;
+  @override
+  PostViewer? get viewer;
+  @override
+  String get uri;
+  @override
+  String get cid;
 
   /// Create a copy of Post
   /// with the given fields replaced by the non-null parameter values.
@@ -426,5 +542,156 @@ abstract class _Actor implements Actor {
   @override
   @JsonKey(includeFromJson: false, includeToJson: false)
   _$$ActorImplCopyWith<_$ActorImpl> get copyWith =>
+      throw _privateConstructorUsedError;
+}
+
+PostViewer _$PostViewerFromJson(Map<String, dynamic> json) {
+  return _PostViewer.fromJson(json);
+}
+
+/// @nodoc
+mixin _$PostViewer {
+  String? get like => throw _privateConstructorUsedError;
+
+  /// Serializes this PostViewer to a JSON map.
+  Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
+
+  /// Create a copy of PostViewer
+  /// with the given fields replaced by the non-null parameter values.
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  $PostViewerCopyWith<PostViewer> get copyWith =>
+      throw _privateConstructorUsedError;
+}
+
+/// @nodoc
+abstract class $PostViewerCopyWith<$Res> {
+  factory $PostViewerCopyWith(
+    PostViewer value,
+    $Res Function(PostViewer) then,
+  ) = _$PostViewerCopyWithImpl<$Res, PostViewer>;
+  @useResult
+  $Res call({String? like});
+}
+
+/// @nodoc
+class _$PostViewerCopyWithImpl<$Res, $Val extends PostViewer>
+    implements $PostViewerCopyWith<$Res> {
+  _$PostViewerCopyWithImpl(this._value, this._then);
+
+  // ignore: unused_field
+  final $Val _value;
+  // ignore: unused_field
+  final $Res Function($Val) _then;
+
+  /// Create a copy of PostViewer
+  /// with the given fields replaced by the non-null parameter values.
+  @pragma('vm:prefer-inline')
+  @override
+  $Res call({Object? like = freezed}) {
+    return _then(
+      _value.copyWith(
+            like: freezed == like
+                ? _value.like
+                : like // ignore: cast_nullable_to_non_nullable
+                      as String?,
+          )
+          as $Val,
+    );
+  }
+}
+
+/// @nodoc
+abstract class _$$PostViewerImplCopyWith<$Res>
+    implements $PostViewerCopyWith<$Res> {
+  factory _$$PostViewerImplCopyWith(
+    _$PostViewerImpl value,
+    $Res Function(_$PostViewerImpl) then,
+  ) = __$$PostViewerImplCopyWithImpl<$Res>;
+  @override
+  @useResult
+  $Res call({String? like});
+}
+
+/// @nodoc
+class __$$PostViewerImplCopyWithImpl<$Res>
+    extends _$PostViewerCopyWithImpl<$Res, _$PostViewerImpl>
+    implements _$$PostViewerImplCopyWith<$Res> {
+  __$$PostViewerImplCopyWithImpl(
+    _$PostViewerImpl _value,
+    $Res Function(_$PostViewerImpl) _then,
+  ) : super(_value, _then);
+
+  /// Create a copy of PostViewer
+  /// with the given fields replaced by the non-null parameter values.
+  @pragma('vm:prefer-inline')
+  @override
+  $Res call({Object? like = freezed}) {
+    return _then(
+      _$PostViewerImpl(
+        like: freezed == like
+            ? _value.like
+            : like // ignore: cast_nullable_to_non_nullable
+                  as String?,
+      ),
+    );
+  }
+}
+
+/// @nodoc
+@JsonSerializable()
+class _$PostViewerImpl implements _PostViewer {
+  const _$PostViewerImpl({this.like});
+
+  factory _$PostViewerImpl.fromJson(Map<String, dynamic> json) =>
+      _$$PostViewerImplFromJson(json);
+
+  @override
+  final String? like;
+
+  @override
+  String toString() {
+    return 'PostViewer(like: $like)';
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is _$PostViewerImpl &&
+            (identical(other.like, like) || other.like == like));
+  }
+
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @override
+  int get hashCode => Object.hash(runtimeType, like);
+
+  /// Create a copy of PostViewer
+  /// with the given fields replaced by the non-null parameter values.
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @override
+  @pragma('vm:prefer-inline')
+  _$$PostViewerImplCopyWith<_$PostViewerImpl> get copyWith =>
+      __$$PostViewerImplCopyWithImpl<_$PostViewerImpl>(this, _$identity);
+
+  @override
+  Map<String, dynamic> toJson() {
+    return _$$PostViewerImplToJson(this);
+  }
+}
+
+abstract class _PostViewer implements PostViewer {
+  const factory _PostViewer({final String? like}) = _$PostViewerImpl;
+
+  factory _PostViewer.fromJson(Map<String, dynamic> json) =
+      _$PostViewerImpl.fromJson;
+
+  @override
+  String? get like;
+
+  /// Create a copy of PostViewer
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  _$$PostViewerImplCopyWith<_$PostViewerImpl> get copyWith =>
       throw _privateConstructorUsedError;
 }

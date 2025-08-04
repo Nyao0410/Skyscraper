@@ -54,7 +54,10 @@ class _TimelineScreenState extends ConsumerState<TimelineScreen> {
                   return const Center(child: CircularProgressIndicator());
                 }
                 final post = timelineData.posts[index];
-                return PostCard(post: post);
+                return PostCard(
+                  post: post,
+                  onTapLike: () => ref.read(timelineProvider.notifier).toggleLike(post),
+                );
               },
             ),
           );
