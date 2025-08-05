@@ -1,32 +1,67 @@
 # REPORT.md
 
-## Skyscraper プロジェクト憲法 v0.5.0-fix タスク実施報告
+## Skyscraper プロジェクト憲法 開発状況報告
 
-### 1. 目的
-`REPORT.md`で報告された`const`キーワードの誤用エラーと、その他のLint警告を修正するタスクを実施しました。
+### 1. プロジェクト概要
+Blueskyクライアントアプリ「Skyscraper」の開発は、MVP（ログインとタイムライン閲覧）の達成に向けて順調に進んでいます。本報告書では、これまでの主要なタスクの実施状況と、現在のコード品質についてまとめます。
 
-### 2. 実施内容
+### 2. 実施済み主要タスク
 
-#### 2.1. `const_with_non_const` エラーの修正
-- `lib/src/screens/notifications_screen.dart`, `lib/src/screens/profile_screen.dart`, `lib/src/screens/search_screen.dart` の各ファイルにおいて、`Scaffold`の`appBar`プロパティに直接`AppBar`を配置するように修正し、`PreferredSize`ウィジェットを削除しました。これにより、`AppBar`が非`const`であることによる`const_with_non_const`エラーが解消されました。
+#### 2.1. v0.2+v0.3-phoenix-manual: `freezed`からのモデル手動移行
+- `pubspec.yaml`から`freezed`および`json_serializable`の依存関係を削除しました。
+- `Author`および`Post`モデルを`freezed`に依存しないプレーンなDartクラスとして手動で再実装しました。
+- 関連するLint警告（`public_member_api_docs`, `sort_constructors_first`, `eol_at_end_of_file`）を修正しました。
 
-#### 2.2. `unnecessary_breaks` 警告の修正
-- `lib/src/screens/main_shell.dart` の `_onItemTapped` メソッド内の `switch` 文から、冗長な `break` 文を削除しました。`context.go` が実行された時点で処理が分岐するため、`break` は不要でした。
+#### 2.2. v0.4.0-pre: デザインシステムの定義
+- `lib/src/constants`ディレクトリを作成し、`theme.dart`（ライト/ダークテーマ）と`sizes.dart`（共通レイアウト定数）を定義しました。
+- `lib/main.dart`に定義したテーマを適用しました。
+- `lib/src/widgets/common`ディレクトリを作成し、`loading_indicator.dart`と`error_display.dart`の骨格を作成しました。
+- 関連するLint警告（`public_member_api_docs`, `avoid_redundant_argument_values`, `flutter_style_todos`, `prefer_int_literals`, `always_put_required_named_parameters_first`）を修正しました。
 
-#### 2.3. `public_member_api_docs` 警告の修正
-- `lib/src/screens/notifications_screen.dart`, `lib/src/screens/profile_screen.dart`, `lib/src/screens/search_screen.dart` の各ファイルに、クラスおよびコンストラクタのDartDocコメントを追加しました。
+#### 2.3. v0.4.0: ログイン画面UIとロジックの実装
+- `lib/src/providers/auth/login_screen_controller.dart`を作成し、ログイン処理の状態管理（ローディング、成功、エラー）を実装しました。
+- `lib/src/screens/login_screen.dart`を更新し、`LoginScreenController`と連携するUI（入力フォーム、ログインボタン、エラー表示、画面遷移）を実装しました。
+- `build_runner`を実行し、必要なコードを生成しました。
 
-#### 2.4. `eol_at_end_of_file` 警告の修正
-- `lib/src/screens/notifications_screen.dart`, `lib/src/screens/profile_screen.dart`, `lib/src/screens/search_screen.dart` の各ファイルの末尾に改行を追加しました。
+#### 2.4. v0.4.0-debug: `ThemeData.brightness`競合の修正
+- `flutter run -d chrome`実行時に発生した`ThemeData.brightness`と`ColorScheme.brightness`の競合エラーを特定し、`lib/src/constants/theme.dart`から`ThemeData`の`brightness`プロパティを削除することで修正しました。
 
-#### 2.5. 最終確認
-- `flutter run -d chrome` を実行し、アプリケーションがエラーなく正常に起動することを確認しました。
-- `flutter analyze` を実行し、すべてのエラーおよび警告が解消されていることを確認しました。
+#### 2.5. v0.4.1: タイムライン表示の実装
+- `lib/src/providers/timeline/timeline_provider.dart`を作成し、`FakeTimelineRepository`から投稿データを取得してUIに供給するロジックを実装しました。
+- `lib/src/screens/home_screen.dart`を更新し、`timelineProvider`の状態を監視してタイムライン（投稿リスト）を表示するようにしました。
+- `build_runner`を実行し、必要なコードを生成しました。
 
-### 3. 結果
-- `const`キーワードの誤用によるコンパイルエラーが完全に解消されました。
-- `unnecessary_breaks`, `public_member_api_docs`, `eol_at_end_of_file` といった主要なLint警告もすべて解消されました。
-- `flutter analyze` の結果、「No issues found!」となり、コード品質がプロジェクト憲法に準拠していることを確認しました。
+#### 2.6. v0.5.0: `ShellRoute`とボトムナビゲーションの構築
+- `lib/src/screens`に`search_screen.dart`, `notifications_screen.dart`, `profile_screen.dart`のプレースホルダー画面を追加しました。
+- `lib/src/screens/main_shell.dart`を作成し、ボトムナビゲーションバーを持つメインUIの骨格を定義しました。
+- `lib/src/navigation/app_router.dart`を`ShellRoute`を使用するように変更し、メインの4画面をボトムナビゲーションバーに統合しました。
+- `build_runner`を実行し、必要なコードを生成しました。
+
+#### 2.7. v0.5.0-fix: `const`エラーとLint警告の修正
+- `notifications_screen.dart`, `profile_screen.dart`, `search_screen.dart`の`Scaffold`内の`AppBar`の`const`キーワード誤用を修正しました。
+- `main_shell.dart`の`_onItemTapped`メソッド内の冗長な`break`文を削除しました。
+- `public_member_api_docs`, `eol_at_end_of_file`などのLint警告を修正しました。
+
+#### 2.8. v0.5.1: `PostCard`ウィジェットの作成
+- `lib/src/widgets/post_card.dart`を新規作成し、投稿一つ分を表示するための再利用可能なカード型ウィジェットを実装しました。
+
+#### 2.9. v0.5.2: `HomeScreen`への`PostCard`統合
+- `lib/src/screens/home_screen.dart`を修正し、タイムラインの投稿表示に`PostCard`ウィジェットを使用するように変更しました。`ListView.builder`を`ListView.separated`に置き換え、各カード間に区切り線を追加しました。
+
+#### 2.10. v0.5.3: `PostCard`ウィジェットテストの作成
+- `test/src/widgets/post_card_test.dart`を新規作成し、`PostCard`ウィジェットの表示ロジックを検証するウィジェットテストを実装しました。
+- テスト実行時の`NetworkImageLoadException`を回避するため、テストデータ内の`avatar`を`null`に設定し、`Icon(Icons.person)`のフォールバックをテストするように修正しました。
+- `find.text`の期待値が実際の表示と一致するように修正しました。
+
+#### 2.11. v0.5.4-lintfix: 残存Lint警告の修正
+- `lib/src/screens/post_detail_screen.dart`および`test/src/widgets/post_card_test.dart`の末尾に改行を追加し、`eol_at_end_of_file`警告を解消しました。
+- `test/src/widgets/post_card_test.dart`内の`Post`インスタンスの`createdAt`引数を`DateTime.utc(2023)`に変更し、`avoid_redundant_argument_values`警告を解消しました。
+- `test/src/widgets/post_card_test.dart`内の80文字を超える行を整形し、`lines_longer_than_80_chars`警告を解消しました。
+
+### 3. 現在のコード品質
+`flutter analyze`の実行結果は「No issues found!」であり、すべてのエラーおよびLint警告が解消されています。プロジェクト憲法に定められたコード品質基準を満たしています。
 
 ### 4. 今後の課題
+- MVPの次のステップとして、投稿詳細画面（スレッド表示）の実装を進めます。
+- API連携を`package:bluesky`に切り替え、フェイクデータではなく実際のBluesky APIからデータを取得するように変更します。
 - プロジェクト憲法に則り、継続的なコード品質の維持に努めます。

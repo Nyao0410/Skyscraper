@@ -5,6 +5,7 @@ import 'package:skyscraper/src/screens/home_screen.dart';
 import 'package:skyscraper/src/screens/login_screen.dart';
 import 'package:skyscraper/src/screens/main_shell.dart';
 import 'package:skyscraper/src/screens/notifications_screen.dart';
+import 'package:skyscraper/src/screens/post_detail_screen.dart'; // importを追加
 import 'package:skyscraper/src/screens/profile_screen.dart';
 import 'package:skyscraper/src/screens/search_screen.dart';
 
@@ -51,6 +52,11 @@ GoRouter goRouter(Ref ref) {
         path: '/login',
         builder: (BuildContext context, GoRouterState state) =>
             const LoginScreen(),
+      ),
+      GoRoute(
+        path: '/post/:postId',
+        builder: (BuildContext context, GoRouterState state) =>
+            PostDetailScreen(postId: state.pathParameters['postId']!),
       ),
     ],
   );
