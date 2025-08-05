@@ -24,7 +24,6 @@ class MyApp extends ConsumerWidget {
       title: 'Skyscraper',
       theme: lightTheme,
       darkTheme: darkTheme,
-      themeMode: ThemeMode.system,
     );
   }
 }

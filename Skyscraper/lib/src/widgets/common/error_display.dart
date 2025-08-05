@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 /// A widget to display an error message.
 class ErrorDisplay extends StatelessWidget {
   /// Creates an [ErrorDisplay] widget.
-  const ErrorDisplay({super.key, required this.message});
+  const ErrorDisplay({required this.message, super.key});
   
   /// The error message to display.
   final String message;

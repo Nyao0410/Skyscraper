@@ -6,9 +6,11 @@ part of 'timeline_repository.dart';
 // RiverpodGenerator
 // **************************************************************************
 
+/// Provides the timeline repository instance.
 @ProviderFor(timelineRepository)
 const timelineRepositoryProvider = TimelineRepositoryProvider._();
 
+/// Provides the timeline repository instance.
 final class TimelineRepositoryProvider
     extends
         $FunctionalProvider<
@@ -17,6 +19,7 @@ final class TimelineRepositoryProvider
           ITimelineRepository
         >
     with $Provider<ITimelineRepository> {
+  /// Provides the timeline repository instance.
   const TimelineRepositoryProvider._()
     : super(
         from: null,

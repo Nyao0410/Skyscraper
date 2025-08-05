@@ -6,13 +6,16 @@ part of 'auth_repository.dart';
 // RiverpodGenerator
 // **************************************************************************
 
+/// Provides the authentication repository instance.
 @ProviderFor(authRepository)
 const authRepositoryProvider = AuthRepositoryProvider._();
 
+/// Provides the authentication repository instance.
 final class AuthRepositoryProvider
     extends
         $FunctionalProvider<IAuthRepository, IAuthRepository, IAuthRepository>
     with $Provider<IAuthRepository> {
+  /// Provides the authentication repository instance.
   const AuthRepositoryProvider._()
     : super(
         from: null,

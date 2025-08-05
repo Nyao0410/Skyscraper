@@ -3,7 +3,8 @@ import 'package:flutter/services.dart';
 import 'package:skyscraper/src/models/post.dart';
 import 'package:skyscraper/src/repositories/timeline_repository.dart';
 
-/// A fake implementation of [ITimelineRepository] that reads data from a local JSON file.
+/// A fake implementation of [ITimelineRepository] that reads data from a
+/// local JSON file.
 class FakeTimelineRepository implements ITimelineRepository {
   @override
   Future<List<Post>> fetchTimeline({String? cursor}) async {
@@ -15,10 +16,12 @@ class FakeTimelineRepository implements ITimelineRepository {
     );
     final jsonMap = jsonDecode(jsonString) as Map<String, dynamic>;
     
-    // Bluesky API response is expected to have a 'feed' key containing a list of posts.
+    // Bluesky API response is expected to have a 'feed' key containing a
+    // list of posts.
     final feed = jsonMap['feed'] as List<dynamic>;
 
-    // In the actual response, post information is expected to be inside the 'post' key.
+    // In the actual response, post information is expected to be inside the
+    // 'post' key.
     return feed
         .map((dynamic item) {
           final postMap = item as Map<String, dynamic>;
