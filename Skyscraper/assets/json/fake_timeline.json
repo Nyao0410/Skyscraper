@@ -1,0 +1,73 @@
+{
+  "feed": [
+    {
+      "post": {
+        "uri": "at://did:plc:z72i7hdynmk6r22z27h6tvur/app.bsky.feed.post/3kqu3g7g2x62w",
+        "cid": "bafyreihjc44z65f2z2es4vw52ey36tphz5h55qakbnshv6gp55f3x6656a",
+        "author": {
+          "did": "did:plc:z72i7hdynmk6r22z27h6tvur",
+          "handle": "shinyakato.bsky.social",
+          "displayName": "Shinya Kato",
+          "avatar": "https://cdn.bsky.social/imgproxy/g1H4wVvA9y1h3y8nDIq3O4n62e5VjL4oR44a_3k4dYE/rs:fill:1000:1000:1:0/plain/bafkreie6rtoznysff4xajv4fw6lfl6i52i5ak4ct2j5a5y3s2d5wucbax4@jpeg"
+        },
+        "record": {
+          "text": "Skyscraper Project Gemによって生成された最初の投稿です。これはテストデータであり、実際のBlueskyネットワーク上には存在しません。",
+          "type": "app.bsky.feed.post",
+          "createdAt": "2025-08-05T06:00:00.000Z"
+        },
+        "replyCount": 1,
+        "repostCount": 5,
+        "likeCount": 15,
+        "indexedAt": "2025-08-05T06:00:10.000Z",
+        "viewer": {
+          "like": "at://did:plc:z72i7hdynmk6r22z27h6tvur/app.bsky.feed.like/3kqu3g7g2x62w"
+        }
+      }
+    },
+    {
+      "post": {
+        "uri": "at://did:plc:xxxxxxxxxxxxxxxxxxxxxxxx/app.bsky.feed.post/3kqu3g7g2x73x",
+        "cid": "bafyreihjc44z65f2z2es4vw52ey36tphz5h55qakbnshv6gp55f3x7767b",
+        "author": {
+          "did": "did:plc:xxxxxxxxxxxxxxxxxxxxxxxx",
+          "handle": "gemini-architect.bsky.social",
+          "displayName": "Gemini Architect",
+          "avatar": "https://cdn.bsky.social/imgproxy/your_avatar_proxy_url/plain/path_to_gemini_avatar@jpeg"
+        },
+        "record": {
+          "text": "これは2番目の投稿です。フェニックス・プロトコルの進捗は順調です。UI層の開発を加速させましょう。",
+          "type": "app.bsky.feed.post",
+          "createdAt": "2025-08-05T06:15:00.000Z"
+        },
+        "replyCount": 0,
+        "repostCount": 2,
+        "likeCount": 8,
+        "indexedAt": "2025-08-05T06:15:10.000Z",
+        "viewer": {}
+      }
+    },
+    {
+      "post": {
+        "uri": "at://did:plc:yyyyyyyyyyyyyyyyyyyyyyyy/app.bsky.feed.post/3kqu3g7g2x84y",
+        "cid": "bafyreihjc44z65f2z2es4vw52ey36tphz5h55qakbnshv6gp55f3x8878c",
+        "author": {
+          "did": "did:plc:yyyyyyyyyyyyyyyyyyyyyyyy",
+          "handle": "flutter-dev.bsky.social",
+          "displayName": "Flutter Developer",
+          "avatar": "https://cdn.bsky.social/imgproxy/your_avatar_proxy_url/plain/path_to_flutter_avatar@png"
+        },
+        "record": {
+          "text": "画像付き投稿のテストも将来的には必要ですね。まずはテキストベースのタイムラインを完成させることが最優先です。\n\n複数行の投稿も正しく表示されるか確認しましょう。",
+          "type": "app.bsky.feed.post",
+          "createdAt": "2025-08-05T06:30:00.000Z"
+        },
+        "replyCount": 3,
+        "repostCount": 12,
+        "likeCount": 28,
+        "indexedAt": "2025-08-05T06:30:10.000Z",
+        "viewer": {}
+      }
+    }
+  ],
+  "cursor": "1691211010000::bafyreihjc44z65f2z2es4vw52ey36tphz5h55qakbnshv6gp55f3x8878c"
+}

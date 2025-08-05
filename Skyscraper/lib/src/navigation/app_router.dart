@@ -7,7 +7,7 @@ import 'package:skyscraper/src/screens/login_screen.dart';
 part 'app_router.g.dart';
 
 @riverpod
-GoRouter goRouter(GoRouterRef ref) {
+GoRouter goRouter(Ref ref) {
   return GoRouter(
     initialLocation: '/login',
     routes: [
