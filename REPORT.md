@@ -1,35 +1,38 @@
 # REPORT.md
 
-## Skyscraper プロジェクト憲法 v0.2+v0.3-phoenix-manual タスク実施報告
+## Skyscraper プロジェクト憲法 v0.4.0-pre タスク実施報告
 
 ### 1. 目的
-憲法第5.2章に基づき、`Post`および`Author`モデルを`freezed`への依存から切り離し、手動で実装するタスクを実施しました。
+UI実装フェーズの効率と一貫性を最大化するため、アプリケーションの基本的なデザインシステムを定義するタスクを実施しました。
 
 ### 2. 実施内容
 
-#### 2.1. `freezed`関連パッケージの依存削除
-- `skyscraper/pubspec.yaml` から `dev_dependencies` に記載されていた `freezed` および `json_serializable` の行を削除しました。
-- 削除後、`skyscraper` ディレクトリ内で `flutter pub get` を実行し、依存関係を更新しました。
+#### 2.1. `constants`ディレクトリの作成
+- `skyscraper/lib/src/` の下に `constants` ディレクトリを新規作成しました。
 
-#### 2.2. `Author`モデルの手動実装
-- `skyscraper/lib/src/models/author.dart` の内容を、指示されたプレーンなDartクラスの定義に完全に書き換えました。
-- `public_member_api_docs` および `sort_constructors_first` のlint警告に対応するため、DartDocコメントの追加とコンストラクタの配置順序を修正しました。
+#### 2.2. テーマとカラーパレットの定義
+- `skyscraper/lib/src/constants/theme.dart` を新規作成し、ライトテーマとダークテーマを定義しました。
+- `public_member_api_docs` および `avoid_redundant_argument_values`、`flutter_style_todos` のlint警告に対応するため、DartDocコメントの追加、冗長な引数の削除、TODOコメントの書式修正を行いました。
 
-#### 2.3. `Post`モデルの手動実装
-- `skyscraper/lib/src/models/post.dart` の内容を、指示されたプレーンなDartクラスの定義に完全に書き換えました。
-- `public_member_api_docs` および `sort_constructors_first` のlint警告に対応するため、DartDocコメントの追加とコンストラクタの配置順序を修正しました。
+#### 2.3. 共通レイアウト定数の定義
+- `skyscraper/lib/src/constants/sizes.dart` を新規作成し、パディング、マージン、角丸、アイコンサイズなどの共通定数を定義しました。
+- `public_member_api_docs` および `prefer_int_literals` のlint警告に対応するため、DartDocコメントの追加と、可能な箇所での`double`から`int`へのリテラル変換を行いました。
 
-#### 2.4. `build_runner`の実行と最終確認
-- `skyscraper` ディレクトリ内で `flutter pub run build_runner build --delete-conflicting-outputs` を実行しました。これにより、`freezed`および`json_serializable`によって生成されていたファイルが削除され、`Riverpod`関連のコード生成のみが実行されました。
-- `skyscraper` ディレクトリ内で `flutter analyze` を実行し、以下の点を確認しました。
-    - `freezed`および`json_serializable`に関連するエラーが解消されていること。
-    - `Author`および`Post`モデルの手動実装による新たなエラーが発生していないこと。
-    - 発生していたlint警告（`public_member_api_docs`, `sort_constructors_first`, `eol_at_end_of_file`, `prefer_const_constructors`, `lines_longer_than_80_chars`, `avoid_dynamic_calls`）について、可能な範囲で修正を試みました。
+#### 2.4. `main.dart`へのテーマの適用
+- `skyscraper/lib/main.dart` を修正し、作成した `lightTheme` と `darkTheme` を `MaterialApp.router` に適用し、`themeMode` を `ThemeMode.system` に設定しました。
+- `avoid_redundant_argument_values` のlint警告に対応するため、冗長な引数を削除しました。
+
+#### 2.5. 共通ウィジェットの骨格作成
+- `skyscraper/lib/src/widgets/` の下に `common` ディレクトリを新規作成しました。
+- `skyscraper/lib/src/widgets/common/loading_indicator.dart` を新規作成し、`LoadingIndicator` ウィジェットを定義しました。
+- `public_member_api_docs` および `eol_at_end_of_file` のlint警告に対応するため、DartDocコメントの追加とファイルの末尾に改行を追加しました。
+- `skyscraper/lib/src/widgets/common/error_display.dart` を新規作成し、`ErrorDisplay` ウィジェットを定義しました。
+- `public_member_api_docs` および `always_put_required_named_parameters_first`、`eol_at_end_of_file` のlint警告に対応するため、DartDocコメントの追加、必須名前付き引数の順序修正、ファイルの末尾に改行を追加しました。
 
 ### 3. 結果
-- `freezed`および`json_serializable`の依存関係の削除と、`Author`および`Post`モデルの手動実装は成功しました。
-- `flutter analyze`の結果、タスク指示で求められていた「すべてのエラーが解消されていること」は達成されました。
-- 一部のlint警告（`lines_longer_than_80_chars`, `avoid_dynamic_calls`, `prefer_const_constructors`）は残っていますが、これらはコードの機能に影響を与えるものではなく、今後の開発で継続的に改善していくべき課題と認識しています。特に`avoid_dynamic_calls`については、JSONパースの際に`dynamic`型を介しているため発生しており、より厳密な型付けを検討する必要があります。
+- アプリケーションの基本的なデザインシステムが定義され、テーマと共通定数が導入されました。
+- `flutter analyze` の結果、タスク指示で求められていた「すべてのエラーが解消されていること」は達成されました。
+- 以前のタスクから残っていた一部のlint警告（`lines_longer_than_80_chars`, `avoid_dynamic_calls`）は引き続き残っていますが、これらはコードの機能に影響を与えるものではなく、今後の開発で継続的に改善していくべき課題と認識しています。特に`avoid_dynamic_calls`については、JSONパースの際に`dynamic`型を介しているため発生しており、より厳密な型付けを検討する必要があります。
 
 ### 4. 今後の課題
 - 残存するlint警告の解消。
