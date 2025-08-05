@@ -10,7 +10,11 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
-          body: PostCard(post: post),
+          body: PostCard(
+            post: post,
+            onLikePressed: () {},
+            onRepostPressed: () {},
+          ),
         ),
       ),
     );
@@ -31,7 +35,9 @@ void main() {
         ),
         likeCount: 10,
         repostCount: 5,
-        createdAt: DateTime.utc(2023),
+        createdAt: DateTime.utc(2023), // Removed redundant arguments.
+        isLiked: false,
+        isReposted: false,
       );
 
       // 2. Action: Render the PostCard widget.
@@ -62,7 +68,9 @@ void main() {
         ),
         likeCount: 0,
         repostCount: 0,
-        createdAt: DateTime.utc(2023),
+        createdAt: DateTime.utc(2023), // Removed redundant arguments.
+        isLiked: false,
+        isReposted: false,
       );
 
       // 2. Action: Render the widget.

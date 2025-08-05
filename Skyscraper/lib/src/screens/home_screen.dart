@@ -30,7 +30,15 @@ class HomeScreen extends ConsumerWidget {
             itemBuilder: (context, index) {
               final post = posts[index];
               // ListTileの代わりにPostCardを返す
-              return PostCard(post: post);
+              return PostCard(
+                post: post,
+                onLikePressed: () {
+                  ref.read(timelineProvider.notifier).toggleLike(post.uri);
+                },
+                onRepostPressed: () {
+                  ref.read(timelineProvider.notifier).toggleRepost(post.uri);
+                },
+              );
             },
             // 各カードの間にスペースを設ける
             separatorBuilder: (context, index) => const Divider(height: p8),

@@ -58,6 +58,14 @@ Blueskyクライアントアプリ「Skyscraper」の開発は、MVP（ログイ
 - `test/src/widgets/post_card_test.dart`内の`Post`インスタンスの`createdAt`引数を`DateTime.utc(2023)`に変更し、`avoid_redundant_argument_values`警告を解消しました。
 - `test/src/widgets/post_card_test.dart`内の80文字を超える行を整形し、`lines_longer_than_80_chars`警告を解消しました。
 
+#### 2.12. v0.6.0: Optimistic UIによる「いいね」機能の実装
+- `lib/src/models/post.dart`に`isLiked`と`likeUri`プロパティを追加し、`copyWith`メソッドを更新しました。
+- `lib/src/repositories/timeline_repository.dart`に`likePost`と`unlikePost`メソッドを追加し、`lib/src/repositories/fakes/fake_timeline_repository.dart`にその偽の実装を追加しました。
+- `lib/src/providers/timeline/timeline_provider.dart`を`AsyncNotifierProvider`に刷新し、Optimistic UIによる「いいね」のトグルロジックを実装しました。
+- `lib/src/widgets/post_card.dart`を更新し、「いいね」ボタンが`isLiked`の状態に応じてアイコンと色を変化させ、`onLikePressed`コールバックを呼び出すように修正しました。
+- `lib/src/screens/home_screen.dart`を更新し、`PostCard`に`onLikePressed`コールバックを渡すように修正しました。
+- `build_runner`を実行し、必要なコードを生成しました。
+
 ### 3. 現在のコード品質
 `flutter analyze`の実行結果は「No issues found!」であり、すべてのエラーおよびLint警告が解消されています。プロジェクト憲法に定められたコード品質基準を満たしています。
 

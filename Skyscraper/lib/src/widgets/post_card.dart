@@ -5,10 +5,21 @@ import 'package:skyscraper/src/models/post.dart';
 /// 投稿一つ分を表示するカード型ウィジェット。
 class PostCard extends StatelessWidget {
   /// PostCardのコンストラクタ。
-  const PostCard({required this.post, super.key});
+  const PostCard({
+    required this.post,
+    required this.onLikePressed,
+    required this.onRepostPressed, // 追加
+    super.key,
+  });
 
   /// 表示対象の投稿データ。
   final Post post;
+
+  /// いいねボタンが押されたときのコールバック。
+  final VoidCallback onLikePressed;
+
+  /// リポストボタンが押されたときのコールバック。
+  final VoidCallback onRepostPressed; // 追加
 
   @override
   Widget build(BuildContext context) {
@@ -77,12 +88,14 @@ class PostCard extends StatelessWidget {
                 _ActionButton(
                   icon: Icons.repeat,
                   count: post.repostCount,
-                  onPressed: () {},
+                  onPressed: onRepostPressed, // 修正
+                  isReposted: post.isReposted, // 追加
                 ),
                 _ActionButton(
                   icon: Icons.favorite_border,
                   count: post.likeCount,
-                  onPressed: () {},
+                  onPressed: onLikePressed,
+                  isLiked: post.isLiked, // isLikedプロパティを渡す
                 ),
                 IconButton(
                   icon: const Icon(Icons.more_horiz),
@@ -104,11 +117,15 @@ class _ActionButton extends StatelessWidget {
     required this.icon,
     required this.count,
     required this.onPressed,
+    this.isLiked = false,
+    this.isReposted = false, // 追加
   });
 
   final IconData icon;
   final int count;
   final VoidCallback onPressed;
+  final bool isLiked; // 追加
+  final bool isReposted; // 追加
 
   @override
   Widget build(BuildContext context) {
@@ -118,7 +135,18 @@ class _ActionButton extends StatelessWidget {
     return Row(
       children: [
         IconButton(
-          icon: Icon(icon),
+          icon: Icon(
+            isLiked
+                ? Icons.favorite
+                : isReposted // isRepostedに応じてアイコンを変更
+                    ? Icons.repeat
+                    : icon, 
+            color: isLiked
+                ? Colors.pink
+                : isReposted // isRepostedに応じて色を変更
+                    ? Colors.green
+                    : null, 
+          ),
           iconSize: iconSizeM,
           onPressed: onPressed,
         ),

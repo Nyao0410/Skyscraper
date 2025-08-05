@@ -29,4 +29,28 @@ class FakeTimelineRepository implements ITimelineRepository {
         })
         .toList();
   }
+
+  @override
+  Future<void> likePost(String uri) async {
+    await Future<void>.delayed(const Duration(milliseconds: 300));
+    // Fakeなので何もしない。成功したと仮定する。
+  }
+
+  @override
+  Future<void> unlikePost(String uri) async {
+    await Future<void>.delayed(const Duration(milliseconds: 300));
+    // Fakeなので何もしない。成功したと仮定する。
+  }
+
+  @override
+  Future<void> repostPost(String uri) async {
+    await Future<void>.delayed(const Duration(milliseconds: 300));
+    // Fakeなので何もしない。成功したと仮定する。
+  }
+
+  @override
+  Future<void> unrepostPost(String uri) async {
+    await Future<void>.delayed(const Duration(milliseconds: 300));
+    // Fakeなので何もしない。成功したと仮定する。
+  }
 }

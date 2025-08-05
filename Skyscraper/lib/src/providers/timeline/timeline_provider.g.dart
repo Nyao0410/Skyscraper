@@ -6,29 +6,14 @@ part of 'timeline_provider.dart';
 // RiverpodGenerator
 // **************************************************************************
 
-/// Provides a list of posts for the timeline.
-///
-/// This asynchronous provider fetches the timeline data from the
-/// [timelineRepositoryProvider].
-@ProviderFor(timeline)
+/// A Riverpod notifier for managing the timeline state.
+@ProviderFor(Timeline)
 const timelineProvider = TimelineProvider._();
 
-/// Provides a list of posts for the timeline.
-///
-/// This asynchronous provider fetches the timeline data from the
-/// [timelineRepositoryProvider].
+/// A Riverpod notifier for managing the timeline state.
 final class TimelineProvider
-    extends
-        $FunctionalProvider<
-          AsyncValue<List<Post>>,
-          List<Post>,
-          FutureOr<List<Post>>
-        >
-    with $FutureModifier<List<Post>>, $FutureProvider<List<Post>> {
-  /// Provides a list of posts for the timeline.
-  ///
-  /// This asynchronous provider fetches the timeline data from the
-  /// [timelineRepositoryProvider].
+    extends $AsyncNotifierProvider<Timeline, List<Post>> {
+  /// A Riverpod notifier for managing the timeline state.
   const TimelineProvider._()
     : super(
         from: null,
@@ -45,16 +30,29 @@ final class TimelineProvider
 
   @$internal
   @override
-  $FutureProviderElement<List<Post>> $createElement($ProviderPointer pointer) =>
-      $FutureProviderElement(pointer);
-
-  @override
-  FutureOr<List<Post>> create(Ref ref) {
-    return timeline(ref);
-  }
+  Timeline create() => Timeline();
 }
 
-String _$timelineHash() => r'a678c8abe4f04c75c0ba5f0b89f333d4026266bc';
+String _$timelineHash() => r'd7f8ab2c762b7b87577645377d71f544943898f4';
+
+abstract class _$Timeline extends $AsyncNotifier<List<Post>> {
+  FutureOr<List<Post>> build();
+  @$mustCallSuper
+  @override
+  void runBuild() {
+    final created = build();
+    final ref = this.ref as $Ref<AsyncValue<List<Post>>, List<Post>>;
+    final element =
+        ref.element
+            as $ClassProviderElement<
+              AnyNotifier<AsyncValue<List<Post>>, List<Post>>,
+              AsyncValue<List<Post>>,
+              Object?,
+              Object?
+            >;
+    element.handleValue(ref, created);
+  }
+}
 
 // ignore_for_file: type=lint
 // ignore_for_file: subtype_of_sealed_class, invalid_use_of_internal_member, invalid_use_of_visible_for_testing_member, deprecated_member_use_from_same_package
