@@ -1,34 +1,32 @@
 # REPORT.md
 
-## Skyscraper プロジェクト憲法 v0.4.1 タスク実施報告
+## Skyscraper プロジェクト憲法 v0.5.0-fix タスク実施報告
 
 ### 1. 目的
-`FakeTimelineRepository`から取得した投稿データを、ホーム画面にリスト表示するタスクを実施しました。
+`REPORT.md`で報告された`const`キーワードの誤用エラーと、その他のLint警告を修正するタスクを実施しました。
 
 ### 2. 実施内容
 
-#### 2.1. タイムラインのデータを供給するProviderの作成
-- `skyscraper/lib/src/providers/` の下に `timeline` ディレクトリを新規作成しました。
-- `skyscraper/lib/src/providers/timeline/timeline_provider.dart` を新規作成し、`timelineRepository` から投稿リストを取得してUIに供給する `timelineProvider` を実装しました。
-- `public_member_api_docs` のlint警告に対応するため、DartDocコメントを追加しました。
-- `Undefined class 'TimelineRef'` エラーを修正するため、`timeline` プロバイダの引数を `TimelineRef` から `Ref` に変更しました。
+#### 2.1. `const_with_non_const` エラーの修正
+- `lib/src/screens/notifications_screen.dart`, `lib/src/screens/profile_screen.dart`, `lib/src/screens/search_screen.dart` の各ファイルにおいて、`Scaffold`の`appBar`プロパティに直接`AppBar`を配置するように修正し、`PreferredSize`ウィジェットを削除しました。これにより、`AppBar`が非`const`であることによる`const_with_non_const`エラーが解消されました。
 
-#### 2.2. ホーム画面UIの実装
-- `skyscraper/lib/src/screens/home_screen.dart` の内容を全面的に書き換え、`timelineProvider` の状態を監視し、ローディング中、エラー時、データ取得成功時に応じたUIを表示するように実装しました。
-- 投稿リストは `ListView.builder` を使用して表示し、各投稿の著者名と本文を表示するようにしました。
+#### 2.2. `unnecessary_breaks` 警告の修正
+- `lib/src/screens/main_shell.dart` の `_onItemTapped` メソッド内の `switch` 文から、冗長な `break` 文を削除しました。`context.go` が実行された時点で処理が分岐するため、`break` は不要でした。
 
-#### 2.3. コード生成の実行
-- `skyscraper` ディレクトリ内で `flutter pub run build_runner build --delete-conflicting-outputs` を実行し、`timeline_provider.g.dart` を生成しました。
+#### 2.3. `public_member_api_docs` 警告の修正
+- `lib/src/screens/notifications_screen.dart`, `lib/src/screens/profile_screen.dart`, `lib/src/screens/search_screen.dart` の各ファイルに、クラスおよびコンストラクタのDartDocコメントを追加しました。
 
-#### 2.4. 最終確認
-- `skyscraper` ディレクトリ内で `flutter analyze` を実行し、以下の点を確認しました。
-    - 新たなエラーが発生していないこと。
-    - 以前のタスクから残っていたlint警告（`lines_longer_than_80_chars`）は引き続き残っていますが、これらはコードの機能に影響を与えるものではなく、今後の開発で継続的に改善していくべき課題と認識しています。
+#### 2.4. `eol_at_end_of_file` 警告の修正
+- `lib/src/screens/notifications_screen.dart`, `lib/src/screens/profile_screen.dart`, `lib/src/screens/search_screen.dart` の各ファイルの末尾に改行を追加しました。
+
+#### 2.5. 最終確認
+- `flutter run -d chrome` を実行し、アプリケーションがエラーなく正常に起動することを確認しました。
+- `flutter analyze` を実行し、すべてのエラーおよび警告が解消されていることを確認しました。
 
 ### 3. 結果
-- `FakeTimelineRepository` から取得した投稿データがホーム画面にリスト表示されるようになりました。
-- `flutter analyze` の結果、「No issues found!」となり、コード品質が維持されていることを確認しました。
+- `const`キーワードの誤用によるコンパイルエラーが完全に解消されました。
+- `unnecessary_breaks`, `public_member_api_docs`, `eol_at_end_of_file` といった主要なLint警告もすべて解消されました。
+- `flutter analyze` の結果、「No issues found!」となり、コード品質がプロジェクト憲法に準拠していることを確認しました。
 
 ### 4. 今後の課題
-- 残存するlint警告の解消。
 - プロジェクト憲法に則り、継続的なコード品質の維持に努めます。
