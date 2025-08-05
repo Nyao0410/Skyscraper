@@ -6,11 +6,14 @@ part of 'login_screen_controller.dart';
 // RiverpodGenerator
 // **************************************************************************
 
+/// A Riverpod controller for managing the login screen's state and logic.
 @ProviderFor(LoginScreenController)
 const loginScreenControllerProvider = LoginScreenControllerProvider._();
 
+/// A Riverpod controller for managing the login screen's state and logic.
 final class LoginScreenControllerProvider
     extends $AsyncNotifierProvider<LoginScreenController, void> {
+  /// A Riverpod controller for managing the login screen's state and logic.
   const LoginScreenControllerProvider._()
     : super(
         from: null,
