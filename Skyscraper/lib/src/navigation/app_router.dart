@@ -6,6 +6,7 @@ import 'package:skyscraper/src/screens/login_screen.dart';
 
 part 'app_router.g.dart';
 
+/// Provides the GoRouter instance for navigation.
 @riverpod
 GoRouter goRouter(Ref ref) {
   return GoRouter(
@@ -13,11 +14,15 @@ GoRouter goRouter(Ref ref) {
     routes: [
       GoRoute(
         path: '/login',
-        builder: (BuildContext context, GoRouterState state) => const LoginScreen(),
+        builder: (BuildContext context, GoRouterState state) {
+          return const LoginScreen();
+        },
       ),
       GoRoute(
         path: '/home',
-        builder: (BuildContext context, GoRouterState state) => const HomeScreen(),
+        builder: (BuildContext context, GoRouterState state) {
+          return const HomeScreen();
+        },
       ),
     ],
   );

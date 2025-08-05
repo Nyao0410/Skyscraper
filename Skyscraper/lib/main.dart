@@ -10,7 +10,9 @@ void main() {
   );
 }
 
+/// The main application widget.
 class MyApp extends ConsumerWidget {
+  /// Creates a [MyApp] widget.
   const MyApp({super.key});
 
   @override
