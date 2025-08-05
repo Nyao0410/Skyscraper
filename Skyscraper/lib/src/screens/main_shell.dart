@@ -66,6 +66,10 @@ class MainShellScreen extends StatelessWidget {
           ),
         ],
       ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () => context.go('/create-post'),
+        child: const Icon(Icons.edit),
+      ),
     );
   }
 }

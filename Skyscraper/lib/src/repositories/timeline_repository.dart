@@ -21,6 +21,11 @@ abstract class ITimelineRepository {
 
   /// Unreposts a post with the given URI.
   Future<void> unrepostPost(String uri);
+  /// Creates a new post.
+  /// 新しい投稿を作成する。
+  /// 
+  /// [text]には投稿する本文を指定する。
+  Future<void> createPost({required String text});
 }
 
 /// Provides the timeline repository instance.

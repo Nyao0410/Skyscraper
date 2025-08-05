@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'package:skyscraper/src/screens/create_post_screen.dart';
 import 'package:skyscraper/src/screens/home_screen.dart';
 import 'package:skyscraper/src/screens/login_screen.dart';
 import 'package:skyscraper/src/screens/main_shell.dart';
 import 'package:skyscraper/src/screens/notifications_screen.dart';
-import 'package:skyscraper/src/screens/post_detail_screen.dart'; // importを追加
+import 'package:skyscraper/src/screens/post_detail_screen.dart';
 import 'package:skyscraper/src/screens/profile_screen.dart';
 import 'package:skyscraper/src/screens/search_screen.dart';
 
@@ -57,6 +58,12 @@ GoRouter goRouter(Ref ref) {
         path: '/post/:postId',
         builder: (BuildContext context, GoRouterState state) =>
             PostDetailScreen(postId: state.pathParameters['postId']!),
+      ),
+      GoRoute(
+        path: '/create-post',
+        // 全画面で表示するため、親Navigatorを使用
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => const CreatePostScreen(),
       ),
     ],
   );

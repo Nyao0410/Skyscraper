@@ -66,10 +66,50 @@ Blueskyクライアントアプリ「Skyscraper」の開発は、MVP（ログイ
 - `lib/src/screens/home_screen.dart`を更新し、`PostCard`に`onLikePressed`コールバックを渡すように修正しました。
 - `build_runner`を実行し、必要なコードを生成しました。
 
+#### 2.13. v0.6.1: Optimistic UIによる「リポスト」機能の実装
+- `lib/src/models/post.dart`に`isReposted`と`repostUri`プロパティを追加し、`copyWith`メソッドを更新しました。
+- `lib/src/repositories/timeline_repository.dart`に`repostPost`と`unrepostPost`メソッドを追加し、`lib/src/repositories/fakes/fake_timeline_repository.dart`にその偽の実装を追加しました。
+- `lib/src/providers/timeline/timeline_provider.dart`に`toggleRepost`メソッドを追加し、Optimistic UIによる「リポスト」のトグルロジックを実装しました。
+- `lib/src/widgets/post_card.dart`を更新し、「リポスト」ボタンが`isReposted`の状態に応じてアイコンと色を変化させ、`onRepostPressed`コールバックを呼び出すように修正しました。
+- `lib/src/screens/home_screen.dart`を更新し、`PostCard`に`onRepostPressed`コールバックを渡すように修正しました。
+- `build_runner`を実行し、必要なコードを生成しました。
+
+#### 2.14. v0.7.0: テキスト投稿機能の実装
+- `lib/src/repositories/timeline_repository.dart`に`createPost`メソッドを追加し、`lib/src/repositories/fakes/fake_timeline_repository.dart`にその偽の実装を追加しました。
+- `lib/src/providers/post/create_post_controller.dart`を新規作成し、投稿処理の状態管理とタイムラインの更新ロジックを実装しました。
+- `lib/src/screens/create_post_screen.dart`を新規作成し、投稿画面のUIを実装しました。
+- `lib/src/navigation/app_router.dart`に投稿画面へのルートを追加し、`lib/src/screens/main_shell.dart`に投稿ボタンを追加しました。
+- `build_runner`を実行し、必要なコードを生成しました。
+
+#### 2.15. v0.7.0-fix.1: `create_post_screen.dart`の非同期処理リファクタリング
+- `lib/src/screens/create_post_screen.dart`を`ref.listen`パターンを用いてリファクタリングし、非同期処理をまたいだ`BuildContext`の安全な使用を確保しました。
+
+#### 2.16. v0.7.0-fix.2: `Missing documentation for a public member`の修正
+- `lib/src/repositories/timeline_repository.dart`および`lib/src/screens/create_post_screen.dart`にDartDocコメントを追加し、`Missing documentation for a public member`警告を解消しました。
+
 ### 3. 現在のコード品質
-`flutter analyze`の実行結果は「No issues found!」であり、すべてのエラーおよびLint警告が解消されています。プロジェクト憲法に定められたコード品質基準を満たしています。
+
+`flutter analyze`の実行結果、以下の5件の`info`レベルの警告が残っています。
+
+- **`Missing a newline at the end of the file`**:
+    - `lib/src/navigation/app_router.dart:70:2`
+    - `lib/src/repositories/fakes/fake_timeline_repository.dart:64:2`
+    - `lib/src/screens/home_screen.dart:50:2`
+    - `lib/src/widgets/post_card.dart:162:2`
+    - `test/src/widgets/post_card_test.dart:87:2`
+    - **説明**: ファイルの末尾に改行がないことを示しています。
+
+- **`Unnecessary use of a 'double' literal`**:
+    - `lib/src/screens/create_post_screen.dart:48:39`
+    - **説明**: `double`リテラル（例: `8.0`）が冗長であり、`int`リテラル（例: `8`）で十分であることを示しています。
+
+- **`The value of the argument is redundant because it matches the default value`**:
+    - `test/src/widgets/post_card_test.dart:34:19`
+    - `test/src/widgets/post_card_test.dart:67:19`
+    - **説明**: 引数の値がデフォルト値と同じであるため、冗長であることを示しています。
 
 ### 4. 今後の課題
+- 残存するLint警告の解消。
 - MVPの次のステップとして、投稿詳細画面（スレッド表示）の実装を進めます。
 - API連携を`package:bluesky`に切り替え、フェイクデータではなく実際のBluesky APIからデータを取得するように変更します。
 - プロジェクト憲法に則り、継続的なコード品質の維持に努めます。

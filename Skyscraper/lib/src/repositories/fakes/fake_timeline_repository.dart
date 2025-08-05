@@ -53,4 +53,12 @@ class FakeTimelineRepository implements ITimelineRepository {
     await Future<void>.delayed(const Duration(milliseconds: 300));
     // Fakeなので何もしない。成功したと仮定する。
   }
+
+  @override
+  Future<void> createPost({required String text}) async {
+    // 投稿処理にかかる時間をシミュレート
+    await Future<void>.delayed(const Duration(seconds: 2));
+    // Fakeなので何もしない。成功したと仮定する。
+    // 実際のAPI連携では、ここで新しい投稿がデータソースに追加される
+  }
 }

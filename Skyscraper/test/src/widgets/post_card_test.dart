@@ -35,7 +35,7 @@ void main() {
         ),
         likeCount: 10,
         repostCount: 5,
-        createdAt: DateTime.utc(2023), // Removed redundant arguments.
+        createdAt: DateTime.utc(2023, 1, 1),
         isLiked: false,
         isReposted: false,
       );
@@ -68,7 +68,7 @@ void main() {
         ),
         likeCount: 0,
         repostCount: 0,
-        createdAt: DateTime.utc(2023), // Removed redundant arguments.
+        createdAt: DateTime.utc(2023, 1, 1),
         isLiked: false,
         isReposted: false,
       );
