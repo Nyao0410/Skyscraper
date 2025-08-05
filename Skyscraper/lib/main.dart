@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
-import 'package:skyscraper/router/app_router.dart';
+import 'package:skyscraper/src/navigation/app_router.dart';
 
 void main() {
   runApp(
@@ -16,13 +15,13 @@ class MyApp extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final GoRouter router = ref.watch(appRouterProvider);
-
+    final router = ref.watch(goRouterProvider);
     return MaterialApp.router(
       routerConfig: router,
       title: 'Skyscraper',
       theme: ThemeData(
-        primarySwatch: Colors.blue,
+        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
+        useMaterial3: true,
       ),
     );
   }
