@@ -39,7 +39,7 @@ linter:
     - unnecessary_await_in_return
     - unnecessary_brace_in_string_interps
     - unnecessary_const
-    - unnecessary_getters_with_setters
+    
     - unnecessary_new
     - unnecessary_null_aware_assignments
     - unnecessary_overrides
@@ -51,7 +51,7 @@ linter:
     - use_full_hex_values_for_colors
     - use_key_in_widget_constructors
     - use_rethrow_when_possible
-    - use_setters_instead_of_properties
+    
     - use_string_buffers
     - use_to_and_as_if_applicable
     - valid_regexps
