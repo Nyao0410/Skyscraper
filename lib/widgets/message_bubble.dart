@@ -32,6 +32,7 @@ class MessageBubble extends StatelessWidget {
               children: [
                 if (!isMe) ...[
                   _buildAuthorName(),
+                  // Text(message.avatar ?? 'no avatar', style: TextStyle(fontSize: 8, color: Colors.white)), // Debug
                   const SizedBox(height: 4),
                 ],
                 Row(
@@ -74,50 +75,38 @@ class MessageBubble extends StatelessWidget {
 
   Widget _buildAvatar() {
     final avatarUrl = message.avatar;
-    final hasAvatar = avatarUrl != null && avatarUrl.isNotEmpty;
-    
-    return CircleAvatar(
-      radius: 20,
-      backgroundColor: Colors.grey.shade300,
-      child: hasAvatar
-          ? ClipOval(
+    final isValidUrl = avatarUrl != null && avatarUrl.isNotEmpty && avatarUrl.startsWith('http');
+
+    return Container(
+      width: 35, // 少し大きく
+      height: 35, // 少し大きく
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: Colors.grey.shade300,
+        border: Border.all(color: Colors.white24, width: 1),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: isValidUrl
+          ? Transform.scale(
+              scale: 1.2, // 内部の画像を20%拡大
               child: CachedNetworkImage(
-                imageUrl: avatarUrl,
-                width: 40,
-                height: 40,
+                imageUrl: avatarUrl!,
                 fit: BoxFit.cover,
-                memCacheWidth: 120,
-                memCacheHeight: 120,
-                placeholder: (context, url) => Container(
-                  color: Colors.grey.shade200,
-                  child: const Center(
-                    child: SizedBox(
-                      width: 16,
-                      height: 16,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    ),
+                memCacheWidth: 132,
+                memCacheHeight: 132,
+                placeholder: (context, url) => const Center(
+                  child: SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
                   ),
                 ),
-                errorWidget: (context, url, error) => _buildAvatarFallback(),
+                errorWidget: (context, url, error) {
+                  return const Icon(Icons.person, color: Colors.white);
+                },
               ),
             )
-          : _buildAvatarFallback(),
-    );
-  }
-
-  Widget _buildAvatarFallback() {
-    return Container(
-      color: Colors.grey.shade300,
-      child: Center(
-        child: Text(
-          message.author.isNotEmpty ? message.author[0].toUpperCase() : '?',
-          style: const TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-            fontSize: 16,
-          ),
-        ),
-      ),
+          : const Icon(Icons.person, color: Colors.white),
     );
   }
 

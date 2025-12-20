@@ -48,50 +48,26 @@ class BlueskyService {
     }
 
     try {
-      debugPrint('Fetching timeline for handle: ${handle ?? "unknown"} (limit: $limit)...');
-      debugPrint('Session DID: ${_bluesky?.session?.did ?? "null"}');
-      
       final response = await _bluesky!.feed.getTimeline(limit: limit);
-      // debugPrint('Response status: ${response.status.code}');
-      
       final feedItems = response.data.feed;
-      // debugPrint('Raw feed items count: ${feedItems.length}');
-
-      if (feedItems.isNotEmpty) {
-        final first = feedItems.first;
-        // debugPrint('First item type: ${first.runtimeType}');
-        try {
-          // debugPrint('First item post CID: ${first.post.cid}');
-          // debugPrint('First item author: ${first.post.author.handle}');
-          // debugPrint('First item record type: ${first.post.record.runtimeType}');
-        } catch (e) {
-          // debugPrint('Error accessing first item properties: ${e.toString()}');
-        }
-      } else {
-        // debugPrint('Timeline is empty from server. Check if the account has follows/posts.');
-      }
 
       final posts = feedItems
           .map((f) {
             try {
-              if (f == null) return null;
               return PostItem.fromFeedView(f, handle);
             } catch (e) {
-              // debugPrint('Error parsing post item: ${e.toString()}');
               return null;
             }
           })
           .whereType<PostItem>()
           .toList();
       
-      // debugPrint('Successfully parsed ${posts.length} posts');
       return posts;
     } on UnauthorizedException catch (e) {
       throw Exception('認証エラー: ${e.toString()}');
     } on XRPCException catch (e) {
       throw Exception('タイムライン取得失敗: ${e.toString()}');
     } catch (e) {
-      debugPrint('Unexpected error in getTimeline: ${e.toString()}');
       throw Exception('ネットワークエラー: ${e.toString()}');
     }
   }

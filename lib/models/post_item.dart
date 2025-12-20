@@ -133,13 +133,11 @@ class PostItem {
         }
       }
 
-      // debugPrint('Parsing post from ${author.handle}, avatar: ${author.avatar ?? "null"}');
-
       return PostItem(
         id: post.cid,
         author: author.displayName ?? author.handle,
         handle: author.handle,
-        avatar: author.avatar,
+        avatar: author.avatar?.toString(),
         text: postText,
         createdAt: post.indexedAt,
         isMe: author.handle == myHandle,
