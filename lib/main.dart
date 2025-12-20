@@ -2,9 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:intl/date_symbol_data_local.dart';
 
-import 'models/post_item.dart';
-import 'screens/chat_screen.dart';
 import 'screens/login_screen.dart';
+import 'screens/main_screen.dart';
 import 'services/bluesky_service.dart';
 
 void main() async {
@@ -26,26 +25,44 @@ class BskyApp extends StatelessWidget {
         primaryColor: const Color(0xFF00C300),
         colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF00C300)),
       ),
-      home: const HomePage(),
+      home: const AuthCheck(),
+      routes: {
+        '/login': (context) => const AuthCheck(),
+        '/main': (context) => const MainScreen(),
+      },
     );
   }
 }
 
-class HomePage extends StatefulWidget {
-  const HomePage({super.key});
+class AuthCheck extends StatefulWidget {
+  const AuthCheck({super.key});
 
   @override
-  State<HomePage> createState() => _HomePageState();
+  State<AuthCheck> createState() => _AuthCheckState();
 }
 
-class _HomePageState extends State<HomePage> {
+class _AuthCheckState extends State<AuthCheck> {
   final _service = BlueskyService();
-
-  bool _isLoggedIn = false;
+  bool _checking = true;
   bool _loading = false;
-  bool _refreshing = false;
   String? _error;
-  List<PostItem> _feed = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _checkAuth();
+  }
+
+  Future<void> _checkAuth() async {
+    final restored = await _service.restoreSession();
+    if (restored) {
+      if (mounted) {
+        Navigator.of(context).pushReplacementNamed('/main');
+      }
+    } else {
+      setState(() => _checking = false);
+    }
+  }
 
   Future<void> _handleLogin(String handle, String password) async {
     setState(() {
@@ -55,8 +72,9 @@ class _HomePageState extends State<HomePage> {
 
     try {
       await _service.login(handle, password);
-      setState(() => _isLoggedIn = true);
-      await _fetchTimeline();
+      if (mounted) {
+        Navigator.of(context).pushReplacementNamed('/main');
+      }
     } catch (e) {
       setState(() => _error = e.toString());
     } finally {
@@ -64,251 +82,18 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  Future<void> _fetchTimeline() async {
-    if (!_isLoggedIn) return;
-
-    setState(() => _refreshing = true);
-
-    try {
-      final list = await _service.getTimeline(limit: 40);
-      // debugPrint('Main: Fetched ${list.length} posts');
-      setState(() => _feed = list);
-    } catch (e) {
-      setState(() => _error = e.toString());
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('タイムラインの取得に失敗しました: ${e.toString()}')),
-        );
-      }
-    } finally {
-      setState(() => _refreshing = false);
-    }
-  }
-
-  Future<void> _handleSendMessage(String text) async {
-    if (text.isEmpty) return;
-
-    if (!mounted) return;
-
-    // Show sending indicator
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Row(
-          children: [
-            SizedBox(
-              width: 16,
-              height: 16,
-              child: CircularProgressIndicator(
-                strokeWidth: 2,
-                color: Colors.white,
-              ),
-            ),
-            SizedBox(width: 12),
-            Text('投稿中...'),
-          ],
-        ),
-        duration: Duration(seconds: 2),
-      ),
-    );
-
-    try {
-      await _service.post(text);
-
-      if (!mounted) return;
-
-      ScaffoldMessenger.of(context).clearSnackBars();
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Row(
-            children: [
-              Icon(Icons.check_circle, color: Colors.white),
-              SizedBox(width: 12),
-              Text('投稿しました!'),
-            ],
-          ),
-          backgroundColor: Color(0xFF00C300),
-          duration: Duration(seconds: 1),
-        ),
-      );
-
-      await _fetchTimeline();
-    } catch (e) {
-      if (!mounted) return;
-
-      ScaffoldMessenger.of(context).clearSnackBars();
-      final errorMessage = e.toString().replaceAll('Exception: ', '');
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Row(
-            children: [
-              const Icon(Icons.error_outline, color: Colors.white),
-              const SizedBox(width: 12),
-              Expanded(child: Text('投稿エラー: $errorMessage')),
-            ],
-          ),
-          backgroundColor: Colors.red,
-          duration: const Duration(seconds: 3),
-        ),
-      );
-
-      setState(() => _error = errorMessage);
-    }
-  }
-
-  Future<void> _handleLike(PostItem item) async {
-    try {
-      debugPrint('Attempting to like post: CID=${item.id}, URI=${item.uri}');
-      await _service.like(item.id, item.uri);
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('いいねしました')),
-      );
-    } catch (e) {
-      debugPrint('Like failed: $e');
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('いいね失敗: ${e.toString()}')),
-      );
-    }
-  }
-
-  Future<void> _handleRepost(PostItem item) async {
-    try {
-      debugPrint('Attempting to repost post: CID=${item.id}, URI=${item.uri}');
-      await _service.repost(item.id, item.uri);
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('RPしました')),
-      );
-    } catch (e) {
-      debugPrint('Repost failed: $e');
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('RP失敗: ${e.toString()}')),
-      );
-    }
-  }
-
-  Future<void> _handleDelete(PostItem item) async {
-    try {
-      debugPrint('Attempting to delete post: URI=${item.uri}');
-      await _service.delete(item.uri);
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('削除しました')),
-      );
-      _fetchTimeline(); // Refresh timeline
-    } catch (e) {
-      debugPrint('Delete failed: $e');
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('削除失敗: ${e.toString()}')),
-      );
-    }
-  }
-
-  void _handleReply(PostItem item) {
-    _showPostDialog(item, isReply: true);
-  }
-
-  void _handleQuote(PostItem item) {
-    _showPostDialog(item, isQuote: true);
-  }
-
-  void _showPostDialog(PostItem item, {bool isReply = false, bool isQuote = false}) {
-    final controller = TextEditingController();
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(isReply ? '返信' : '引用'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: Colors.grey.shade100,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Text(
-                item.text,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontSize: 12, color: Colors.grey),
-              ),
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: controller,
-              maxLines: 3,
-              decoration: InputDecoration(
-                hintText: isReply ? '返信を入力...' : 'コメントを入力...',
-                border: const OutlineInputBorder(),
-              ),
-              autofocus: true,
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('キャンセル'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              final text = controller.text.trim();
-              if (text.isEmpty) return;
-              Navigator.pop(context);
-              
-              try {
-                if (isReply) {
-                  await _service.reply(item, text);
-                } else if (isQuote) {
-                  await _service.quote(item, text);
-                }
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text(isReply ? '返信しました' : '引用しました')),
-                  );
-                  _fetchTimeline();
-                }
-              } catch (e) {
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('エラー: ${e.toString()}')),
-                  );
-                }
-              }
-            },
-            child: const Text('投稿'),
-          ),
-        ],
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
-    if (!_isLoggedIn) {
-      return LoginScreen(
-        onLogin: _handleLogin,
-        isLoading: _loading,
-        error: _error,
+    if (_checking) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
       );
     }
 
-    return ChatScreen(
-      messages: _feed,
-      isRefreshing: _refreshing,
-      onRefresh: _fetchTimeline,
-      onSendMessage: _handleSendMessage,
-      onLike: _handleLike,
-      onRepost: _handleRepost,
-      onReply: _handleReply,
-      onQuote: _handleQuote,
-      onDelete: _handleDelete,
+    return LoginScreen(
+      onLogin: _handleLogin,
+      isLoading: _loading,
+      error: _error,
     );
   }
 }

@@ -61,6 +61,7 @@ class MessageBubble extends StatelessWidget {
                         child: Column(
                           crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
                           children: [
+                            if (message.quotedPost != null) _buildQuotedPost(maxBubbleWidth, context),
                             if (message.text.isNotEmpty) _buildTextBubble(maxBubbleWidth, context),
                             if (message.media.isNotEmpty)
                               ..._buildMediaWidgets(message.media, maxBubbleWidth, context),
@@ -208,8 +209,8 @@ class MessageBubble extends StatelessWidget {
         decoration: BoxDecoration(
           color: isMe ? const Color(0xFF8DE055) : Colors.white,
           borderRadius: BorderRadius.only(
-            topLeft: Radius.circular(isMe ? 16 : 4),
-            topRight: const Radius.circular(16),
+            topLeft: Radius.circular(isMe ? 16 : (message.quotedPost != null ? 0 : 4)),
+            topRight: Radius.circular(message.quotedPost != null ? 0 : 16),
             bottomLeft: const Radius.circular(16),
             bottomRight: Radius.circular(isMe ? 4 : 16),
           ),
@@ -232,6 +233,81 @@ class MessageBubble extends StatelessWidget {
             decoration: TextDecoration.underline,
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildQuotedPost(double maxWidth, BuildContext context) {
+    final quoted = message.quotedPost!;
+    return Container(
+      constraints: BoxConstraints(maxWidth: maxWidth),
+      margin: const EdgeInsets.only(bottom: 1),
+      padding: const EdgeInsets.all(8),
+      decoration: BoxDecoration(
+        color: isMe 
+            ? (quoted.isMe ? const Color(0xFF6FB83A) : const Color(0xFF7BC946))
+            : (quoted.isMe ? Colors.grey.shade100 : Colors.grey.shade200),
+        borderRadius: BorderRadius.only(
+          topLeft: Radius.circular(isMe ? 16 : 4),
+          topRight: const Radius.circular(16),
+        ),
+        border: Border.all(color: Colors.black12, width: 0.5),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              if (quoted.avatar != null)
+                CircleAvatar(
+                  radius: 8,
+                  backgroundImage: CachedNetworkImageProvider(quoted.avatar!),
+                )
+              else
+                const Icon(Icons.account_circle, size: 16, color: Colors.grey),
+              const SizedBox(width: 4),
+              Expanded(
+                child: Text(
+                  quoted.isMe ? '自分' : quoted.author,
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                    color: quoted.isMe ? (isMe ? Colors.white : Colors.blue) : Colors.black54,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              if (quoted.isMe)
+                const Icon(Icons.person, size: 12, color: Colors.black26),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(
+            quoted.text,
+            style: const TextStyle(fontSize: 12, color: Colors.black87),
+            maxLines: 3,
+            overflow: TextOverflow.ellipsis,
+          ),
+          if (quoted.media.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Wrap(
+                spacing: 4,
+                runSpacing: 4,
+                children: quoted.media.take(2).map((m) => Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(4),
+                    image: DecorationImage(
+                      image: CachedNetworkImageProvider(m.url),
+                      fit: BoxFit.cover,
+                    ),
+                  ),
+                )).toList(),
+              ),
+            ),
+        ],
       ),
     );
   }

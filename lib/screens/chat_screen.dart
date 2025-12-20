@@ -5,6 +5,7 @@ import '../widgets/message_bubble.dart';
 import '../widgets/date_separator.dart';
 
 class ChatScreen extends StatefulWidget {
+  final String title;
   final List<PostItem> messages;
   final bool isRefreshing;
   final Function() onRefresh;
@@ -17,6 +18,7 @@ class ChatScreen extends StatefulWidget {
 
   const ChatScreen({
     super.key,
+    this.title = 'Bluesky タイムライン',
     required this.messages,
     required this.isRefreshing,
     required this.onRefresh,
@@ -102,19 +104,29 @@ class _ChatScreenState extends State<ChatScreen> {
     return AppBar(
       backgroundColor: const Color(0xFF7494C0),
       elevation: 1,
-      title: const Column(
+      leading: Navigator.canPop(context)
+          ? IconButton(
+              icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
+              onPressed: () => Navigator.pop(context),
+            )
+          : null,
+      title: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Bluesky タイムライン', style: TextStyle(fontWeight: FontWeight.bold)),
-          Text('オンライン', style: TextStyle(fontSize: 12)),
+          Text(widget.title, style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
+          const Text('オンライン', style: TextStyle(fontSize: 12, color: Colors.white70)),
         ],
       ),
       actions: [
         IconButton(
           onPressed: widget.onRefresh,
           icon: widget.isRefreshing
-              ? const CircularProgressIndicator(color: Colors.white)
-              : const Icon(Icons.refresh),
+              ? const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                )
+              : const Icon(Icons.refresh, color: Colors.white),
         ),
       ],
     );

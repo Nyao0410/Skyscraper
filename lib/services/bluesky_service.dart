@@ -5,13 +5,22 @@ import 'package:atproto_core/atproto_core.dart';
 import 'package:bluesky/com_atproto_repo_strongref.dart';
 import 'package:bluesky/app_bsky_feed_post.dart';
 import 'package:bluesky/app_bsky_embed_record.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'dart:convert';
 
 import '../models/post_item.dart';
 
 class BlueskyService {
+  static final BlueskyService _instance = BlueskyService._internal();
+  factory BlueskyService() => _instance;
+  BlueskyService._internal();
+
   Bluesky? _bluesky;
   String? handle;
   String? did;
+
+  final _storage = const FlutterSecureStorage();
+  static const _sessionKey = 'bsky_session';
 
   bool get isLoggedIn => _bluesky != null;
 
@@ -35,6 +44,10 @@ class BlueskyService {
 
       handle = session.handle;
       did = session.did;
+
+      // Save session for persistence
+      await _storage.write(key: _sessionKey, value: jsonEncode(session.toJson()));
+
       debugPrint('Login successful. Handle: ${handle ?? "null"}, DID: ${did ?? "null"}');
     } on UnauthorizedException catch (e) {
       throw Exception('ログイン失敗: ${e.toString()}');
@@ -45,27 +58,59 @@ class BlueskyService {
     }
   }
 
+  Future<bool> restoreSession() async {
+    try {
+      final sessionJson = await _storage.read(key: _sessionKey);
+      if (sessionJson == null) return false;
+
+      final sessionData = jsonDecode(sessionJson) as Map<String, dynamic>;
+      final session = Session.fromJson(sessionData);
+
+      // Initialize Bluesky client with session
+      _bluesky = Bluesky.fromSession(session);
+      handle = session.handle;
+      did = session.did;
+
+      debugPrint('Session restored. Handle: $handle');
+      return true;
+    } catch (e) {
+      debugPrint('Failed to restore session: $e');
+      await logout();
+      return false;
+    }
+  }
+
+  Future<void> logout() async {
+    _bluesky = null;
+    handle = null;
+    did = null;
+    await _storage.delete(key: _sessionKey);
+  }
+
   Future<List<PostItem>> getTimeline({int limit = 40}) async {
     if (_bluesky == null) {
       throw Exception('ログインしていません');
     }
 
     try {
+      debugPrint('Fetching timeline...');
       final response = await _bluesky!.feed.getTimeline(limit: limit);
       final feedItems = response.data.feed;
+      debugPrint('Fetched ${feedItems.length} feed items from timeline');
 
       final posts = feedItems
           .map((f) {
             try {
               return PostItem.fromFeedView(f, handle);
             } catch (e) {
-              debugPrint('Error parsing post: $e');
+              debugPrint('Error parsing post in getTimeline: $e');
               return null;
             }
           })
           .whereType<PostItem>()
           .toList();
       
+      debugPrint('Parsed ${posts.length} posts from timeline');
       return posts;
     } on UnauthorizedException catch (e) {
       throw Exception('認証エラー: ${e.toString()}');
@@ -73,6 +118,145 @@ class BlueskyService {
       throw Exception('タイムライン取得失敗: ${e.toString()}');
     } catch (e) {
       throw Exception('ネットワークエラー: ${e.toString()}');
+    }
+  }
+
+  Future<List<PostItem>> getCustomFeed(String feedUri, {int limit = 40}) async {
+    if (_bluesky == null) {
+      throw Exception('ログインしていません');
+    }
+
+    try {
+      debugPrint('Fetching custom feed: $feedUri');
+      
+      final List<dynamic> feedItems;
+      if (feedUri == 'following') {
+        final response = await _bluesky!.feed.getTimeline(limit: limit);
+        feedItems = response.data.feed;
+      } else {
+        final response = await _bluesky!.feed.getFeed(
+          feed: AtUri.parse(feedUri),
+          limit: limit,
+        );
+        feedItems = response.data.feed;
+      }
+      
+      debugPrint('Fetched ${feedItems.length} feed items from $feedUri');
+
+      final posts = feedItems
+          .map((f) {
+            try {
+              return PostItem.fromFeedView(f, handle);
+            } catch (e) {
+              debugPrint('Error parsing post in getCustomFeed: $e');
+              return null;
+            }
+          })
+          .whereType<PostItem>()
+          .toList();
+      
+      debugPrint('Parsed ${posts.length} posts from $feedUri');
+      return posts;
+    } on UnauthorizedException catch (e) {
+      throw Exception('認証エラー: ${e.toString()}');
+    } on XRPCException catch (e) {
+      throw Exception('フィード取得失敗: ${e.toString()}');
+    } catch (e) {
+      throw Exception('ネットワークエラー: ${e.toString()}');
+    }
+  }
+
+  Future<List<Map<String, String>>> getSavedFeeds() async {
+    if (_bluesky == null) throw Exception('ログインしていません');
+    try {
+      debugPrint('Fetching preferences...');
+      final prefsResponse = await _bluesky!.actor.getPreferences();
+      final prefs = prefsResponse.data.preferences;
+
+      List<String> savedUris = [];
+      for (final pref in prefs) {
+        debugPrint('Preference type: ${pref.runtimeType}');
+        // Use dynamic to call when() as the type inference might be failing
+        (pref as dynamic).when(
+          savedFeeds: (data) {
+            debugPrint('Found savedFeeds (V1): ${data.saved.length}');
+            savedUris.addAll(data.saved.map((e) => e.toString()));
+          },
+          savedFeedsPrefV2: (data) {
+            debugPrint('Found savedFeedsPrefV2 (V2): ${data.items.length}');
+            savedUris.addAll(
+              data.items
+                .where((e) => e.type == 'feed')
+                .map((e) => e.value)
+            );
+          },
+          unknown: (data) {},
+        );
+      }
+
+      // Remove duplicates
+      savedUris = savedUris.toSet().toList();
+
+      debugPrint('Saved URIs found: ${savedUris.length}');
+      for (var uri in savedUris) {
+        debugPrint(' - $uri');
+      }
+
+      if (savedUris.isEmpty) {
+        return [
+          {'name': 'Following', 'uri': 'following', 'desc': 'フォロー中の投稿'},
+        ];
+      }
+
+      // Filter only app.bsky.feed.generator URIs for getFeedGenerators
+      final feedGenUris = savedUris
+          .where((uri) => uri.contains('app.bsky.feed.generator'))
+          .map((e) => AtUri.parse(e))
+          .toList();
+
+      debugPrint('Feed Generator URIs: ${feedGenUris.length}');
+
+      final List<Map<String, String>> result = [];
+      result.add({'name': 'Following', 'uri': 'following', 'desc': 'フォロー中の投稿'});
+
+      if (feedGenUris.isNotEmpty) {
+        try {
+          final generatorsResponse = await _bluesky!.feed.getFeedGenerators(
+            feeds: feedGenUris,
+          );
+          final generators = generatorsResponse.data.feeds;
+
+          for (final gen in generators) {
+            result.add({
+              'name': gen.displayName,
+              'uri': gen.uri.toString(),
+              'desc': gen.description ?? '',
+              'avatar': gen.avatar ?? '',
+            });
+          }
+        } catch (e) {
+          debugPrint('Error calling getFeedGenerators: $e');
+          // If getFeedGenerators fails, we still have 'Following'
+          // and we could potentially add the raw URIs as fallback names
+          for (var uri in savedUris) {
+            if (uri != 'following' && !result.any((element) => element['uri'] == uri)) {
+              result.add({
+                'name': 'Unknown Feed',
+                'uri': uri,
+                'desc': uri,
+              });
+            }
+          }
+        }
+      }
+
+      debugPrint('Total feeds to display: ${result.length}');
+      return result;
+    } catch (e) {
+      debugPrint('Error fetching saved feeds: $e');
+      return [
+        {'name': 'Following', 'uri': 'following', 'desc': 'フォロー中の投稿'},
+      ];
     }
   }
 
