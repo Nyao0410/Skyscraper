@@ -10,6 +10,12 @@ class MediaItem {
   MediaItem({required this.type, required this.url, this.alt = ''});
 }
 
+class StrongRef {
+  final String cid;
+  final String uri;
+  StrongRef({required this.cid, required this.uri});
+}
+
 class PostItem {
   final String id; // CID
   final String uri; // AtUri
@@ -24,6 +30,8 @@ class PostItem {
   final int replyCount;
   final int repostCount;
   final int likeCount;
+  final StrongRef? replyRoot;
+  final StrongRef? replyParent;
 
   PostItem({
     required this.id,
@@ -39,22 +47,57 @@ class PostItem {
     this.replyCount = 0,
     this.repostCount = 0,
     this.likeCount = 0,
+    this.replyRoot,
+    this.replyParent,
   });
 
   factory PostItem.fromFeedView(dynamic feedView, String? myHandle) {
     try {
-      // feedView is FeedView
-      final dynamic post = feedView.post;
-      final dynamic author = post.author;
-      final dynamic record = post.record;
+      // Convert to Map for safe access
+      Map<String, dynamic> data;
+      if (feedView is Map) {
+        data = Map<String, dynamic>.from(feedView);
+      } else {
+        try {
+          data = feedView.toJson();
+        } catch (e) {
+          debugPrint('toJson failed in fromFeedView: $e');
+          // Fallback: if it's already a post-like object
+          return PostItem(
+            id: '',
+            uri: '',
+            author: 'Unknown',
+            handle: 'unknown',
+            text: '解析エラー',
+            createdAt: DateTime.now(),
+            isMe: false,
+          );
+        }
+      }
+
+      // Handle Union wrapper if present (some SDK versions wrap data in a 'data' field)
+      Map<String, dynamic> postData;
+      if (data.containsKey('post')) {
+        postData = data['post'];
+      } else if (data.containsKey('data') && data['data'] is Map && data['data'].containsKey('post')) {
+        postData = data['data']['post'];
+      } else {
+        // If the map itself looks like a post
+        postData = data;
+      }
+
+      final author = postData['author'] ?? {};
+      final record = postData['record'] ?? {};
+      final reply = data['reply'] ?? postData['reply'];
 
       List<MediaItem> mediaList = [];
       PostItem? quoted;
 
-      // Embed parsing using toJson() for robustness against SDK version differences
-      if (post.embed != null) {
+      // Embed parsing
+      if (postData['embed'] != null) {
         try {
-          final Map<String, dynamic> embedMap = post.embed.toJson();
+          final embed = postData['embed'];
+          final Map<String, dynamic> embedMap = (embed is Map) ? Map<String, dynamic>.from(embed) : embed.toJson();
           _parseEmbedMap(embedMap, mediaList, (q) => quoted = q, myHandle);
         } catch (e) {
           debugPrint('Error parsing embed: $e');
@@ -69,34 +112,49 @@ class PostItem {
         if (record is Map) {
           postText = record['text']?.toString() ?? '';
           final dynamic ca = record['createdAt'];
-          createdAt = ca is DateTime ? ca : DateTime.tryParse(ca?.toString() ?? '');
-        } else {
-          final dynamic rec = record;
-          postText = rec.text?.toString() ?? '';
-          final dynamic ca = rec.createdAt;
-          createdAt = ca is DateTime ? ca : DateTime.tryParse(ca?.toString() ?? '');
+          createdAt = DateTime.tryParse(ca?.toString() ?? '');
         }
       } catch (e) {
         debugPrint('Error parsing record: $e');
       }
 
+      // Reply parsing
+      StrongRef? root;
+      StrongRef? parent;
+      if (reply != null && reply is Map) {
+        if (reply['root'] != null) {
+          root = StrongRef(
+            cid: reply['root']['cid']?.toString() ?? '',
+            uri: reply['root']['uri']?.toString() ?? '',
+          );
+        }
+        if (reply['parent'] != null) {
+          parent = StrongRef(
+            cid: reply['parent']['cid']?.toString() ?? '',
+            uri: reply['parent']['uri']?.toString() ?? '',
+          );
+        }
+      }
+
       return PostItem(
-        id: post.cid.toString(),
-        uri: post.uri.toString(),
-        author: (author.displayName ?? author.handle).toString(),
-        handle: author.handle.toString(),
-        avatar: author.avatar?.toString(),
+        id: postData['cid']?.toString() ?? '',
+        uri: postData['uri']?.toString() ?? '',
+        author: (author['displayName'] ?? author['handle'] ?? 'Unknown').toString(),
+        handle: (author['handle'] ?? 'unknown').toString(),
+        avatar: author['avatar']?.toString(),
         text: postText,
-        createdAt: createdAt ?? post.indexedAt,
-        isMe: author.handle.toString() == myHandle,
+        createdAt: createdAt ?? (postData['indexedAt'] != null ? DateTime.tryParse(postData['indexedAt'].toString()) : null) ?? DateTime.now(),
+        isMe: author['handle']?.toString() == myHandle,
         media: mediaList,
         quotedPost: quoted,
-        replyCount: post.replyCount ?? 0,
-        repostCount: post.repostCount ?? 0,
-        likeCount: post.likeCount ?? 0,
+        replyCount: postData['replyCount'] ?? 0,
+        repostCount: postData['repostCount'] ?? 0,
+        likeCount: postData['likeCount'] ?? 0,
+        replyRoot: root,
+        replyParent: parent,
       );
     } catch (e) {
-      debugPrint('Error in PostItem.fromFeedView: $e');
+      debugPrint('Critical error in PostItem.fromFeedView: $e');
       rethrow;
     }
   }

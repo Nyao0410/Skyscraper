@@ -4,6 +4,8 @@ import 'package:flutter_linkify/flutter_linkify.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../models/post_item.dart';
+import '../screens/thread_screen.dart';
+import '../screens/profile_screen.dart';
 
 class MessageBubble extends StatelessWidget {
   final PostItem message;
@@ -37,11 +39,19 @@ class MessageBubble extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (!isMe) ...[
-            _buildAvatar(),
+            _buildAvatar(context),
             const SizedBox(width: 6),
           ],
           Flexible(
             child: GestureDetector(
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => ThreadScreen(postUri: message.uri),
+                  ),
+                );
+              },
               onLongPress: () => _showMenu(context),
               behavior: HitTestBehavior.opaque,
               child: Column(
@@ -92,40 +102,48 @@ class MessageBubble extends StatelessWidget {
     );
   }
 
-  Widget _buildAvatar() {
+  Widget _buildAvatar(BuildContext context) {
     final avatarUrl = message.avatar;
     final isValidUrl = avatarUrl != null && avatarUrl.isNotEmpty && avatarUrl.startsWith('http');
 
-    return Container(
-      width: 35, // 少し大きく
-      height: 35, // 少し大きく
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        color: Colors.grey.shade300,
-        border: Border.all(color: Colors.white24, width: 1),
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: isValidUrl
-          ? Transform.scale(
-              scale: 1.2, // 内部の画像を20%拡大
-              child: CachedNetworkImage(
-                imageUrl: avatarUrl,
-                fit: BoxFit.cover,
-                memCacheWidth: 132,
-                memCacheHeight: 132,
-                placeholder: (context, url) => const Center(
-                  child: SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2),
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => ProfileScreen(actor: message.handle)),
+        );
+      },
+      child: Container(
+        width: 35, // 少し大きく
+        height: 35, // 少し大きく
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: Colors.grey.shade300,
+          border: Border.all(color: Colors.white24, width: 1),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: isValidUrl
+            ? Transform.scale(
+                scale: 1.2, // 内部の画像を20%拡大
+                child: CachedNetworkImage(
+                  imageUrl: avatarUrl,
+                  fit: BoxFit.cover,
+                  memCacheWidth: 132,
+                  memCacheHeight: 132,
+                  placeholder: (context, url) => const Center(
+                    child: SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
                   ),
+                  errorWidget: (context, url, error) {
+                    return const Icon(Icons.person, color: Colors.white);
+                  },
                 ),
-                errorWidget: (context, url, error) {
-                  return const Icon(Icons.person, color: Colors.white);
-                },
-              ),
-            )
-          : const Icon(Icons.person, color: Colors.white),
+              )
+            : const Icon(Icons.person, color: Colors.white),
+      ),
     );
   }
 

@@ -4,6 +4,8 @@ import 'package:flutter_linkify/flutter_linkify.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../models/post_item.dart';
 import '../services/bluesky_service.dart';
+import 'thread_screen.dart';
+import 'profile_screen.dart';
 
 class TimelineScreen extends StatefulWidget {
   const TimelineScreen({super.key});
@@ -81,77 +83,93 @@ class _TimelineScreenState extends State<TimelineScreen> {
   }
 
   Widget _buildPostItem(PostItem post) {
-    return Padding(
-      padding: const EdgeInsets.all(12.0),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          CircleAvatar(
-            radius: 24,
-            backgroundImage: post.avatar != null
-                ? CachedNetworkImageProvider(post.avatar!)
-                : null,
-            child: post.avatar == null ? const Icon(Icons.person) : null,
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: RichText(
-                        overflow: TextOverflow.ellipsis,
-                        text: TextSpan(
-                          style: DefaultTextStyle.of(context).style,
-                          children: [
-                            TextSpan(
-                              text: post.author,
-                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
-                            ),
-                            TextSpan(
-                              text: ' @${post.handle}',
-                              style: const TextStyle(color: Colors.grey, fontSize: 13),
-                            ),
-                          ],
+    return InkWell(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => ThreadScreen(postUri: post.uri)),
+        );
+      },
+      child: Padding(
+        padding: const EdgeInsets.all(12.0),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            GestureDetector(
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => ProfileScreen(actor: post.handle)),
+                );
+              },
+              child: CircleAvatar(
+                radius: 24,
+                backgroundImage: post.avatar != null
+                    ? CachedNetworkImageProvider(post.avatar!)
+                    : null,
+                child: post.avatar == null ? const Icon(Icons.person) : null,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: RichText(
+                          overflow: TextOverflow.ellipsis,
+                          text: TextSpan(
+                            style: DefaultTextStyle.of(context).style,
+                            children: [
+                              TextSpan(
+                                text: post.author,
+                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                              ),
+                              TextSpan(
+                                text: ' @${post.handle}',
+                                style: const TextStyle(color: Colors.grey, fontSize: 13),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
-                    ),
-                    Text(
-                      _formatTime(post.createdAt),
-                      style: const TextStyle(color: Colors.grey, fontSize: 12),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 4),
-                Linkify(
-                  text: post.text,
-                  style: const TextStyle(fontSize: 15, height: 1.3),
-                  linkStyle: const TextStyle(color: Colors.blue, decoration: TextDecoration.none),
-                  onOpen: (link) async {
-                    final url = Uri.parse(link.url);
-                    if (await canLaunchUrl(url)) {
-                      await launchUrl(url);
-                    }
-                  },
-                ),
-                if (post.quotedPost != null) _buildQuotedPost(post.quotedPost!),
-                if (post.media.isNotEmpty) _buildMediaGrid(post.media),
-                const SizedBox(height: 12),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    _buildActionIcon(Icons.chat_bubble_outline, post.replyCount, () {}),
-                    _buildActionIcon(Icons.repeat, post.repostCount, () => _handleRepost(post)),
-                    _buildActionIcon(Icons.favorite_border, post.likeCount, () => _handleLike(post)),
-                    _buildActionIcon(Icons.more_horiz, null, () => _showPostMenu(post)),
-                  ],
-                ),
-              ],
+                      Text(
+                        _formatTime(post.createdAt),
+                        style: const TextStyle(color: Colors.grey, fontSize: 12),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Linkify(
+                    text: post.text,
+                    style: const TextStyle(fontSize: 15, height: 1.3),
+                    linkStyle: const TextStyle(color: Colors.blue, decoration: TextDecoration.none),
+                    onOpen: (link) async {
+                      final url = Uri.parse(link.url);
+                      if (await canLaunchUrl(url)) {
+                        await launchUrl(url);
+                      }
+                    },
+                  ),
+                  if (post.quotedPost != null) _buildQuotedPost(post.quotedPost!),
+                  if (post.media.isNotEmpty) _buildMediaGrid(post.media),
+                  const SizedBox(height: 12),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      _buildActionIcon(Icons.chat_bubble_outline, post.replyCount, () => _showReplyDialog(post)),
+                      _buildActionIcon(Icons.repeat, post.repostCount, () => _handleRepost(post)),
+                      _buildActionIcon(Icons.favorite_border, post.likeCount, () => _handleLike(post)),
+                      _buildActionIcon(Icons.more_horiz, null, () => _showPostMenu(post)),
+                    ],
+                  ),
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -169,13 +187,20 @@ class _TimelineScreenState extends State<TimelineScreen> {
         children: [
           Row(
             children: [
-              if (quoted.avatar != null)
-                CircleAvatar(
-                  radius: 10,
-                  backgroundImage: CachedNetworkImageProvider(quoted.avatar!),
-                )
-              else
-                const Icon(Icons.person, size: 20),
+              GestureDetector(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => ProfileScreen(actor: quoted.handle)),
+                  );
+                },
+                child: quoted.avatar != null
+                    ? CircleAvatar(
+                        radius: 10,
+                        backgroundImage: CachedNetworkImageProvider(quoted.avatar!),
+                      )
+                    : const Icon(Icons.person, size: 20),
+              ),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
@@ -308,6 +333,14 @@ class _TimelineScreenState extends State<TimelineScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            ListTile(
+              leading: const Icon(Icons.format_quote),
+              title: const Text('引用して投稿'),
+              onTap: () {
+                Navigator.pop(context);
+                _showQuoteDialog(post);
+              },
+            ),
             if (post.isMe)
               ListTile(
                 leading: const Icon(Icons.delete, color: Colors.red),
@@ -325,6 +358,91 @@ class _TimelineScreenState extends State<TimelineScreen> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  void _showReplyDialog(PostItem post) {
+    final controller = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('@${post.handle} への返信'),
+        content: TextField(
+          controller: controller,
+          maxLines: 5,
+          decoration: const InputDecoration(
+            hintText: '返信を書き込む...',
+            border: OutlineInputBorder(),
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('キャンセル')),
+          ElevatedButton(
+            onPressed: () async {
+              if (controller.text.trim().isEmpty) return;
+              try {
+                await _service.reply(post, controller.text);
+                if (mounted) {
+                  Navigator.pop(context);
+                  _fetchTimeline();
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('返信しました')));
+                }
+              } catch (e) {
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('エラー: $e')));
+                }
+              }
+            },
+            child: const Text('返信'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showQuoteDialog(PostItem post) {
+    final controller = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('引用投稿'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _buildQuotedPost(post),
+            const SizedBox(height: 12),
+            TextField(
+              controller: controller,
+              maxLines: 5,
+              decoration: const InputDecoration(
+                hintText: 'コメントを追加...',
+                border: OutlineInputBorder(),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('キャンセル')),
+          ElevatedButton(
+            onPressed: () async {
+              if (controller.text.trim().isEmpty) return;
+              try {
+                await _service.quote(post, controller.text);
+                if (mounted) {
+                  Navigator.pop(context);
+                  _fetchTimeline();
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('引用投稿しました')));
+                }
+              } catch (e) {
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('エラー: $e')));
+                }
+              }
+            },
+            child: const Text('投稿'),
+          ),
+        ],
       ),
     );
   }

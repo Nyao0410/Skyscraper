@@ -380,10 +380,11 @@ class BlueskyService {
   Future<void> reply(PostItem item, String text) async {
     if (_bluesky == null) throw Exception('ログインしていません');
     try {
+      final root = item.replyRoot ?? StrongRef(cid: item.id, uri: item.uri);
       await _bluesky!.feed.post.create(
         text: text,
         reply: ReplyRef(
-          root: RepoStrongRef(cid: item.id, uri: AtUri.parse(item.uri)),
+          root: RepoStrongRef(cid: root.cid, uri: AtUri.parse(root.uri)),
           parent: RepoStrongRef(cid: item.id, uri: AtUri.parse(item.uri)),
         ),
       );
@@ -415,6 +416,50 @@ class BlueskyService {
         throw Exception('引用失敗(${e.response.status.code}): $errorMsg');
       }
       throw Exception('引用失敗: $e');
+    }
+  }
+
+  Future<dynamic> getPostThread(String uri) async {
+    if (_bluesky == null) throw Exception('ログインしていません');
+    try {
+      final response = await _bluesky!.feed.getPostThread(uri: AtUri.parse(uri));
+      return response.data.thread;
+    } catch (e) {
+      debugPrint('GetThread error detail: $e');
+      throw Exception('スレッド取得失敗: $e');
+    }
+  }
+
+  Future<dynamic> getProfile(String actor) async {
+    if (_bluesky == null) throw Exception('ログインしていません');
+    try {
+      final response = await _bluesky!.actor.getProfile(actor: actor);
+      return response.data;
+    } catch (e) {
+      debugPrint('GetProfile error detail: $e');
+      throw Exception('プロフィール取得失敗: $e');
+    }
+  }
+
+  Future<List<PostItem>> getAuthorFeed(String actor, {int limit = 40}) async {
+    if (_bluesky == null) throw Exception('ログインしていません');
+    try {
+      final response = await _bluesky!.feed.getAuthorFeed(actor: actor, limit: limit);
+      final feedItems = response.data.feed;
+      
+      return feedItems
+          .map((f) {
+            try {
+              return PostItem.fromFeedView(f, handle);
+            } catch (e) {
+              return null;
+            }
+          })
+          .whereType<PostItem>()
+          .toList();
+    } catch (e) {
+      debugPrint('GetAuthorFeed error detail: $e');
+      throw Exception('ユーザー投稿取得失敗: $e');
     }
   }
 }
