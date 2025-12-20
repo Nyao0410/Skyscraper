@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter_linkify/flutter_linkify.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../models/post_item.dart';
 
@@ -10,68 +13,92 @@ class MessageBubble extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final maxBubbleWidth = screenWidth * 0.75;
+
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
+      padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 12),
       child: Row(
-        mainAxisAlignment: isMe
-            ? MainAxisAlignment.end
-            : MainAxisAlignment.start,
-        crossAxisAlignment: CrossAxisAlignment.end,
+        mainAxisAlignment: isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          if (!isMe) _buildAvatar(),
-          const SizedBox(width: 8),
-          Column(
-            crossAxisAlignment: isMe
-                ? CrossAxisAlignment.end
-                : CrossAxisAlignment.start,
-            children: [
-              if (!isMe) _buildAuthorName(),
-              const SizedBox(height: 6),
-              Column(
-                crossAxisAlignment: isMe
-                    ? CrossAxisAlignment.end
-                    : CrossAxisAlignment.start,
-                children: [
-                  if (message.text.isNotEmpty) _buildTextBubble(),
-                  if (message.media.isNotEmpty)
-                    ..._buildMediaWidgets(message.media),
+          if (!isMe) ...[
+            _buildAvatar(),
+            const SizedBox(width: 8),
+          ],
+          Flexible(
+            child: Column(
+              crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+              children: [
+                if (!isMe) ...[
+                  _buildAuthorName(),
+                  const SizedBox(height: 4),
                 ],
-              ),
-            ],
+                Row(
+                  mainAxisAlignment: isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    if (isMe) _buildTimestamp(),
+                    const SizedBox(width: 4),
+                    Flexible(
+                      child: Column(
+                        crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+                        children: [
+                          if (message.text.isNotEmpty) _buildTextBubble(maxBubbleWidth),
+                          if (message.media.isNotEmpty)
+                            ..._buildMediaWidgets(message.media, maxBubbleWidth),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    if (!isMe) _buildTimestamp(),
+                  ],
+                ),
+              ],
+            ),
           ),
         ],
       ),
     );
   }
 
+  Widget _buildTimestamp() {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 2),
+      child: Text(
+        '${message.createdAt.hour.toString().padLeft(2, '0')}:${message.createdAt.minute.toString().padLeft(2, '0')}',
+        style: const TextStyle(fontSize: 10, color: Colors.white70),
+      ),
+    );
+  }
+
   Widget _buildAvatar() {
+    final avatarUrl = message.avatar;
+    final hasAvatar = avatarUrl != null && avatarUrl.isNotEmpty;
+    
     return CircleAvatar(
       radius: 20,
       backgroundColor: Colors.grey.shade300,
-      child: message.avatar != null && message.avatar!.isNotEmpty
+      child: hasAvatar
           ? ClipOval(
-              child: Image.network(
-                message.avatar!,
+              child: CachedNetworkImage(
+                imageUrl: avatarUrl,
                 width: 40,
                 height: 40,
                 fit: BoxFit.cover,
-                cacheWidth: 80,
-                errorBuilder: (context, error, stackTrace) {
-                  return _buildAvatarFallback();
-                },
-                loadingBuilder: (context, child, loadingProgress) {
-                  if (loadingProgress == null) return child;
-                  return Container(
-                    color: Colors.grey.shade200,
-                    child: const Center(
-                      child: SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      ),
+                memCacheWidth: 120,
+                memCacheHeight: 120,
+                placeholder: (context, url) => Container(
+                  color: Colors.grey.shade200,
+                  child: const Center(
+                    child: SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2),
                     ),
-                  );
-                },
+                  ),
+                ),
+                errorWidget: (context, url, error) => _buildAvatarFallback(),
               ),
             )
           : _buildAvatarFallback(),
@@ -105,135 +132,96 @@ class MessageBubble extends StatelessWidget {
     );
   }
 
-  Widget _buildTextBubble() {
+  Widget _buildTextBubble(double maxWidth) {
     return Container(
-      constraints: const BoxConstraints(maxWidth: 260),
-      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 14),
+      constraints: BoxConstraints(maxWidth: maxWidth),
+      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
       decoration: BoxDecoration(
         color: isMe ? const Color(0xFF8DE055) : Colors.white,
         borderRadius: BorderRadius.only(
-          topLeft: const Radius.circular(18),
-          topRight: const Radius.circular(18),
-          bottomLeft: Radius.circular(isMe ? 18 : 4),
-          bottomRight: Radius.circular(isMe ? 4 : 18),
+          topLeft: const Radius.circular(16),
+          topRight: const Radius.circular(16),
+          bottomLeft: Radius.circular(isMe ? 16 : 4),
+          bottomRight: Radius.circular(isMe ? 4 : 16),
         ),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            message.text,
-            style: TextStyle(color: isMe ? Colors.black : Colors.black87),
-          ),
-          const SizedBox(height: 6),
-          Align(
-            alignment: Alignment.bottomRight,
-            child: Text(
-              '${message.createdAt.hour.toString().padLeft(2, '0')}:'
-              '${message.createdAt.minute.toString().padLeft(2, '0')}',
-              style: const TextStyle(fontSize: 10, color: Colors.black54),
-            ),
-          ),
-        ],
+      child: Linkify(
+        onOpen: (link) async {
+          final uri = Uri.parse(link.url);
+          if (await canLaunchUrl(uri)) {
+            await launchUrl(uri, mode: LaunchMode.externalApplication);
+          }
+        },
+        text: message.text,
+        style: TextStyle(
+          color: isMe ? Colors.black : Colors.black87,
+          fontSize: 15,
+        ),
+        linkStyle: TextStyle(
+          color: isMe ? Colors.blue.shade900 : Colors.blue.shade700,
+          decoration: TextDecoration.underline,
+        ),
       ),
     );
   }
 
-  List<Widget> _buildMediaWidgets(List<MediaItem> media) {
-    return media.map((item) {
+  List<Widget> _buildMediaWidgets(List<MediaItem> media, double maxWidth) {
+    return media.where((item) => item.url.isNotEmpty).map((item) {
       if (item.type == MediaType.image) {
         return Padding(
-          padding: const EdgeInsets.only(top: 6),
+          padding: const EdgeInsets.only(top: 4),
           child: ClipRRect(
             borderRadius: BorderRadius.circular(12),
             child: Container(
-              constraints: const BoxConstraints(maxWidth: 260, maxHeight: 300),
-              decoration: BoxDecoration(
-                color: isMe ? const Color(0xFF8DE055) : Colors.white,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Image.network(
-                item.url,
+              constraints: BoxConstraints(maxWidth: maxWidth, maxHeight: 400),
+              child: CachedNetworkImage(
+                imageUrl: item.url,
                 fit: BoxFit.cover,
-                cacheWidth: 800,
-                errorBuilder: (context, error, stackTrace) => Container(
-                  padding: const EdgeInsets.all(20),
+                memCacheWidth: 800,
+                placeholder: (context, url) => Container(
+                  height: 150,
+                  width: maxWidth,
                   color: Colors.grey.shade200,
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(
-                        Icons.broken_image,
-                        size: 48,
-                        color: Colors.grey,
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        item.alt.isNotEmpty ? item.alt : '画像を読み込めません',
-                        style: const TextStyle(
-                          fontSize: 10,
-                          color: Colors.grey,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                    ],
+                  child: const Center(
+                    child: CircularProgressIndicator(strokeWidth: 2),
                   ),
                 ),
-                loadingBuilder: (context, child, loadingProgress) {
-                  if (loadingProgress == null) return child;
-                  final progress = loadingProgress.expectedTotalBytes != null
-                      ? loadingProgress.cumulativeBytesLoaded /
-                            loadingProgress.expectedTotalBytes!
-                      : null;
-                  return Container(
-                    height: 150,
-                    color: Colors.grey.shade200,
-                    child: Center(
-                      child: CircularProgressIndicator(
-                        value: progress,
-                        strokeWidth: 2,
-                      ),
-                    ),
-                  );
-                },
+                errorWidget: (context, url, error) => Container(
+                  padding: const EdgeInsets.all(20),
+                  width: maxWidth,
+                  color: Colors.grey.shade200,
+                  child: const Icon(Icons.broken_image, color: Colors.grey),
+                ),
               ),
             ),
           ),
         );
       } else if (item.type == MediaType.video) {
         return Padding(
-          padding: const EdgeInsets.only(top: 6),
+          padding: const EdgeInsets.only(top: 4),
           child: ClipRRect(
             borderRadius: BorderRadius.circular(12),
             child: Container(
-              constraints: const BoxConstraints(maxWidth: 260, maxHeight: 200),
+              constraints: BoxConstraints(maxWidth: maxWidth, maxHeight: 200),
               color: Colors.black87,
               child: Stack(
                 alignment: Alignment.center,
                 children: [
-                  const Icon(
-                    Icons.play_circle_outline,
-                    size: 64,
-                    color: Colors.white,
-                  ),
-                  Positioned(
-                    bottom: 8,
-                    left: 8,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.black54,
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: const Text(
-                        '動画',
-                        style: TextStyle(color: Colors.white, fontSize: 12),
-                      ),
+                  CachedNetworkImage(
+                    imageUrl: item.url,
+                    fit: BoxFit.cover,
+                    width: double.infinity,
+                    height: double.infinity,
+                    placeholder: (context, url) => const Center(
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
+                    errorWidget: (context, url, error) => const Icon(
+                      Icons.video_library,
+                      color: Colors.white54,
+                      size: 48,
                     ),
                   ),
+                  const Icon(Icons.play_circle_outline, size: 48, color: Colors.white),
                 ],
               ),
             ),

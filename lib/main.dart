@@ -1,11 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
+import 'package:intl/date_symbol_data_local.dart';
 
 import 'models/post_item.dart';
 import 'screens/chat_screen.dart';
 import 'screens/login_screen.dart';
 import 'services/bluesky_service.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  Intl.defaultLocale = 'ja_JP';
+  await initializeDateFormatting('ja_JP', null);
   runApp(const BskyApp());
 }
 
@@ -66,13 +71,13 @@ class _HomePageState extends State<HomePage> {
 
     try {
       final list = await _service.getTimeline(limit: 40);
-      debugPrint('Main: Fetched ${list.length} posts');
+      // debugPrint('Main: Fetched ${list.length} posts');
       setState(() => _feed = list);
     } catch (e) {
       setState(() => _error = e.toString());
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('タイムラインの取得に失敗しました: $e')),
+          SnackBar(content: Text('タイムラインの取得に失敗しました: ${e.toString()}')),
         );
       }
     } finally {

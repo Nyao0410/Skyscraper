@@ -1,4 +1,6 @@
 import 'package:flutter/foundation.dart';
+// ignore: unused_import
+import 'package:bluesky/app_bsky_feed_post.dart';
 
 enum MediaType { image, video }
 
@@ -39,90 +41,112 @@ class PostItem {
 
       List<MediaItem> mediaList = [];
 
-      // Handle embed
       final embed = post.embed;
       if (embed != null) {
         try {
-          embed.whenOrNull(
-            images: (data) {
-              mediaList = data.images
-                  .map(
-                    (img) => MediaItem(
-                      type: MediaType.image,
-                      url: img.fullsize,
-                      alt: img.alt,
-                    ),
-                  )
-                  .toList();
+          embed.when(
+            imagesView: (data) {
+              mediaList.addAll(
+                data.images.map(
+                  (img) => MediaItem(
+                    type: MediaType.image,
+                    url: img.fullsize,
+                    alt: img.alt,
+                  ),
+                ),
+              );
             },
-            video: (data) {
-              final thumbnail = data.thumbnail;
-              if (thumbnail != null) {
-                mediaList = [
-                  MediaItem(type: MediaType.video, url: thumbnail, alt: 'Video'),
-                ];
+            videoView: (data) {
+              if (data.thumbnail != null) {
+                mediaList.add(
+                  MediaItem(
+                    type: MediaType.video,
+                    url: data.thumbnail!,
+                    alt: 'Video',
+                  ),
+                );
               }
             },
-            external: (data) {
-              final thumb = data.external.thumb;
-              if (thumb != null) {
-                mediaList = [
+            externalView: (data) {
+              if (data.external.thumb != null) {
+                mediaList.add(
                   MediaItem(
                     type: MediaType.image,
-                    url: thumb,
+                    url: data.external.thumb!,
                     alt: data.external.title,
                   ),
-                ];
+                );
               }
             },
-            recordWithMedia: (data) {
-              data.media.whenOrNull(
-                images: (imgData) {
-                  mediaList = imgData.images
-                      .map(
-                        (img) => MediaItem(
-                          type: MediaType.image,
-                          url: img.fullsize,
-                          alt: img.alt,
-                        ),
-                      )
-                      .toList();
+            recordWithMediaView: (data) {
+              data.media.when(
+                imagesView: (images) {
+                  mediaList.addAll(
+                    images.images.map(
+                      (img) => MediaItem(
+                        type: MediaType.image,
+                        url: img.fullsize,
+                        alt: img.alt,
+                      ),
+                    ),
+                  );
+                },
+                videoView: (video) {
+                  if (video.thumbnail != null) {
+                    mediaList.add(
+                      MediaItem(
+                        type: MediaType.video,
+                        url: video.thumbnail!,
+                        alt: 'Video',
+                      ),
+                    );
+                  }
+                },
+                externalView: (external) {
+                  if (external.external.thumb != null) {
+                    mediaList.add(
+                      MediaItem(
+                        type: MediaType.image,
+                        url: external.external.thumb!,
+                        alt: external.external.title,
+                      ),
+                    );
+                  }
                 },
               );
             },
+            recordView: (data) {},
+            unknown: (data) {},
           );
         } catch (e) {
-          debugPrint('Error parsing embed: $e');
+          // debugPrint('Error parsing embed: ${e.toString()}');
         }
       }
 
-      // Extract text from record
       String postText = '';
       try {
-        if (record is Map) {
-          debugPrint('Record is Map. Keys: ${record.keys}');
-          postText = record['text']?.toString() ?? '';
-        } else {
-          postText = record.text.toString();
-        }
+        final dynamic r = record;
+        postText = r.text?.toString() ?? '';
       } catch (e) {
-        debugPrint('Error extracting text from record: $e');
+        if (record is Map && record.containsKey('text')) {
+          postText = record['text'].toString();
+        }
       }
 
-      debugPrint('Extracted text: $postText');
+      // debugPrint('Parsing post from ${author.handle}, avatar: ${author.avatar ?? "null"}');
 
       return PostItem(
         id: post.cid,
         author: author.displayName ?? author.handle,
         handle: author.handle,
-        avatar: author.avatar?.toString(),
+        avatar: author.avatar,
         text: postText,
         createdAt: post.indexedAt,
         isMe: author.handle == myHandle,
         media: mediaList,
       );
     } catch (e) {
-      debugPrint('Critical error in PostItem.fromFeedView: $e');
+      // debugPrint('Error creating PostItem: ${e.toString()}');
       rethrow;
     }
   }

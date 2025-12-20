@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../models/post_item.dart';
 import '../widgets/message_bubble.dart';
+import '../widgets/date_separator.dart';
 
 class ChatScreen extends StatefulWidget {
   final List<PostItem> messages;
@@ -61,7 +62,7 @@ class _ChatScreenState extends State<ChatScreen> {
 
   @override
   Widget build(BuildContext context) {
-    debugPrint('ChatScreen build: ${widget.messages.length} messages, refreshing: ${widget.isRefreshing}');
+    // debugPrint('ChatScreen build: ${widget.messages.length} messages, refreshing: ${widget.isRefreshing}');
     return Scaffold(
       backgroundColor: const Color(0xFF7494C0),
       appBar: _buildAppBar(),
@@ -136,6 +137,31 @@ class _ChatScreenState extends State<ChatScreen> {
       itemCount: widget.messages.length,
       itemBuilder: (context, index) {
         final message = widget.messages[index];
+        
+        // 日付の区切りを表示するか判定
+        bool showDateSeparator = false;
+        if (index == widget.messages.length - 1) {
+          // 一番古いメッセージには必ず日付を表示
+          showDateSeparator = true;
+        } else {
+          // 一つ古いメッセージと日付が異なる場合に表示
+          final nextMessage = widget.messages[index + 1];
+          if (message.createdAt.year != nextMessage.createdAt.year ||
+              message.createdAt.month != nextMessage.createdAt.month ||
+              message.createdAt.day != nextMessage.createdAt.day) {
+            showDateSeparator = true;
+          }
+        }
+
+        if (showDateSeparator) {
+          return Column(
+            children: [
+              DateSeparator(date: message.createdAt),
+              MessageBubble(message: message, isMe: message.isMe),
+            ],
+          );
+        }
+
         return MessageBubble(message: message, isMe: message.isMe);
       },
     );
