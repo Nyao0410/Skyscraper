@@ -9,6 +9,11 @@ class ChatScreen extends StatefulWidget {
   final bool isRefreshing;
   final Function() onRefresh;
   final Function(String text) onSendMessage;
+  final Function(PostItem item)? onLike;
+  final Function(PostItem item)? onRepost;
+  final Function(PostItem item)? onReply;
+  final Function(PostItem item)? onQuote;
+  final Function(PostItem item)? onDelete;
 
   const ChatScreen({
     super.key,
@@ -16,6 +21,11 @@ class ChatScreen extends StatefulWidget {
     required this.isRefreshing,
     required this.onRefresh,
     required this.onSendMessage,
+    this.onLike,
+    this.onRepost,
+    this.onReply,
+    this.onQuote,
+    this.onDelete,
   });
 
   @override
@@ -157,12 +167,28 @@ class _ChatScreenState extends State<ChatScreen> {
           return Column(
             children: [
               DateSeparator(date: message.createdAt),
-              MessageBubble(message: message, isMe: message.isMe),
+              MessageBubble(
+                message: message,
+                isMe: message.isMe,
+                onLike: widget.onLike,
+                onRepost: widget.onRepost,
+                onReply: widget.onReply,
+                onQuote: widget.onQuote,
+                onDelete: widget.onDelete,
+              ),
             ],
           );
         }
 
-        return MessageBubble(message: message, isMe: message.isMe);
+        return MessageBubble(
+          message: message,
+          isMe: message.isMe,
+          onLike: widget.onLike,
+          onRepost: widget.onRepost,
+          onReply: widget.onReply,
+          onQuote: widget.onQuote,
+          onDelete: widget.onDelete,
+        );
       },
     );
   }

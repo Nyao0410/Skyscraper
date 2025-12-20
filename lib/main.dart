@@ -156,6 +156,70 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
+  Future<void> _handleLike(PostItem item) async {
+    try {
+      debugPrint('Attempting to like post: CID=${item.id}, URI=${item.uri}');
+      await _service.like(item.id, item.uri);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('いいねしました')),
+      );
+    } catch (e) {
+      debugPrint('Like failed: $e');
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('いいね失敗: ${e.toString()}')),
+      );
+    }
+  }
+
+  Future<void> _handleRepost(PostItem item) async {
+    try {
+      debugPrint('Attempting to repost post: CID=${item.id}, URI=${item.uri}');
+      await _service.repost(item.id, item.uri);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('RPしました')),
+      );
+    } catch (e) {
+      debugPrint('Repost failed: $e');
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('RP失敗: ${e.toString()}')),
+      );
+    }
+  }
+
+  Future<void> _handleDelete(PostItem item) async {
+    try {
+      debugPrint('Attempting to delete post: URI=${item.uri}');
+      await _service.delete(item.uri);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('削除しました')),
+      );
+      _fetchTimeline(); // Refresh timeline
+    } catch (e) {
+      debugPrint('Delete failed: $e');
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('削除失敗: ${e.toString()}')),
+      );
+    }
+  }
+
+  void _handleReply(PostItem item) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('返信機能は未実装です')),
+    );
+  }
+
+  void _handleQuote(PostItem item) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('引用機能は未実装です')),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     if (!_isLoggedIn) {
@@ -171,6 +235,11 @@ class _HomePageState extends State<HomePage> {
       isRefreshing: _refreshing,
       onRefresh: _fetchTimeline,
       onSendMessage: _handleSendMessage,
+      onLike: _handleLike,
+      onRepost: _handleRepost,
+      onReply: _handleReply,
+      onQuote: _handleQuote,
+      onDelete: _handleDelete,
     );
   }
 }

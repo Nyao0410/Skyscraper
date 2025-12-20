@@ -1,7 +1,3 @@
-import 'package:flutter/foundation.dart';
-// ignore: unused_import
-import 'package:bluesky/app_bsky_feed_post.dart';
-
 enum MediaType { image, video }
 
 class MediaItem {
@@ -13,7 +9,8 @@ class MediaItem {
 }
 
 class PostItem {
-  final String id;
+  final String id; // CID
+  final String uri; // AtUri
   final String author;
   final String handle;
   final String? avatar;
@@ -24,6 +21,7 @@ class PostItem {
 
   PostItem({
     required this.id,
+    required this.uri,
     required this.author,
     required this.handle,
     this.avatar,
@@ -134,13 +132,14 @@ class PostItem {
       }
 
       return PostItem(
-        id: post.cid,
-        author: author.displayName ?? author.handle,
-        handle: author.handle,
+        id: post.cid.toString(),
+        uri: post.uri.toString(),
+        author: (author.displayName ?? author.handle).toString(),
+        handle: author.handle.toString(),
         avatar: author.avatar?.toString(),
         text: postText,
         createdAt: post.indexedAt,
-        isMe: author.handle == myHandle,
+        isMe: author.handle.toString() == myHandle,
         media: mediaList,
       );
     } catch (e) {
