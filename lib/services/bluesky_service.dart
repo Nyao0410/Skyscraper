@@ -175,23 +175,35 @@ class BlueskyService {
 
       List<String> savedUris = [];
       for (final pref in prefs) {
-        debugPrint('Preference type: ${pref.runtimeType}');
-        // Use dynamic to call when() as the type inference might be failing
-        (pref as dynamic).when(
-          savedFeeds: (data) {
-            debugPrint('Found savedFeeds (V1): ${data.saved.length}');
-            savedUris.addAll(data.saved.map((e) => e.toString()));
-          },
-          savedFeedsPrefV2: (data) {
-            debugPrint('Found savedFeedsPrefV2 (V2): ${data.items.length}');
-            savedUris.addAll(
-              data.items
-                .where((e) => e.type == 'feed')
-                .map((e) => e.value)
-            );
-          },
-          unknown: (data) {},
-        );
+        try {
+          final json = pref.toJson();
+          final type = json[r'$type'] ?? json['\$type'];
+          debugPrint('Preference type: $type');
+
+          if (type == 'app.bsky.actor.defs#savedFeedsPref') {
+            // V1: pinned and saved
+            final pinned = json['pinned'] as List?;
+            final saved = json['saved'] as List?;
+            if (pinned != null) {
+              for (var uri in pinned) savedUris.add(uri.toString());
+            }
+            if (saved != null) {
+              for (var uri in saved) savedUris.add(uri.toString());
+            }
+          } else if (type == 'app.bsky.actor.defs#savedFeedsPrefV2') {
+            // V2: items with pinned flag
+            final items = json['items'] as List?;
+            if (items != null) {
+              for (var item in items) {
+                if (item['value'] != null) {
+                  savedUris.add(item['value'].toString());
+                }
+              }
+            }
+          }
+        } catch (e) {
+          debugPrint('Error parsing preference item: $e');
+        }
       }
 
       // Remove duplicates

@@ -27,7 +27,7 @@ class BskyApp extends StatelessWidget {
       ),
       home: const AuthCheck(),
       routes: {
-        '/login': (context) => const AuthCheck(),
+        '/login': (context) => const LoginWrapper(),
         '/main': (context) => const MainScreen(),
       },
     );
@@ -43,9 +43,6 @@ class AuthCheck extends StatefulWidget {
 
 class _AuthCheckState extends State<AuthCheck> {
   final _service = BlueskyService();
-  bool _checking = true;
-  bool _loading = false;
-  String? _error;
 
   @override
   void initState() {
@@ -54,15 +51,35 @@ class _AuthCheckState extends State<AuthCheck> {
   }
 
   Future<void> _checkAuth() async {
-    final restored = await _service.restoreSession();
-    if (restored) {
-      if (mounted) {
+    final success = await _service.restoreSession();
+    if (mounted) {
+      if (success) {
         Navigator.of(context).pushReplacementNamed('/main');
+      } else {
+        Navigator.of(context).pushReplacementNamed('/login');
       }
-    } else {
-      setState(() => _checking = false);
     }
   }
+
+  @override
+  Widget build(BuildContext context) {
+    return const Scaffold(
+      body: Center(child: CircularProgressIndicator()),
+    );
+  }
+}
+
+class LoginWrapper extends StatefulWidget {
+  const LoginWrapper({super.key});
+
+  @override
+  State<LoginWrapper> createState() => _LoginWrapperState();
+}
+
+class _LoginWrapperState extends State<LoginWrapper> {
+  final _service = BlueskyService();
+  bool _loading = false;
+  String? _error;
 
   Future<void> _handleLogin(String handle, String password) async {
     setState(() {
@@ -84,12 +101,6 @@ class _AuthCheckState extends State<AuthCheck> {
 
   @override
   Widget build(BuildContext context) {
-    if (_checking) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
-    }
-
     return LoginScreen(
       onLogin: _handleLogin,
       isLoading: _loading,
