@@ -209,14 +209,83 @@ class _HomePageState extends State<HomePage> {
   }
 
   void _handleReply(PostItem item) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('返信機能は未実装です')),
-    );
+    _showPostDialog(item, isReply: true);
   }
 
   void _handleQuote(PostItem item) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('引用機能は未実装です')),
+    _showPostDialog(item, isQuote: true);
+  }
+
+  void _showPostDialog(PostItem item, {bool isReply = false, bool isQuote = false}) {
+    final controller = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(isReply ? '返信' : '引用'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.grey.shade100,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(
+                item.text,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontSize: 12, color: Colors.grey),
+              ),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: controller,
+              maxLines: 3,
+              decoration: InputDecoration(
+                hintText: isReply ? '返信を入力...' : 'コメントを入力...',
+                border: const OutlineInputBorder(),
+              ),
+              autofocus: true,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('キャンセル'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              final text = controller.text.trim();
+              if (text.isEmpty) return;
+              Navigator.pop(context);
+              
+              try {
+                if (isReply) {
+                  await _service.reply(item, text);
+                } else if (isQuote) {
+                  await _service.quote(item, text);
+                }
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text(isReply ? '返信しました' : '引用しました')),
+                  );
+                  _fetchTimeline();
+                }
+              } catch (e) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('エラー: ${e.toString()}')),
+                  );
+                }
+              }
+            },
+            child: const Text('投稿'),
+          ),
+        ],
+      ),
     );
   }
 

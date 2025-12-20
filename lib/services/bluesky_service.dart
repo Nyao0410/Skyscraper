@@ -3,6 +3,8 @@ import 'package:bluesky/bluesky.dart';
 import 'package:bluesky/atproto.dart';
 import 'package:atproto_core/atproto_core.dart';
 import 'package:bluesky/com_atproto_repo_strongref.dart';
+import 'package:bluesky/app_bsky_feed_post.dart';
+import 'package:bluesky/app_bsky_embed_record.dart';
 
 import '../models/post_item.dart';
 
@@ -167,6 +169,47 @@ class BlueskyService {
         throw Exception('削除失敗(${e.response.status.code}): $errorMsg');
       }
       throw Exception('削除失敗: $e');
+    }
+  }
+
+  Future<void> reply(PostItem item, String text) async {
+    if (_bluesky == null) throw Exception('ログインしていません');
+    try {
+      await _bluesky!.feed.post.create(
+        text: text,
+        reply: ReplyRef(
+          root: RepoStrongRef(cid: item.id, uri: AtUri.parse(item.uri)),
+          parent: RepoStrongRef(cid: item.id, uri: AtUri.parse(item.uri)),
+        ),
+      );
+    } catch (e) {
+      debugPrint('Reply error detail: $e');
+      if (e is XRPCException) {
+        final errorMsg = e.response.data.message;
+        throw Exception('返信失敗(${e.response.status.code}): $errorMsg');
+      }
+      throw Exception('返信失敗: $e');
+    }
+  }
+
+  Future<void> quote(PostItem item, String text) async {
+    if (_bluesky == null) throw Exception('ログインしていません');
+    try {
+      await _bluesky!.feed.post.create(
+        text: text,
+        embed: UFeedPostEmbed.embedRecord(
+          data: EmbedRecord(
+            record: RepoStrongRef(cid: item.id, uri: AtUri.parse(item.uri)),
+          ),
+        ),
+      );
+    } catch (e) {
+      debugPrint('Quote error detail: $e');
+      if (e is XRPCException) {
+        final errorMsg = e.response.data.message;
+        throw Exception('引用失敗(${e.response.status.code}): $errorMsg');
+      }
+      throw Exception('引用失敗: $e');
     }
   }
 }
