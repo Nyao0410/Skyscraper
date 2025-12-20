@@ -244,6 +244,7 @@ class BlueskyService {
               'uri': gen.uri.toString(),
               'desc': gen.description ?? '',
               'avatar': gen.avatar ?? '',
+              'indexedAt': gen.indexedAt.toIso8601String(),
             });
           }
         } catch (e) {
@@ -256,18 +257,26 @@ class BlueskyService {
                 'name': 'Unknown Feed',
                 'uri': uri,
                 'desc': uri,
+                'indexedAt': DateTime.now().toIso8601String(),
               });
             }
           }
         }
       }
 
+      // Sort by indexedAt if available
+      result.sort((a, b) {
+        final timeA = DateTime.tryParse(a['indexedAt'] ?? '') ?? DateTime(0);
+        final timeB = DateTime.tryParse(b['indexedAt'] ?? '') ?? DateTime(0);
+        return timeB.compareTo(timeA);
+      });
+
       debugPrint('Total feeds to display: ${result.length}');
       return result;
     } catch (e) {
       debugPrint('Error fetching saved feeds: $e');
       return [
-        {'name': 'Following', 'uri': 'following', 'desc': 'フォロー中の投稿'},
+        {'name': 'Following', 'uri': 'following', 'desc': 'フォロー中の投稿', 'indexedAt': DateTime.now().toIso8601String()},
       ];
     }
   }

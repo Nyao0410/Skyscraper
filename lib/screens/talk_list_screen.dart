@@ -61,6 +61,10 @@ class _TalkListScreenState extends State<TalkListScreen> {
                 itemBuilder: (context, index) {
                   final feed = _feeds[index];
                   final avatarUrl = feed['avatar'];
+                  final timeStr = feed['indexedAt'] != null
+                      ? DateTime.parse(feed['indexedAt']!).toLocal().toString().substring(11, 16)
+                      : '--:--';
+                  
                   return ListTile(
                     leading: CircleAvatar(
                       backgroundColor: Colors.blue.shade100,
@@ -73,7 +77,7 @@ class _TalkListScreenState extends State<TalkListScreen> {
                     ),
                     title: Text(feed['name']!, style: const TextStyle(fontWeight: FontWeight.bold)),
                     subtitle: Text(feed['desc']!, maxLines: 1, overflow: TextOverflow.ellipsis),
-                    trailing: const Text('12:34', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                    trailing: Text(timeStr, style: const TextStyle(fontSize: 12, color: Colors.grey)),
                     onTap: () => widget.onFeedSelected(feed['name']!, feed['uri']!),
                   );
                 },

@@ -31,14 +31,14 @@ class MessageBubble extends StatelessWidget {
     final maxBubbleWidth = screenWidth * 0.75;
 
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 12),
+      padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
       child: Row(
         mainAxisAlignment: isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (!isMe) ...[
             _buildAvatar(),
-            const SizedBox(width: 8),
+            const SizedBox(width: 6),
           ],
           Flexible(
             child: GestureDetector(
@@ -82,10 +82,11 @@ class MessageBubble extends StatelessWidget {
   }
 
   Widget _buildTimestamp() {
+    final localTime = message.createdAt.toLocal();
     return Padding(
       padding: const EdgeInsets.only(bottom: 2),
       child: Text(
-        '${message.createdAt.hour.toString().padLeft(2, '0')}:${message.createdAt.minute.toString().padLeft(2, '0')}',
+        '${localTime.hour.toString().padLeft(2, '0')}:${localTime.minute.toString().padLeft(2, '0')}',
         style: const TextStyle(fontSize: 10, color: Colors.white70),
       ),
     );
@@ -132,9 +133,9 @@ class MessageBubble extends StatelessWidget {
     return Text(
       message.author,
       style: const TextStyle(
-        color: Colors.white,
+        color: Color.fromARGB(255, 65, 65, 65),
         fontWeight: FontWeight.bold,
-        fontSize: 12,
+        fontSize: 10,
       ),
     );
   }
