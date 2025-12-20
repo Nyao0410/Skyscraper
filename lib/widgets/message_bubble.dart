@@ -177,10 +177,14 @@ class MessageBubble extends StatelessWidget {
 
   Widget _buildMainBubble(double maxWidth, BuildContext context) {
     final hasReplyParent = message.replyParentPost != null;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
     return Container(
       constraints: BoxConstraints(maxWidth: maxWidth),
       decoration: BoxDecoration(
-        color: isMe ? const Color(0xFF8DE055) : Colors.white,
+        color: isMe 
+            ? const Color(0xFF8DE055) 
+            : (isDark ? const Color(0xFF2C2C2E) : Colors.white),
         borderRadius: BorderRadius.only(
           topLeft: Radius.circular(hasReplyParent ? 0 : 16),
           topRight: Radius.circular(hasReplyParent ? 0 : 16),
@@ -199,11 +203,15 @@ class MessageBubble extends StatelessWidget {
               child: LinkifiedText(
                 text: message.text,
                 style: TextStyle(
-                  color: isMe ? Colors.black : Colors.black87,
+                  color: isMe 
+                      ? Colors.black 
+                      : (isDark ? Colors.white : Colors.black87),
                   fontSize: 15,
                 ),
                 linkStyle: TextStyle(
-                  color: isMe ? Colors.blue.shade900 : Colors.blue.shade700,
+                  color: isMe 
+                      ? Colors.blue.shade900 
+                      : (isDark ? Colors.blue.shade300 : Colors.blue.shade700),
                   decoration: TextDecoration.underline,
                 ),
               ),
@@ -220,15 +228,20 @@ class MessageBubble extends StatelessWidget {
 
   Widget _buildQuotedPostInside(double maxWidth, BuildContext context) {
     final quoted = message.quotedPost!;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
     return Container(
       constraints: BoxConstraints(maxWidth: maxWidth),
       padding: const EdgeInsets.all(8),
       decoration: BoxDecoration(
         color: isMe 
             ? (quoted.isMe ? const Color(0xFF6FB83A) : const Color(0xFF7BC946))
-            : (quoted.isMe ? Colors.grey.shade100 : Colors.grey.shade200),
+            : (isDark ? Colors.black26 : (quoted.isMe ? Colors.grey.shade100 : Colors.grey.shade200)),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.black12, width: 0.5),
+        border: Border.all(
+          color: isDark ? Colors.white10 : Colors.black12, 
+          width: 0.5,
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -249,7 +262,9 @@ class MessageBubble extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.bold,
-                    color: quoted.isMe ? (isMe ? Colors.white : Colors.blue) : Colors.black54,
+                    color: quoted.isMe 
+                        ? (isMe ? Colors.white : Colors.blue) 
+                        : (isDark ? Colors.white70 : Colors.black54),
                   ),
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -259,7 +274,10 @@ class MessageBubble extends StatelessWidget {
           const SizedBox(height: 4),
           LinkifiedText(
             text: quoted.text,
-            style: const TextStyle(fontSize: 12, color: Colors.black87),
+            style: TextStyle(
+              fontSize: 12, 
+              color: isDark ? Colors.white70 : Colors.black87,
+            ),
           ),
           if (quoted.media.isNotEmpty)
             Padding(

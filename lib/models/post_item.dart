@@ -8,12 +8,34 @@ class MediaItem {
   final String alt;
 
   MediaItem({required this.type, required this.url, this.alt = ''});
+
+  Map<String, dynamic> toJson() => {
+        'type': type.index,
+        'url': url,
+        'alt': alt,
+      };
+
+  factory MediaItem.fromJson(Map<String, dynamic> json) => MediaItem(
+        type: MediaType.values[json['type'] as int],
+        url: json['url'] as String,
+        alt: json['alt'] as String? ?? '',
+      );
 }
 
 class StrongRef {
   final String cid;
   final String uri;
   StrongRef({required this.cid, required this.uri});
+
+  Map<String, dynamic> toJson() => {
+        'cid': cid,
+        'uri': uri,
+      };
+
+  factory StrongRef.fromJson(Map<String, dynamic> json) => StrongRef(
+        cid: json['cid'] as String,
+        uri: json['uri'] as String,
+      );
 }
 
 class PostItem {
@@ -54,6 +76,59 @@ class PostItem {
     this.replyParentHandle,
     this.replyParentPost,
   });
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'uri': uri,
+        'author': author,
+        'handle': handle,
+        'avatar': avatar,
+        'text': text,
+        'createdAt': createdAt.toIso8601String(),
+        'isMe': isMe ? 1 : 0,
+        'media': media.map((m) => m.toJson()).toList(),
+        'quotedPost': quotedPost?.toJson(),
+        'replyCount': replyCount,
+        'repostCount': repostCount,
+        'likeCount': likeCount,
+        'replyRoot': replyRoot?.toJson(),
+        'replyParent': replyParent?.toJson(),
+        'replyParentHandle': replyParentHandle,
+        'replyParentPost': replyParentPost?.toJson(),
+      };
+
+  factory PostItem.fromJson(Map<String, dynamic> json) {
+    return PostItem(
+      id: json['id'] as String,
+      uri: json['uri'] as String,
+      author: json['author'] as String,
+      handle: json['handle'] as String,
+      avatar: json['avatar'] as String?,
+      text: json['text'] as String,
+      createdAt: DateTime.parse(json['createdAt'] as String),
+      isMe: (json['isMe'] as int) == 1,
+      media: (json['media'] as List?)
+              ?.map((m) => MediaItem.fromJson(m as Map<String, dynamic>))
+              .toList() ??
+          [],
+      quotedPost: json['quotedPost'] != null
+          ? PostItem.fromJson(json['quotedPost'] as Map<String, dynamic>)
+          : null,
+      replyCount: json['replyCount'] as int? ?? 0,
+      repostCount: json['repostCount'] as int? ?? 0,
+      likeCount: json['likeCount'] as int? ?? 0,
+      replyRoot: json['replyRoot'] != null
+          ? StrongRef.fromJson(json['replyRoot'] as Map<String, dynamic>)
+          : null,
+      replyParent: json['replyParent'] != null
+          ? StrongRef.fromJson(json['replyParent'] as Map<String, dynamic>)
+          : null,
+      replyParentHandle: json['replyParentHandle'] as String?,
+      replyParentPost: json['replyParentPost'] != null
+          ? PostItem.fromJson(json['replyParentPost'] as Map<String, dynamic>)
+          : null,
+    );
+  }
 
   factory PostItem.fromFeedView(dynamic feedView, String? myHandle) {
     try {

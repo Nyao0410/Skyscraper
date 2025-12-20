@@ -74,9 +74,10 @@ class _ChatScreenState extends State<ChatScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     // debugPrint('ChatScreen build: ${widget.messages.length} messages, refreshing: ${widget.isRefreshing}');
     return Scaffold(
-      backgroundColor: const Color(0xFF7494C0),
+      backgroundColor: isDark ? const Color(0xFF1A1D21) : const Color(0xFF7494C0),
       appBar: _buildAppBar(),
       body: Column(
         children: [
@@ -101,32 +102,36 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   PreferredSizeWidget _buildAppBar() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final appBarColor = isDark ? const Color(0xFF1A1A1A) : const Color(0xFF7494C0);
+    final textColor = Colors.white;
+
     return AppBar(
-      backgroundColor: const Color(0xFF7494C0),
+      backgroundColor: appBarColor,
       elevation: 1,
       leading: Navigator.canPop(context)
           ? IconButton(
-              icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
+              icon: Icon(Icons.arrow_back_ios, color: textColor),
               onPressed: () => Navigator.pop(context),
             )
           : null,
       title: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(widget.title, style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
-          const Text('オンライン', style: TextStyle(fontSize: 12, color: Colors.white70)),
+          Text(widget.title, style: TextStyle(fontWeight: FontWeight.bold, color: textColor)),
+          Text('オンライン', style: TextStyle(fontSize: 12, color: textColor.withOpacity(0.7))),
         ],
       ),
       actions: [
         IconButton(
           onPressed: widget.onRefresh,
           icon: widget.isRefreshing
-              ? const SizedBox(
+              ? SizedBox(
                   width: 20,
                   height: 20,
-                  child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                  child: CircularProgressIndicator(color: textColor, strokeWidth: 2),
                 )
-              : const Icon(Icons.refresh, color: Colors.white),
+              : Icon(Icons.refresh, color: textColor),
         ),
       ],
     );
@@ -206,8 +211,13 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   Widget _buildInputArea() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bgColor = isDark ? const Color(0xFF1A1A1A) : Colors.white;
+    final inputBgColor = isDark ? const Color(0xFF2C2C2E) : const Color(0xFFF5F5F5);
+    final textColor = isDark ? Colors.white : Colors.black;
+
     return Container(
-      color: Colors.white,
+      color: bgColor,
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       child: SafeArea(
         top: false,
@@ -217,17 +227,19 @@ class _ChatScreenState extends State<ChatScreen> {
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF5F5F5),
+                  color: inputBgColor,
                   borderRadius: BorderRadius.circular(28),
                 ),
                 child: TextField(
                   controller: _textController,
                   maxLines: null,
                   minLines: 1,
+                  style: TextStyle(color: textColor),
                   keyboardType: TextInputType.multiline,
-                  decoration: const InputDecoration(
+                  decoration: InputDecoration(
                     border: InputBorder.none,
                     hintText: 'メッセージを入力',
+                    hintStyle: TextStyle(color: textColor.withOpacity(0.5)),
                   ),
                   onSubmitted: (_) => _handleSend(),
                 ),
@@ -239,7 +251,7 @@ class _ChatScreenState extends State<ChatScreen> {
               icon: Icon(
                 Icons.send,
                 color: _textController.text.trim().isEmpty
-                    ? Colors.grey.shade300
+                    ? Colors.grey.shade400
                     : const Color(0xFF00C300),
                 size: 28,
               ),

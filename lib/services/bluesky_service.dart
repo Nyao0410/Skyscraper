@@ -9,6 +9,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'dart:convert';
 
 import '../models/post_item.dart';
+import 'database_service.dart';
 
 class BlueskyService {
   static final BlueskyService _instance = BlueskyService._internal();
@@ -20,6 +21,7 @@ class BlueskyService {
   String? did;
 
   final _storage = const FlutterSecureStorage();
+  final _db = DatabaseService();
   static const _sessionKey = 'bsky_session';
 
   bool get isLoggedIn => _bluesky != null;
@@ -111,6 +113,10 @@ class BlueskyService {
           .toList();
       
       debugPrint('Parsed ${posts.length} posts from timeline');
+      
+      // Save to cache
+      await _db.savePosts('following', posts);
+      
       return posts;
     } on UnauthorizedException catch (e) {
       throw Exception('認証エラー: ${e.toString()}');
@@ -119,6 +125,10 @@ class BlueskyService {
     } catch (e) {
       throw Exception('ネットワークエラー: ${e.toString()}');
     }
+  }
+
+  Future<List<PostItem>> getCachedTimeline({int limit = 40}) async {
+    return await _db.getCachedPosts('following', limit: limit);
   }
 
   Future<List<PostItem>> getCustomFeed(String feedUri, {int limit = 40}) async {
@@ -156,6 +166,10 @@ class BlueskyService {
           .toList();
       
       debugPrint('Parsed ${posts.length} posts from $feedUri');
+      
+      // Save to cache
+      await _db.savePosts(feedUri, posts);
+      
       return posts;
     } on UnauthorizedException catch (e) {
       throw Exception('認証エラー: ${e.toString()}');
@@ -164,6 +178,10 @@ class BlueskyService {
     } catch (e) {
       throw Exception('ネットワークエラー: ${e.toString()}');
     }
+  }
+
+  Future<List<PostItem>> getCachedCustomFeed(String feedUri, {int limit = 40}) async {
+    return await _db.getCachedPosts(feedUri, limit: limit);
   }
 
   Future<List<Map<String, String>>> getSavedFeeds() async {
@@ -467,7 +485,7 @@ class BlueskyService {
     if (_bluesky == null) throw Exception('ログインしていません');
     try {
       final response = await _bluesky!.feed.searchPosts(
-        query,
+        q: query,
         limit: limit,
         since: since,
         until: until,
@@ -496,6 +514,135 @@ class BlueskyService {
     } catch (e) {
       debugPrint('SearchActors error detail: $e');
       throw Exception('ユーザー検索失敗: $e');
+    }
+  }
+
+  Future<List<dynamic>> getFollows(String actor, {int limit = 50}) async {
+    if (_bluesky == null) throw Exception('ログインしていません');
+    try {
+      final response = await _bluesky!.graph.getFollows(actor: actor, limit: limit);
+      return response.data.follows;
+    } catch (e) {
+      throw Exception('フォロー一覧取得失敗: $e');
+    }
+  }
+
+  Future<List<dynamic>> getFollowers(String actor, {int limit = 50}) async {
+    if (_bluesky == null) throw Exception('ログインしていません');
+    try {
+      final response = await _bluesky!.graph.getFollowers(actor: actor, limit: limit);
+      return response.data.followers;
+    } catch (e) {
+      throw Exception('フォロワー一覧取得失敗: $e');
+    }
+  }
+
+  Future<List<PostItem>> getAuthorFeedWithFilter(String actor, {String? filter, int limit = 40}) async {
+    if (_bluesky == null) throw Exception('ログインしていません');
+    try {
+      // The SDK expects a specific filter type; apply filtering client-side
+      final response = await _bluesky!.feed.getAuthorFeed(
+        actor: actor,
+        limit: limit,
+      );
+
+      final allPosts = response.data.feed
+          .map((f) {
+            try {
+              return PostItem.fromFeedView(f, handle);
+            } catch (e) {
+              return null;
+            }
+          })
+          .whereType<PostItem>()
+          .toList();
+
+      // Save to cache (using a unique key for this author and filter)
+      final cacheKey = 'author_feed_${actor}_${filter ?? "all"}';
+      await _db.savePosts(cacheKey, allPosts);
+
+      if (filter == null) return allPosts;
+
+      switch (filter) {
+        case 'posts_no_replies':
+          return allPosts.where((p) => p.replyParent == null).toList();
+        case 'posts_with_replies':
+          return allPosts.where((p) => p.replyParent != null).toList();
+        case 'posts_with_media':
+          return allPosts.where((p) => p.media.isNotEmpty).toList();
+        case 'posts_with_video':
+          return allPosts.where((p) => p.media.any((m) => m.type == MediaType.video)).toList();
+        default:
+          return allPosts;
+      }
+    } catch (e) {
+      throw Exception('ユーザー投稿取得失敗: $e');
+    }
+  }
+
+  Future<List<PostItem>> getCachedAuthorFeed(String actor, {String? filter, int limit = 40}) async {
+    final cacheKey = 'author_feed_${actor}_${filter ?? "all"}';
+    return await _db.getCachedPosts(cacheKey, limit: limit);
+  }
+
+  Future<List<PostItem>> getActorLikes(String actor, {int limit = 40}) async {
+    if (_bluesky == null) throw Exception('ログインしていません');
+    try {
+      final response = await _bluesky!.feed.getActorLikes(actor: actor, limit: limit);
+      final posts = response.data.feed
+          .map((f) {
+            try {
+              return PostItem.fromFeedView(f, handle);
+            } catch (e) {
+              return null;
+            }
+          })
+          .whereType<PostItem>()
+          .toList();
+
+      // Save to cache
+      final cacheKey = 'actor_likes_$actor';
+      await _db.savePosts(cacheKey, posts);
+
+      return posts;
+    } catch (e) {
+      throw Exception('いいね取得失敗: $e');
+    }
+  }
+
+  Future<List<PostItem>> getCachedActorLikes(String actor, {int limit = 40}) async {
+    final cacheKey = 'actor_likes_$actor';
+    return await _db.getCachedPosts(cacheKey, limit: limit);
+  }
+
+  Future<List<dynamic>> getActorFeeds(String actor, {int limit = 50}) async {
+    if (_bluesky == null) throw Exception('ログインしていません');
+    try {
+      final response = await _bluesky!.feed.getActorFeeds(actor: actor, limit: limit);
+      return response.data.feeds;
+    } catch (e) {
+      throw Exception('フィード一覧取得失敗: $e');
+    }
+  }
+
+  Future<List<dynamic>> getLists(String actor, {int limit = 50}) async {
+    if (_bluesky == null) throw Exception('ログインしていません');
+    try {
+      final response = await _bluesky!.graph.getLists(actor: actor, limit: limit);
+      return response.data.lists;
+    } catch (e) {
+      throw Exception('リスト一覧取得失敗: $e');
+    }
+  }
+
+  // Note: getListsWithMembership is used to see which lists a user is in
+  Future<List<dynamic>> getListMemberships(String actor, {int limit = 50}) async {
+    if (_bluesky == null) throw Exception('ログインしていません');
+    try {
+      final response = await _bluesky!.graph.getListsWithMembership(actor: actor, limit: limit);
+      return response.data.listsWithMembership;
+    } catch (e) {
+      throw Exception('被リスト一覧取得失敗: $e');
     }
   }
 }

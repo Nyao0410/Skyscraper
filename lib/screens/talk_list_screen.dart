@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../services/bluesky_service.dart';
+import 'search_screen.dart';
 
 class TalkListScreen extends StatefulWidget {
   final Function(String name, String uri) onFeedSelected;
@@ -47,7 +48,15 @@ class _TalkListScreenState extends State<TalkListScreen> {
       appBar: AppBar(
         title: const Text('トーク', style: TextStyle(fontWeight: FontWeight.bold)),
         actions: [
-          IconButton(icon: const Icon(Icons.search), onPressed: () {}),
+          IconButton(
+            icon: const Icon(Icons.search),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const SearchScreen()),
+              );
+            },
+          ),
           IconButton(icon: const Icon(Icons.chat_bubble_outline), onPressed: () {}),
         ],
       ),

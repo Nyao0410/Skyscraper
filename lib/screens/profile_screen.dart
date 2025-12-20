@@ -13,29 +13,45 @@ class ProfileScreen extends StatefulWidget {
   State<ProfileScreen> createState() => _ProfileScreenState();
 }
 
-class _ProfileScreenState extends State<ProfileScreen> {
+class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProviderStateMixin {
   final _service = BlueskyService();
   dynamic _profile;
-  List<PostItem> _feed = [];
+  List<dynamic> _currentData = [];
   bool _loading = true;
+  late TabController _tabController;
+  
+  // Filter for feed
+  String _currentFilter = 'posts_no_replies';
 
   @override
   void initState() {
     super.initState();
+    _tabController = TabController(length: 8, vsync: this);
+    _tabController.addListener(_handleTabChange);
     _fetchData();
+  }
+
+  @override
+  void dispose() {
+    _tabController.removeListener(_handleTabChange);
+    _tabController.dispose();
+    super.dispose();
+  }
+
+  void _handleTabChange() {
+    if (_tabController.indexIsChanging) return;
+    _fetchFeedForTab(_tabController.index);
   }
 
   Future<void> _fetchData() async {
     setState(() => _loading = true);
     try {
       final profile = await _service.getProfile(widget.actor);
-      final feed = await _service.getAuthorFeed(widget.actor);
       if (mounted) {
         setState(() {
           _profile = profile;
-          _feed = feed;
-          _loading = false;
         });
+        _fetchFeedForTab(0); // Initial tab
       }
     } catch (e) {
       if (mounted) {
@@ -45,10 +61,89 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
+  Future<void> _fetchFeedForTab(int index) async {
+    // 1. Load from cache first
+    try {
+      List<dynamic> cachedData = [];
+      switch (index) {
+        case 0:
+          cachedData = await _service.getCachedAuthorFeed(widget.actor, filter: 'posts_no_replies');
+          break;
+        case 1:
+          cachedData = await _service.getCachedAuthorFeed(widget.actor, filter: 'posts_with_replies');
+          break;
+        case 2:
+          cachedData = await _service.getCachedAuthorFeed(widget.actor, filter: 'posts_with_media');
+          break;
+        case 3:
+          cachedData = await _service.getCachedAuthorFeed(widget.actor, filter: 'posts_with_video');
+          break;
+        case 4:
+          cachedData = await _service.getCachedActorLikes(widget.actor);
+          break;
+      }
+      if (cachedData.isNotEmpty && mounted) {
+        setState(() {
+          _currentData = cachedData;
+          _loading = false;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error loading cached profile feed: $e');
+    }
+
+    // 2. Fetch from network
+    setState(() => _loading = _currentData.isEmpty);
+    try {
+      List<dynamic> data = [];
+      switch (index) {
+        case 0: // 投稿
+          data = await _service.getAuthorFeedWithFilter(widget.actor, filter: 'posts_no_replies');
+          break;
+        case 1: // 返信
+          data = await _service.getAuthorFeedWithFilter(widget.actor, filter: 'posts_with_replies');
+          break;
+        case 2: // メディア
+          data = await _service.getAuthorFeedWithFilter(widget.actor, filter: 'posts_with_media');
+          break;
+        case 3: // ビデオ
+          data = await _service.getAuthorFeedWithFilter(widget.actor, filter: 'posts_with_video');
+          break;
+        case 4: // いいね
+          data = await _service.getActorLikes(widget.actor);
+          break;
+        case 5: // フィード
+          data = await _service.getActorFeeds(widget.actor);
+          break;
+        case 6: // リスト
+          data = await _service.getLists(widget.actor);
+          break;
+        case 7: // 被リスト
+          data = await _service.getListMemberships(widget.actor);
+          break;
+        default:
+          data = [];
+      }
+      if (mounted) {
+        setState(() {
+          _currentData = data;
+          _loading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _loading = false);
+        if (_currentData.isEmpty) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('エラー: $e')));
+        }
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: _loading
+      body: _profile == null && _loading
           ? const Center(child: CircularProgressIndicator())
           : _profile == null
               ? const Center(child: Text('プロフィールが見つかりませんでした'))
@@ -56,17 +151,82 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   slivers: [
                     _buildAppBar(),
                     SliverToBoxAdapter(child: _buildProfileHeader()),
-                    SliverList(
-                      delegate: SliverChildBuilderDelegate(
-                        (context, index) {
-                          final post = _feed[index];
-                          return _buildPostItem(post);
-                        },
-                        childCount: _feed.length,
+                    SliverPersistentHeader(
+                      pinned: true,
+                      delegate: _SliverAppBarDelegate(
+                        TabBar(
+                          controller: _tabController,
+                          isScrollable: true,
+                          tabs: const [
+                            Tab(text: '投稿'),
+                            Tab(text: '返信'),
+                            Tab(text: 'メディア'),
+                            Tab(text: 'ビデオ'),
+                            Tab(text: 'いいね'),
+                            Tab(text: 'フィード'),
+                            Tab(text: 'リスト'),
+                            Tab(text: '被リスト'),
+                          ],
+                        ),
                       ),
                     ),
+                    if (_loading)
+                      const SliverFillRemaining(
+                        child: Center(child: CircularProgressIndicator()),
+                      )
+                    else if (_currentData.isEmpty)
+                      const SliverFillRemaining(
+                        child: Center(child: Text('データがありません')),
+                      )
+                    else
+                      SliverList(
+                        delegate: SliverChildBuilderDelegate(
+                          (context, index) {
+                            final item = _currentData[index];
+                            if (item is PostItem) {
+                              return _buildPostItem(item);
+                            } else {
+                              // FeedGeneratorView or ListView
+                              return _buildGenericItem(item);
+                            }
+                          },
+                          childCount: _currentData.length,
+                        ),
+                      ),
                   ],
                 ),
+    );
+  }
+
+  Widget _buildGenericItem(dynamic item) {
+    // item could be FeedGeneratorView or ListView
+    final String title = item.displayName ?? 'Unknown';
+    final String? description = item.description;
+    final String? avatar = item.avatar;
+    final String? creator = item.creator?.handle;
+
+    return ListTile(
+      leading: CircleAvatar(
+        backgroundImage: avatar != null ? CachedNetworkImageProvider(avatar) : null,
+        child: avatar == null ? const Icon(Icons.rss_feed) : null,
+      ),
+      title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
+      subtitle: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (creator != null) Text('by @$creator', style: const TextStyle(fontSize: 12, color: Colors.blue)),
+          if (description != null)
+            Text(
+              description,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontSize: 13),
+            ),
+        ],
+      ),
+      onTap: () {
+        // Handle navigation to feed or list if needed
+      },
     );
   }
 
@@ -83,6 +243,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Widget _buildProfileHeader() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Padding(
       padding: const EdgeInsets.all(16.0),
       child: Column(
@@ -94,7 +255,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             children: [
               CircleAvatar(
                 radius: 40,
-                backgroundColor: Colors.white,
+                backgroundColor: isDark ? Colors.black : Colors.white,
                 child: CircleAvatar(
                   radius: 38,
                   backgroundImage: _profile.avatar != null
@@ -106,6 +267,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ElevatedButton(
                 onPressed: () {},
                 style: ElevatedButton.styleFrom(
+                  backgroundColor: isDark ? Colors.white : Colors.black,
+                  foregroundColor: isDark ? Colors.black : Colors.white,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
                 ),
                 child: const Text('フォロー'),
@@ -131,31 +294,97 @@ class _ProfileScreenState extends State<ProfileScreen> {
           const SizedBox(height: 16),
           Row(
             children: [
-              _buildStat('${_profile.followsCount}', 'フォロー'),
+              _buildStat('${_profile.followsCount}', 'フォロー', () {
+                _showUserList('フォロー', () => _service.getFollows(widget.actor));
+              }),
               const SizedBox(width: 20),
-              _buildStat('${_profile.followersCount}', 'フォロワー'),
+              _buildStat('${_profile.followersCount}', 'フォロワー', () {
+                _showUserList('フォロワー', () => _service.getFollowers(widget.actor));
+              }),
               const SizedBox(width: 20),
-              _buildStat('${_profile.postsCount}', '投稿'),
+              _buildStat('${_profile.postsCount}', '投稿', null),
             ],
           ),
-          const Divider(height: 32),
         ],
       ),
     );
   }
 
-  Widget _buildStat(String count, String label) {
-    return Row(
-      children: [
-        Text(count, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-        const SizedBox(width: 4),
-        Text(label, style: const TextStyle(color: Colors.grey, fontSize: 14)),
-      ],
+  Widget _buildStat(String count, String label, VoidCallback? onTap) {
+    return InkWell(
+      onTap: onTap,
+      child: Row(
+        children: [
+          Text(count, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+          const SizedBox(width: 4),
+          Text(label, style: const TextStyle(color: Colors.grey, fontSize: 14)),
+        ],
+      ),
+    );
+  }
+
+  void _showUserList(String title, Future<List<dynamic>> Function() fetcher) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (context) => DraggableScrollableSheet(
+        initialChildSize: 0.9,
+        minChildSize: 0.5,
+        maxChildSize: 0.95,
+        expand: false,
+        builder: (context, scrollController) => Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            ),
+            const Divider(height: 1),
+            Expanded(
+              child: FutureBuilder<List<dynamic>>(
+                future: fetcher(),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+                  if (snapshot.hasError) {
+                    return Center(child: Text('エラー: ${snapshot.error}'));
+                  }
+                  final users = snapshot.data ?? [];
+                  if (users.isEmpty) {
+                    return const Center(child: Text('ユーザーがいません'));
+                  }
+                  return ListView.builder(
+                    controller: scrollController,
+                    itemCount: users.length,
+                    itemBuilder: (context, index) {
+                      final user = users[index];
+                      return ListTile(
+                        leading: CircleAvatar(
+                          backgroundImage: user.avatar != null ? CachedNetworkImageProvider(user.avatar!) : null,
+                          child: user.avatar == null ? const Icon(Icons.person) : null,
+                        ),
+                        title: Text(user.displayName ?? user.handle, style: const TextStyle(fontWeight: FontWeight.bold)),
+                        subtitle: Text('@${user.handle}'),
+                        onTap: () {
+                          Navigator.pop(context);
+                          Navigator.push(context, MaterialPageRoute(builder: (context) => ProfileScreen(actor: user.did)));
+                        },
+                      );
+                    },
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
   // TimelineScreenからコピー（共通化が望ましい）
   Widget _buildPostItem(PostItem post) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return InkWell(
       onTap: () {
         Navigator.push(
@@ -185,7 +414,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       Expanded(
                         child: Text(
                           post.author,
-                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold, 
+                            fontSize: 15,
+                            color: isDark ? Colors.white : Colors.black,
+                          ),
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
@@ -200,7 +433,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     style: const TextStyle(color: Colors.grey, fontSize: 13),
                   ),
                   const SizedBox(height: 4),
-                  LinkifiedText(text: post.text, style: const TextStyle(fontSize: 15)),
+                  LinkifiedText(
+                    text: post.text, 
+                    style: TextStyle(
+                      fontSize: 15,
+                      color: isDark ? Colors.white.withOpacity(0.9) : Colors.black87,
+                    ),
+                  ),
                   if (post.media.isNotEmpty) _buildMediaGrid(post.media),
                   const SizedBox(height: 12),
                   Row(
@@ -238,5 +477,29 @@ class _ProfileScreenState extends State<ProfileScreen> {
     if (diff.inHours < 1) return '${diff.inMinutes}分';
     if (diff.inDays < 1) return '${diff.inHours}時間';
     return '${time.month}/${time.day}';
+  }
+}
+
+class _SliverAppBarDelegate extends SliverPersistentHeaderDelegate {
+  final TabBar _tabBar;
+  _SliverAppBarDelegate(this._tabBar);
+
+  @override
+  double get minExtent => _tabBar.preferredSize.height;
+
+  @override
+  double get maxExtent => _tabBar.preferredSize.height;
+
+  @override
+  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
+    return Container(
+      color: Theme.of(context).scaffoldBackgroundColor,
+      child: _tabBar,
+    );
+  }
+
+  @override
+  bool shouldRebuild(covariant _SliverAppBarDelegate oldDelegate) {
+    return oldDelegate._tabBar != _tabBar;
   }
 }

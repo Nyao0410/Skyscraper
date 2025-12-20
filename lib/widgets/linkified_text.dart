@@ -2,6 +2,7 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../screens/profile_screen.dart';
+import '../screens/search_screen.dart';
 
 class LinkifiedText extends StatelessWidget {
   final String text;
@@ -19,12 +20,17 @@ class LinkifiedText extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final defaultStyle = style ?? DefaultTextStyle.of(context).style;
-    final defaultLinkStyle = linkStyle ??
-        defaultStyle.copyWith(
-          color: Colors.blue,
-          decoration: TextDecoration.underline,
-        );
+    final themeDefaultStyle = DefaultTextStyle.of(context).style;
+    final defaultStyle = style != null 
+        ? themeDefaultStyle.merge(style) 
+        : themeDefaultStyle;
+        
+    final defaultLinkStyle = linkStyle != null
+        ? defaultStyle.merge(linkStyle)
+        : defaultStyle.copyWith(
+            color: Colors.blue,
+            decoration: TextDecoration.underline,
+          );
 
     final spans = _buildTextSpans(context, defaultStyle, defaultLinkStyle);
 
@@ -101,9 +107,11 @@ class LinkifiedText extends StatelessWidget {
           style: linkStyle,
           recognizer: TapGestureRecognizer()
             ..onTap = () {
-              // TODO: Hashtag search or similar
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('ハッシュタグ: $matchText')),
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => SearchScreen(initialQuery: matchText),
+                ),
               );
             },
         ));

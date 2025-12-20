@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:url_launcher/url_launcher.dart';
+import 'package:intl/intl.dart';
 import '../models/post_item.dart';
 import '../services/bluesky_service.dart';
+import '../services/database_service.dart';
 import '../widgets/linkified_text.dart';
 import 'thread_screen.dart';
 import 'profile_screen.dart';
+import 'search_screen.dart';
+import 'new_post_screen.dart';
 
 class TimelineScreen extends StatefulWidget {
   const TimelineScreen({super.key});
@@ -16,6 +19,7 @@ class TimelineScreen extends StatefulWidget {
 
 class _TimelineScreenState extends State<TimelineScreen> {
   final _service = BlueskyService();
+  final _db = DatabaseService();
   List<PostItem> _posts = [];
   bool _loading = true;
 
@@ -26,6 +30,20 @@ class _TimelineScreenState extends State<TimelineScreen> {
   }
 
   Future<void> _fetchTimeline() async {
+    // 1. Load from cache first for immediate display
+    try {
+      final cachedPosts = await _service.getCachedTimeline();
+      if (cachedPosts.isNotEmpty && mounted) {
+        setState(() {
+          _posts = cachedPosts;
+          _loading = false;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error loading cached timeline: $e');
+    }
+
+    // 2. Fetch from network to update
     try {
       final posts = await _service.getTimeline();
       if (mounted) {
@@ -35,7 +53,8 @@ class _TimelineScreenState extends State<TimelineScreen> {
         });
       }
     } catch (e) {
-      if (mounted) {
+      debugPrint('Error fetching timeline from network: $e');
+      if (mounted && _posts.isEmpty) {
         setState(() => _loading = false);
       }
     }
@@ -46,9 +65,17 @@ class _TimelineScreenState extends State<TimelineScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('タイムライン', style: TextStyle(fontWeight: FontWeight.bold)),
-        elevation: 0,
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.search),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const SearchScreen()),
+              );
+            },
+          ),
+        ],
       ),
       body: RefreshIndicator(
         onRefresh: _fetchTimeline,
@@ -125,7 +152,11 @@ class _TimelineScreenState extends State<TimelineScreen> {
                             children: [
                               TextSpan(
                                 text: post.author,
-                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold, 
+                                  fontSize: 15,
+                                  color: Theme.of(context).colorScheme.onSurface,
+                                ),
                               ),
                               TextSpan(
                                 text: ' @${post.handle}',
@@ -144,7 +175,11 @@ class _TimelineScreenState extends State<TimelineScreen> {
                   const SizedBox(height: 4),
                   LinkifiedText(
                     text: post.text,
-                    style: const TextStyle(fontSize: 15, height: 1.3),
+                    style: TextStyle(
+                      fontSize: 15, 
+                      height: 1.3,
+                      color: Theme.of(context).colorScheme.onSurface,
+                    ),
                     linkStyle: const TextStyle(color: Colors.blue, decoration: TextDecoration.none),
                   ),
                   if (post.quotedPost != null) _buildQuotedPost(post.quotedPost!),
@@ -169,12 +204,14 @@ class _TimelineScreenState extends State<TimelineScreen> {
   }
 
   Widget _buildQuotedPost(PostItem quoted) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       margin: const EdgeInsets.only(top: 8),
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
-        border: Border.all(color: Colors.grey.shade300),
+        border: Border.all(color: isDark ? Colors.white10 : Colors.grey.shade300),
         borderRadius: BorderRadius.circular(12),
+        color: isDark ? Colors.white.withOpacity(0.05) : null,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -199,7 +236,11 @@ class _TimelineScreenState extends State<TimelineScreen> {
               Expanded(
                 child: Text(
                   quoted.author,
-                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold, 
+                    fontSize: 13,
+                    color: Theme.of(context).colorScheme.onSurface,
+                  ),
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
@@ -208,7 +249,10 @@ class _TimelineScreenState extends State<TimelineScreen> {
           const SizedBox(height: 4),
           LinkifiedText(
             text: quoted.text,
-            style: const TextStyle(fontSize: 14),
+            style: TextStyle(
+              fontSize: 14,
+              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.9),
+            ),
           ),
           if (quoted.media.isNotEmpty) _buildMediaGrid(quoted.media),
         ],
@@ -441,31 +485,111 @@ class _TimelineScreenState extends State<TimelineScreen> {
 
   void _showPostDialog() {
     final controller = TextEditingController();
+    DateTime? scheduledDate;
+
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('新規投稿'),
-        content: TextField(
-          controller: controller,
-          maxLines: 5,
-          decoration: const InputDecoration(hintText: 'いまどうしてる？'),
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('キャンセル')),
-          ElevatedButton(
-            onPressed: () async {
-              if (controller.text.isNotEmpty) {
-                await _service.post(controller.text);
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text('新規投稿'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: controller,
+                maxLines: 5,
+                decoration: const InputDecoration(
+                  hintText: 'いまどうしてる？',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              if (scheduledDate != null)
+                Padding(
+                  padding: const EdgeInsets.only(top: 8.0),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.schedule, size: 16, color: Colors.blue),
+                      const SizedBox(width: 4),
+                      Text(
+                        '予約: ${DateFormat('MM/dd HH:mm').format(scheduledDate!)}',
+                        style: const TextStyle(color: Colors.blue, fontSize: 12),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close, size: 16),
+                        onPressed: () => setDialogState(() => scheduledDate = null),
+                      ),
+                    ],
+                  ),
+                ),
+            ],
+          ),
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.schedule),
+              tooltip: '予約投稿',
+              onPressed: () async {
+                final now = DateTime.now();
+                final date = await showDatePicker(
+                  context: context,
+                  initialDate: scheduledDate ?? now.add(const Duration(minutes: 5)),
+                  firstDate: now,
+                  lastDate: now.add(const Duration(days: 30)),
+                );
+                if (date != null) {
+                  final time = await showTimePicker(
+                    context: context,
+                    initialTime: TimeOfDay.fromDateTime(scheduledDate ?? now.add(const Duration(minutes: 5))),
+                  );
+                  if (time != null) {
+                    setDialogState(() {
+                      scheduledDate = DateTime(date.year, date.month, date.day, time.hour, time.minute);
+                    });
+                  }
+                }
+              },
+            ),
+            TextButton(
+              onPressed: () async {
+                if (controller.text.trim().isEmpty) return;
+                await _db.saveDraft(controller.text);
                 if (mounted) {
                   Navigator.pop(context);
-                  _fetchTimeline();
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('下書きを保存しました')));
                 }
-              }
-            },
-            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF00C300)),
-            child: const Text('投稿', style: TextStyle(color: Colors.white)),
-          ),
-        ],
+              },
+              child: const Text('下書き保存'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                final text = controller.text.trim();
+                if (text.isEmpty) return;
+
+                try {
+                  if (scheduledDate != null) {
+                    await _db.saveDraft(text, scheduledAt: scheduledDate);
+                    if (mounted) {
+                      Navigator.pop(context);
+                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('投稿を予約しました')));
+                    }
+                  } else {
+                    await _service.post(text);
+                    if (mounted) {
+                      Navigator.pop(context);
+                      _fetchTimeline();
+                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('投稿しました')));
+                    }
+                  }
+                } catch (e) {
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('エラー: $e')));
+                  }
+                }
+              },
+              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF00C300)),
+              child: Text(scheduledDate != null ? '予約する' : '投稿', style: const TextStyle(color: Colors.white)),
+            ),
+          ],
+        ),
       ),
     );
   }

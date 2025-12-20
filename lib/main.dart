@@ -22,9 +22,30 @@ class BskyApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       title: 'Bluesky LINE Client',
       theme: ThemeData(
-        primaryColor: const Color(0xFF00C300),
-        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF00C300)),
+        useMaterial3: true,
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: const Color(0xFF00C300),
+          brightness: Brightness.light,
+        ),
+        appBarTheme: const AppBarTheme(
+          backgroundColor: Colors.white,
+          foregroundColor: Colors.black,
+          elevation: 0,
+        ),
       ),
+      darkTheme: ThemeData(
+        useMaterial3: true,
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: const Color(0xFF00C300),
+          brightness: Brightness.dark,
+        ),
+        appBarTheme: const AppBarTheme(
+          backgroundColor: Color(0xFF1A1A1A),
+          foregroundColor: Colors.white,
+          elevation: 0,
+        ),
+      ),
+      themeMode: ThemeMode.system,
       home: const AuthCheck(),
       routes: {
         '/login': (context) => const LoginWrapper(),

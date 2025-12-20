@@ -4,6 +4,7 @@ import '../models/post_item.dart';
 import 'chat_screen.dart';
 import 'talk_list_screen.dart';
 import 'timeline_screen.dart';
+import 'drafts_screen.dart';
 
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
@@ -72,6 +73,17 @@ class _MainScreenState extends State<MainScreen> {
           ),
           const Divider(),
           ListTile(
+            leading: const Icon(Icons.edit_note),
+            title: const Text('下書き・予約投稿'),
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const DraftsScreen()),
+              );
+            },
+          ),
+          const Divider(),
+          ListTile(
             leading: const Icon(Icons.logout, color: Colors.red),
             title: const Text('ログアウト', style: TextStyle(color: Colors.red)),
             onTap: () async {
@@ -110,6 +122,20 @@ class _ChatDetailWrapperState extends State<ChatDetailWrapper> {
   }
 
   Future<void> _fetchFeed() async {
+    // 1. Load from cache first
+    try {
+      final cachedPosts = await _service.getCachedCustomFeed(widget.feedUri);
+      if (cachedPosts.isNotEmpty && mounted) {
+        setState(() {
+          _feed = cachedPosts;
+          _loading = false;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error loading cached feed: $e');
+    }
+
+    // 2. Fetch from network
     try {
       final posts = await _service.getCustomFeed(widget.feedUri);
       if (mounted) {
@@ -121,9 +147,11 @@ class _ChatDetailWrapperState extends State<ChatDetailWrapper> {
     } catch (e) {
       if (mounted) {
         setState(() => _loading = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('フィードの取得に失敗しました: $e')),
-        );
+        if (_feed.isEmpty) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('フィードの取得に失敗しました: $e')),
+          );
+        }
       }
     }
   }
