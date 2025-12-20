@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:url_launcher/url_launcher.dart';
+// url_launcher not used here; remove unused import
 
 import '../models/post_item.dart';
 import '../screens/thread_screen.dart';

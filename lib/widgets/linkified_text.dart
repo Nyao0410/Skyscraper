@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../screens/profile_screen.dart';
 import '../screens/search_screen.dart';
+import '../screens/new_post_screen.dart';
 
 class LinkifiedText extends StatelessWidget {
   final String text;
@@ -32,7 +33,7 @@ class LinkifiedText extends StatelessWidget {
             decoration: TextDecoration.underline,
           );
 
-    final spans = _buildTextSpans(context, defaultStyle, defaultLinkStyle);
+    final spans = _buildTextSpans(context, defaultStyle, defaultLinkStyle, selectable: selectable);
 
     if (selectable) {
       return SelectableText.rich(
@@ -47,15 +48,15 @@ class LinkifiedText extends StatelessWidget {
   }
 
   List<InlineSpan> _buildTextSpans(
-      BuildContext context, TextStyle style, TextStyle linkStyle) {
+      BuildContext context, TextStyle style, TextStyle linkStyle, {bool selectable = false}) {
     final List<InlineSpan> spans = [];
     
     // Regex patterns
-    // 1. URLs
+    // 1. URLs (improved to include non-http schemes)
     // 2. Handles (~.bsky.social)
     // 3. Hashtags (#~)
     final combinedRegex = RegExp(
-      r'(https?:\/\/[^\s]+)|(@?[a-zA-Z0-9.-]+\.bsky\.social)|(#[^\s#]+)',
+      r'((?:https?:\/\/|[a-z0-9]+:\/\/)[^\s]+)|(@?[a-zA-Z0-9.-]+\.bsky\.social)|(#[^\s#]+)',
       caseSensitive: false,
     );
 
@@ -80,7 +81,10 @@ class LinkifiedText extends StatelessWidget {
             ..onTap = () async {
               final uri = Uri.parse(matchText);
               if (await canLaunchUrl(uri)) {
-                await launchUrl(uri, mode: LaunchMode.externalApplication);
+                await launchUrl(
+                  uri, 
+                  mode: LaunchMode.inAppBrowserView,
+                );
               }
             },
         ));
@@ -102,19 +106,48 @@ class LinkifiedText extends StatelessWidget {
         ));
       } else if (match.group(3) != null) {
         // Hashtag
-        spans.add(TextSpan(
-          text: matchText,
-          style: linkStyle,
-          recognizer: TapGestureRecognizer()
-            ..onTap = () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => SearchScreen(initialQuery: matchText),
-                ),
-              );
-            },
-        ));
+        if (selectable) {
+          // Selectable text can't include interactive widgets, provide tap-only recognizer
+          spans.add(TextSpan(
+            text: matchText,
+            style: linkStyle,
+            recognizer: TapGestureRecognizer()
+              ..onTap = () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => SearchScreen(initialQuery: matchText),
+                  ),
+                );
+              },
+          ));
+        } else {
+          // Use a WidgetSpan so we can handle both tap and long-press
+          spans.add(WidgetSpan(
+            alignment: PlaceholderAlignment.baseline,
+            baseline: TextBaseline.alphabetic,
+            child: GestureDetector(
+              behavior: HitTestBehavior.translucent,
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => SearchScreen(initialQuery: matchText),
+                  ),
+                );
+              },
+              onLongPress: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => NewPostScreen(initialText: '$matchText '),
+                  ),
+                );
+              },
+              child: Text(matchText, style: linkStyle),
+            ),
+          ));
+        }
       }
 
       lastIndex = match.end;

@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:url_launcher/url_launcher.dart';
+// url_launcher not used in this file; remove unused import
 import '../models/post_item.dart';
 import '../services/bluesky_service.dart';
 import '../widgets/linkified_text.dart';
 import 'profile_screen.dart';
+import 'new_post_screen.dart';
 
 class ThreadScreen extends StatefulWidget {
   final String postUri;
@@ -253,6 +254,20 @@ class _ThreadScreenState extends State<ThreadScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          if (post.repostedBy != null)
+            Padding(
+              padding: const EdgeInsets.only(left: 36, bottom: 8),
+              child: Row(
+                children: [
+                  const Icon(Icons.repeat, size: 14, color: Colors.grey),
+                  const SizedBox(width: 4),
+                  Text(
+                    '${post.repostedBy} さんがリポスト',
+                    style: const TextStyle(color: Colors.grey, fontSize: 12, fontWeight: FontWeight.bold),
+                  ),
+                ],
+              ),
+            ),
           Row(
             children: [
               GestureDetector(
@@ -328,68 +343,85 @@ class _ThreadScreenState extends State<ThreadScreen> {
       },
       child: Padding(
         padding: EdgeInsets.only(left: 12.0 + (depth * 16.0), top: 12, right: 12, bottom: 12),
-        child: Row(
+        child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            GestureDetector(
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => ProfileScreen(actor: post.handle)),
-                );
-              },
-              child: CircleAvatar(
-                radius: 20,
-                backgroundImage: post.avatar != null
-                    ? CachedNetworkImageProvider(post.avatar!)
-                    : null,
-                child: post.avatar == null ? const Icon(Icons.person) : null,
+            if (post.repostedBy != null)
+              Padding(
+                padding: const EdgeInsets.only(left: 32, bottom: 4),
+                child: Row(
+                  children: [
+                    const Icon(Icons.repeat, size: 12, color: Colors.grey),
+                    const SizedBox(width: 4),
+                    Text(
+                      '${post.repostedBy} さんがリポスト',
+                      style: const TextStyle(color: Colors.grey, fontSize: 11, fontWeight: FontWeight.bold),
+                    ),
+                  ],
+                ),
               ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                GestureDetector(
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => ProfileScreen(actor: post.handle)),
+                    );
+                  },
+                  child: CircleAvatar(
+                    radius: 20,
+                    backgroundImage: post.avatar != null ? CachedNetworkImageProvider(post.avatar!) : null,
+                    child: post.avatar == null ? const Icon(Icons.person) : null,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Expanded(
-                        child: Text(
-                          post.author,
-                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-                          overflow: TextOverflow.ellipsis,
-                        ),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              post.author,
+                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            _formatTime(post.createdAt),
+                            style: const TextStyle(color: Colors.grey, fontSize: 12),
+                          ),
+                        ],
                       ),
-                      const SizedBox(width: 4),
                       Text(
-                        _formatTime(post.createdAt),
+                        '@${post.handle}',
                         style: const TextStyle(color: Colors.grey, fontSize: 12),
                       ),
+                      const SizedBox(height: 4),
+                      LinkifiedText(
+                        text: post.text,
+                        style: const TextStyle(fontSize: 14),
+                        linkStyle: const TextStyle(color: Colors.blue),
+                      ),
+                      if (post.media.isNotEmpty) _buildMediaGrid(post.media),
+                      const SizedBox(height: 8),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          _buildActionIcon(Icons.chat_bubble_outline, post.replyCount, () => _showReplyDialog(post)),
+                          _buildActionIcon(Icons.repeat, post.repostCount, () => _handleRepost(post)),
+                          _buildActionIcon(Icons.favorite_border, post.likeCount, () => _handleLike(post)),
+                          const Icon(Icons.more_horiz, size: 18, color: Colors.grey),
+                        ],
+                      ),
                     ],
                   ),
-                  Text(
-                    '@${post.handle}',
-                    style: const TextStyle(color: Colors.grey, fontSize: 12),
-                  ),
-                  const SizedBox(height: 4),
-                  LinkifiedText(
-                    text: post.text,
-                    style: const TextStyle(fontSize: 14),
-                    linkStyle: const TextStyle(color: Colors.blue),
-                  ),
-                  if (post.media.isNotEmpty) _buildMediaGrid(post.media),
-                  const SizedBox(height: 8),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      _buildActionIcon(Icons.chat_bubble_outline, post.replyCount, () => _showReplyDialog(post)),
-                      _buildActionIcon(Icons.repeat, post.repostCount, () => _handleRepost(post)),
-                      _buildActionIcon(Icons.favorite_border, post.likeCount, () => _handleLike(post)),
-                      const Icon(Icons.more_horiz, size: 18, color: Colors.grey),
-                    ],
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
           ],
         ),
@@ -503,37 +535,13 @@ class _ThreadScreenState extends State<ThreadScreen> {
     }
   }
 
-  void _showReplyDialog(PostItem post) {
-    final controller = TextEditingController();
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('@${post.handle} への返信'),
-        content: TextField(
-          controller: controller,
-          maxLines: 5,
-          decoration: const InputDecoration(hintText: '返信を書き込む...', border: OutlineInputBorder()),
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('キャンセル')),
-          ElevatedButton(
-            onPressed: () async {
-              if (controller.text.trim().isEmpty) return;
-              try {
-                await _service.reply(post, controller.text);
-                if (mounted) {
-                  Navigator.pop(context);
-                  _fetchThread();
-                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('返信しました')));
-                }
-              } catch (e) {
-                if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('エラー: $e')));
-              }
-            },
-            child: const Text('返信'),
-          ),
-        ],
-      ),
+  void _showReplyDialog(PostItem post) async {
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => NewPostScreen(replyTo: post)),
     );
+    if (result == true) {
+      _fetchThread();
+    }
   }
 }

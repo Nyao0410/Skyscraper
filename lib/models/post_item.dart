@@ -56,6 +56,7 @@ class PostItem {
   final StrongRef? replyParent;
   final String? replyParentHandle;
   final PostItem? replyParentPost;
+  final String? repostedBy; // Display name of the person who reposted
 
   PostItem({
     required this.id,
@@ -75,6 +76,7 @@ class PostItem {
     this.replyParent,
     this.replyParentHandle,
     this.replyParentPost,
+    this.repostedBy,
   });
 
   Map<String, dynamic> toJson() => {
@@ -95,6 +97,7 @@ class PostItem {
         'replyParent': replyParent?.toJson(),
         'replyParentHandle': replyParentHandle,
         'replyParentPost': replyParentPost?.toJson(),
+        'repostedBy': repostedBy,
       };
 
   factory PostItem.fromJson(Map<String, dynamic> json) {
@@ -127,6 +130,7 @@ class PostItem {
       replyParentPost: json['replyParentPost'] != null
           ? PostItem.fromJson(json['replyParentPost'] as Map<String, dynamic>)
           : null,
+      repostedBy: json['repostedBy'] as String?,
     );
   }
 
@@ -168,6 +172,18 @@ class PostItem {
       final author = postData['author'] ?? {};
       final record = postData['record'] ?? {};
       final reply = data['reply'] ?? postData['reply'];
+      final reason = data['reason'];
+
+      String? repostedBy;
+      if (reason != null && reason is Map) {
+        final dynamic typeStr = reason['\$type'] ?? reason[r'$type'];
+        if (typeStr != null && typeStr.toString().contains('reasonRepost')) {
+          final by = reason['by'];
+          if (by != null && by is Map) {
+            repostedBy = (by['displayName'] ?? by['handle'] ?? '').toString();
+          }
+        }
+      }
 
       List<MediaItem> mediaList = [];
       PostItem? quoted;
@@ -249,6 +265,7 @@ class PostItem {
         replyParent: parent,
         replyParentHandle: parentHandle,
         replyParentPost: parentPost,
+        repostedBy: repostedBy,
       );
     } catch (e) {
       debugPrint('Critical error in PostItem.fromFeedView: $e');

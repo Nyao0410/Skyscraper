@@ -67,9 +67,11 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
         setState(() => _userResults = results);
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('検索エラー: $e')));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('検索エラー: $e')));
+      }
     } finally {
-      setState(() => _loading = false);
+      if (mounted) setState(() => _loading = false);
     }
   }
 

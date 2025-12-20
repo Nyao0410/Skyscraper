@@ -19,6 +19,7 @@ class BlueskyService {
   Bluesky? _bluesky;
   String? handle;
   String? did;
+  String? avatar;
 
   final _storage = const FlutterSecureStorage();
   final _db = DatabaseService();
@@ -47,6 +48,14 @@ class BlueskyService {
       handle = session.handle;
       did = session.did;
 
+      // Fetch profile to get avatar
+      try {
+        final profile = await _bluesky!.actor.getProfile(actor: did!);
+        avatar = profile.data.avatar;
+      } catch (e) {
+        debugPrint('Failed to fetch profile avatar: $e');
+      }
+
       // Save session for persistence
       await _storage.write(key: _sessionKey, value: jsonEncode(session.toJson()));
 
@@ -72,6 +81,14 @@ class BlueskyService {
       _bluesky = Bluesky.fromSession(session);
       handle = session.handle;
       did = session.did;
+
+      // Fetch profile to get avatar
+      try {
+        final profile = await _bluesky!.actor.getProfile(actor: did!);
+        avatar = profile.data.avatar;
+      } catch (e) {
+        debugPrint('Failed to fetch profile avatar: $e');
+      }
 
       debugPrint('Session restored. Handle: $handle');
       return true;
@@ -203,10 +220,14 @@ class BlueskyService {
             final pinned = json['pinned'] as List?;
             final saved = json['saved'] as List?;
             if (pinned != null) {
-              for (var uri in pinned) savedUris.add(uri.toString());
+              for (var uri in pinned) {
+                savedUris.add(uri.toString());
+              }
             }
             if (saved != null) {
-              for (var uri in saved) savedUris.add(uri.toString());
+              for (var uri in saved) {
+                savedUris.add(uri.toString());
+              }
             }
           } else if (type == 'app.bsky.actor.defs#savedFeedsPrefV2') {
             // V2: items with pinned flag

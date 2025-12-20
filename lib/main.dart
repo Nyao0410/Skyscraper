@@ -5,11 +5,15 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'screens/login_screen.dart';
 import 'screens/main_screen.dart';
 import 'services/bluesky_service.dart';
+import 'services/background_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   Intl.defaultLocale = 'ja_JP';
   await initializeDateFormatting('ja_JP', null);
+  
+  await BackgroundService().init();
+  
   runApp(const BskyApp());
 }
 

@@ -394,65 +394,84 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
       },
       child: Padding(
         padding: const EdgeInsets.all(12.0),
-        child: Row(
+        child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            CircleAvatar(
-              radius: 24,
-              backgroundImage: post.avatar != null
-                  ? CachedNetworkImageProvider(post.avatar!)
-                  : null,
-              child: post.avatar == null ? const Icon(Icons.person) : null,
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
+            if (post.repostedBy != null)
+              Padding(
+                padding: const EdgeInsets.only(left: 36, bottom: 4),
+                child: Row(
+                  children: [
+                    const Icon(Icons.repeat, size: 14, color: Colors.grey),
+                    const SizedBox(width: 4),
+                    Text(
+                      '${post.repostedBy} さんがリポスト',
+                      style: const TextStyle(color: Colors.grey, fontSize: 12, fontWeight: FontWeight.bold),
+                    ),
+                  ],
+                ),
+              ),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                CircleAvatar(
+                  radius: 24,
+                  backgroundImage: post.avatar != null
+                      ? CachedNetworkImageProvider(post.avatar!)
+                      : null,
+                  child: post.avatar == null ? const Icon(Icons.person) : null,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Expanded(
-                        child: Text(
-                          post.author,
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold, 
-                            fontSize: 15,
-                            color: isDark ? Colors.white : Colors.black,
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              post.author,
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 15,
+                                color: isDark ? Colors.white : Colors.black,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
                           ),
-                          overflow: TextOverflow.ellipsis,
-                        ),
+                          Text(
+                            _formatTime(post.createdAt),
+                            style: const TextStyle(color: Colors.grey, fontSize: 12),
+                          ),
+                        ],
                       ),
                       Text(
-                        _formatTime(post.createdAt),
-                        style: const TextStyle(color: Colors.grey, fontSize: 12),
+                        '@${post.handle}',
+                        style: const TextStyle(color: Colors.grey, fontSize: 13),
+                      ),
+                      const SizedBox(height: 4),
+                      LinkifiedText(
+                        text: post.text,
+                        style: TextStyle(
+                          fontSize: 15,
+                          color: isDark ? Colors.white.withOpacity(0.9) : Colors.black87,
+                        ),
+                      ),
+                      if (post.media.isNotEmpty) _buildMediaGrid(post.media),
+                      const SizedBox(height: 12),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Icon(Icons.chat_bubble_outline, size: 18, color: Colors.grey.shade600),
+                          Icon(Icons.repeat, size: 18, color: Colors.grey.shade600),
+                          Icon(Icons.favorite_border, size: 18, color: Colors.grey.shade600),
+                          Icon(Icons.more_horiz, size: 18, color: Colors.grey.shade600),
+                        ],
                       ),
                     ],
                   ),
-                  Text(
-                    '@${post.handle}',
-                    style: const TextStyle(color: Colors.grey, fontSize: 13),
-                  ),
-                  const SizedBox(height: 4),
-                  LinkifiedText(
-                    text: post.text, 
-                    style: TextStyle(
-                      fontSize: 15,
-                      color: isDark ? Colors.white.withOpacity(0.9) : Colors.black87,
-                    ),
-                  ),
-                  if (post.media.isNotEmpty) _buildMediaGrid(post.media),
-                  const SizedBox(height: 12),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Icon(Icons.chat_bubble_outline, size: 18, color: Colors.grey.shade600),
-                      Icon(Icons.repeat, size: 18, color: Colors.grey.shade600),
-                      Icon(Icons.favorite_border, size: 18, color: Colors.grey.shade600),
-                      Icon(Icons.more_horiz, size: 18, color: Colors.grey.shade600),
-                    ],
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
           ],
         ),

@@ -22,7 +22,7 @@ class DatabaseService {
 
     return await openDatabase(
       path,
-      version: 1,
+      version: 2,
       onCreate: (db, version) async {
         await db.execute('''
           CREATE TABLE posts (
@@ -49,6 +49,19 @@ class DatabaseService {
             is_sent INTEGER DEFAULT 0
           )
         ''');
+      },
+      onUpgrade: (db, oldVersion, newVersion) async {
+        if (oldVersion < 2) {
+          await db.execute('''
+            CREATE TABLE IF NOT EXISTS drafts (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              text TEXT NOT NULL,
+              scheduled_at TEXT, -- ISO8601 string for scheduled posts
+              created_at TEXT NOT NULL,
+              is_sent INTEGER DEFAULT 0
+            )
+          ''');
+        }
       },
     );
   }
@@ -86,6 +99,12 @@ class DatabaseService {
   Future<void> deleteDraft(int id) async {
     final db = await database;
     await db.delete('drafts', where: 'id = ?', whereArgs: [id]);
+  }
+
+  Future<int> getDraftCount() async {
+    final db = await database;
+    final result = await db.rawQuery('SELECT COUNT(*) as count FROM drafts WHERE is_sent = 0');
+    return Sqflite.firstIntValue(result) ?? 0;
   }
 
   Future<void> savePosts(String feedUri, List<PostItem> posts) async {

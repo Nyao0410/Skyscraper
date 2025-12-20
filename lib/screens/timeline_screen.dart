@@ -102,7 +102,15 @@ class _TimelineScreenState extends State<TimelineScreen> {
                   ),
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () => _showPostDialog(),
+        onPressed: () async {
+          final result = await Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const NewPostScreen()),
+          );
+          if (result == true) {
+            _fetchTimeline();
+          }
+        },
         backgroundColor: const Color(0xFF00C300),
         child: const Icon(Icons.edit, color: Colors.white),
       ),
@@ -119,83 +127,102 @@ class _TimelineScreenState extends State<TimelineScreen> {
       },
       child: Padding(
         padding: const EdgeInsets.all(12.0),
-        child: Row(
+        child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            GestureDetector(
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => ProfileScreen(actor: post.handle)),
-                );
-              },
-              child: CircleAvatar(
-                radius: 24,
-                backgroundImage: post.avatar != null
-                    ? CachedNetworkImageProvider(post.avatar!)
-                    : null,
-                child: post.avatar == null ? const Icon(Icons.person) : null,
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: RichText(
-                          overflow: TextOverflow.ellipsis,
-                          text: TextSpan(
-                            style: DefaultTextStyle.of(context).style,
-                            children: [
-                              TextSpan(
-                                text: post.author,
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold, 
-                                  fontSize: 15,
-                                  color: Theme.of(context).colorScheme.onSurface,
-                                ),
-                              ),
-                              TextSpan(
-                                text: ' @${post.handle}',
-                                style: const TextStyle(color: Colors.grey, fontSize: 13),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                      Text(
-                        _formatTime(post.createdAt),
-                        style: const TextStyle(color: Colors.grey, fontSize: 12),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 4),
-                  LinkifiedText(
-                    text: post.text,
-                    style: TextStyle(
-                      fontSize: 15, 
-                      height: 1.3,
-                      color: Theme.of(context).colorScheme.onSurface,
+            if (post.repostedBy != null)
+              Padding(
+                padding: const EdgeInsets.only(left: 36, bottom: 4),
+                child: Row(
+                  children: [
+                    const Icon(Icons.repeat, size: 14, color: Colors.grey),
+                    const SizedBox(width: 4),
+                    Text(
+                      '${post.repostedBy} さんがリポスト',
+                      style: const TextStyle(color: Colors.grey, fontSize: 12, fontWeight: FontWeight.bold),
                     ),
-                    linkStyle: const TextStyle(color: Colors.blue, decoration: TextDecoration.none),
+                  ],
+                ),
+              ),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                GestureDetector(
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => ProfileScreen(actor: post.handle)),
+                    );
+                  },
+                  child: CircleAvatar(
+                    radius: 24,
+                    backgroundImage: post.avatar != null
+                        ? CachedNetworkImageProvider(post.avatar!)
+                        : null,
+                    child: post.avatar == null ? const Icon(Icons.person) : null,
                   ),
-                  if (post.quotedPost != null) _buildQuotedPost(post.quotedPost!),
-                  if (post.media.isNotEmpty) _buildMediaGrid(post.media),
-                  const SizedBox(height: 12),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      _buildActionIcon(Icons.chat_bubble_outline, post.replyCount, () => _showReplyDialog(post)),
-                      _buildActionIcon(Icons.repeat, post.repostCount, () => _handleRepost(post)),
-                      _buildActionIcon(Icons.favorite_border, post.likeCount, () => _handleLike(post)),
-                      _buildActionIcon(Icons.more_horiz, null, () => _showPostMenu(post)),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: RichText(
+                              overflow: TextOverflow.ellipsis,
+                              text: TextSpan(
+                                style: DefaultTextStyle.of(context).style,
+                                children: [
+                                  TextSpan(
+                                    text: post.author,
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 15,
+                                      color: Theme.of(context).colorScheme.onSurface,
+                                    ),
+                                  ),
+                                  TextSpan(
+                                    text: ' @${post.handle}',
+                                    style: const TextStyle(color: Colors.grey, fontSize: 13),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          Text(
+                            _formatTime(post.createdAt),
+                            style: const TextStyle(color: Colors.grey, fontSize: 12),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      LinkifiedText(
+                        text: post.text,
+                        style: TextStyle(
+                          fontSize: 15,
+                          height: 1.3,
+                          color: Theme.of(context).colorScheme.onSurface,
+                        ),
+                        linkStyle: const TextStyle(color: Colors.blue, decoration: TextDecoration.none),
+                      ),
+                      if (post.quotedPost != null) _buildQuotedPost(post.quotedPost!),
+                      if (post.media.isNotEmpty) _buildMediaGrid(post.media),
+                      const SizedBox(height: 12),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          _buildActionIcon(Icons.chat_bubble_outline, post.replyCount, () => _showReplyDialog(post)),
+                          _buildActionIcon(Icons.repeat, post.repostCount, () => _handleRepost(post)),
+                          _buildActionIcon(Icons.favorite_border, post.likeCount, () => _handleLike(post)),
+                          _buildActionIcon(Icons.more_horiz, null, () => _showPostMenu(post)),
+                        ],
+                      ),
                     ],
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
           ],
         ),
@@ -398,199 +425,23 @@ class _TimelineScreenState extends State<TimelineScreen> {
     );
   }
 
-  void _showReplyDialog(PostItem post) {
-    final controller = TextEditingController();
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('@${post.handle} への返信'),
-        content: TextField(
-          controller: controller,
-          maxLines: 5,
-          decoration: const InputDecoration(
-            hintText: '返信を書き込む...',
-            border: OutlineInputBorder(),
-          ),
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('キャンセル')),
-          ElevatedButton(
-            onPressed: () async {
-              if (controller.text.trim().isEmpty) return;
-              try {
-                await _service.reply(post, controller.text);
-                if (mounted) {
-                  Navigator.pop(context);
-                  _fetchTimeline();
-                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('返信しました')));
-                }
-              } catch (e) {
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('エラー: $e')));
-                }
-              }
-            },
-            child: const Text('返信'),
-          ),
-        ],
-      ),
+  void _showReplyDialog(PostItem post) async {
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => NewPostScreen(replyTo: post)),
     );
+    if (result == true) {
+      _fetchTimeline();
+    }
   }
 
-  void _showQuoteDialog(PostItem post) {
-    final controller = TextEditingController();
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('引用投稿'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            _buildQuotedPost(post),
-            const SizedBox(height: 12),
-            TextField(
-              controller: controller,
-              maxLines: 5,
-              decoration: const InputDecoration(
-                hintText: 'コメントを追加...',
-                border: OutlineInputBorder(),
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('キャンセル')),
-          ElevatedButton(
-            onPressed: () async {
-              if (controller.text.trim().isEmpty) return;
-              try {
-                await _service.quote(post, controller.text);
-                if (mounted) {
-                  Navigator.pop(context);
-                  _fetchTimeline();
-                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('引用投稿しました')));
-                }
-              } catch (e) {
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('エラー: $e')));
-                }
-              }
-            },
-            child: const Text('投稿'),
-          ),
-        ],
-      ),
+  void _showQuoteDialog(PostItem post) async {
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => NewPostScreen(quoteOf: post)),
     );
-  }
-
-  void _showPostDialog() {
-    final controller = TextEditingController();
-    DateTime? scheduledDate;
-
-    showDialog(
-      context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
-          title: const Text('新規投稿'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: controller,
-                maxLines: 5,
-                decoration: const InputDecoration(
-                  hintText: 'いまどうしてる？',
-                  border: OutlineInputBorder(),
-                ),
-              ),
-              if (scheduledDate != null)
-                Padding(
-                  padding: const EdgeInsets.only(top: 8.0),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.schedule, size: 16, color: Colors.blue),
-                      const SizedBox(width: 4),
-                      Text(
-                        '予約: ${DateFormat('MM/dd HH:mm').format(scheduledDate!)}',
-                        style: const TextStyle(color: Colors.blue, fontSize: 12),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.close, size: 16),
-                        onPressed: () => setDialogState(() => scheduledDate = null),
-                      ),
-                    ],
-                  ),
-                ),
-            ],
-          ),
-          actions: [
-            IconButton(
-              icon: const Icon(Icons.schedule),
-              tooltip: '予約投稿',
-              onPressed: () async {
-                final now = DateTime.now();
-                final date = await showDatePicker(
-                  context: context,
-                  initialDate: scheduledDate ?? now.add(const Duration(minutes: 5)),
-                  firstDate: now,
-                  lastDate: now.add(const Duration(days: 30)),
-                );
-                if (date != null) {
-                  final time = await showTimePicker(
-                    context: context,
-                    initialTime: TimeOfDay.fromDateTime(scheduledDate ?? now.add(const Duration(minutes: 5))),
-                  );
-                  if (time != null) {
-                    setDialogState(() {
-                      scheduledDate = DateTime(date.year, date.month, date.day, time.hour, time.minute);
-                    });
-                  }
-                }
-              },
-            ),
-            TextButton(
-              onPressed: () async {
-                if (controller.text.trim().isEmpty) return;
-                await _db.saveDraft(controller.text);
-                if (mounted) {
-                  Navigator.pop(context);
-                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('下書きを保存しました')));
-                }
-              },
-              child: const Text('下書き保存'),
-            ),
-            ElevatedButton(
-              onPressed: () async {
-                final text = controller.text.trim();
-                if (text.isEmpty) return;
-
-                try {
-                  if (scheduledDate != null) {
-                    await _db.saveDraft(text, scheduledAt: scheduledDate);
-                    if (mounted) {
-                      Navigator.pop(context);
-                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('投稿を予約しました')));
-                    }
-                  } else {
-                    await _service.post(text);
-                    if (mounted) {
-                      Navigator.pop(context);
-                      _fetchTimeline();
-                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('投稿しました')));
-                    }
-                  }
-                } catch (e) {
-                  if (mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('エラー: $e')));
-                  }
-                }
-              },
-              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF00C300)),
-              child: Text(scheduledDate != null ? '予約する' : '投稿', style: const TextStyle(color: Colors.white)),
-            ),
-          ],
-        ),
-      ),
-    );
+    if (result == true) {
+      _fetchTimeline();
+    }
   }
 }

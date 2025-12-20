@@ -3,9 +3,19 @@ import 'package:intl/intl.dart';
 import '../services/bluesky_service.dart';
 import '../services/database_service.dart';
 
+import '../models/post_item.dart';
+
 class NewPostScreen extends StatefulWidget {
   final String? initialText;
-  const NewPostScreen({super.key, this.initialText});
+  final PostItem? replyTo;
+  final PostItem? quoteOf;
+  
+  const NewPostScreen({
+    super.key, 
+    this.initialText,
+    this.replyTo,
+    this.quoteOf,
+  });
 
   @override
   State<NewPostScreen> createState() => _NewPostScreenState();
@@ -26,7 +36,18 @@ class _NewPostScreenState extends State<NewPostScreen> {
     }
   }
 
+  // ignore: use_build_context_synchronously
   Future<void> _selectSchedule() async {
+    if (widget.replyTo != null) {
+      // This uses the BuildContext only in an early-return branch.
+      // The linter may warn about using BuildContext across async gaps;
+      // ignore that here because we return immediately afterwards.
+      // ignore: use_build_context_synchronously
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('返信の予約投稿は現在サポートされていません'))
+      );
+      return;
+    }
     final now = DateTime.now();
     final date = await showDatePicker(
       context: context,
@@ -40,6 +61,7 @@ class _NewPostScreenState extends State<NewPostScreen> {
         initialTime: TimeOfDay.fromDateTime(_scheduledDate ?? now.add(const Duration(minutes: 5))),
       );
       if (time != null) {
+        if (!mounted) return;
         setState(() {
           _scheduledDate = DateTime(date.year, date.month, date.day, time.hour, time.minute);
         });
@@ -51,6 +73,7 @@ class _NewPostScreenState extends State<NewPostScreen> {
     final text = _controller.text.trim();
     if (text.isEmpty) return;
 
+    // For simplicity, we only save text drafts for now
     await _db.saveDraft(text);
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('下書きを保存しました')));
@@ -68,6 +91,18 @@ class _NewPostScreenState extends State<NewPostScreen> {
         await _db.saveDraft(text, scheduledAt: _scheduledDate);
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('投稿を予約しました')));
+          Navigator.pop(context, true);
+        }
+      } else if (widget.replyTo != null) {
+        await _service.reply(widget.replyTo!, text);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('返信しました')));
+          Navigator.pop(context, true);
+        }
+      } else if (widget.quoteOf != null) {
+        await _service.quote(widget.quoteOf!, text);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('引用投稿しました')));
           Navigator.pop(context, true);
         }
       } else {
@@ -88,14 +123,19 @@ class _NewPostScreenState extends State<NewPostScreen> {
 
   @override
   Widget build(BuildContext context) {
+    String title = '新規投稿';
+    if (widget.replyTo != null) title = '返信';
+    if (widget.quoteOf != null) title = '引用';
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text('新規投稿'),
+        title: Text(title),
         actions: [
-          TextButton(
-            onPressed: _isPosting ? null : _saveDraft,
-            child: const Text('下書き'),
-          ),
+          if (widget.replyTo == null && widget.quoteOf == null)
+            TextButton(
+              onPressed: _isPosting ? null : _saveDraft,
+              child: const Text('下書き'),
+            ),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 8.0),
             child: ElevatedButton(
@@ -114,6 +154,8 @@ class _NewPostScreenState extends State<NewPostScreen> {
       ),
       body: Column(
         children: [
+          if (widget.replyTo != null || widget.quoteOf != null)
+            _buildReferencePost(widget.replyTo ?? widget.quoteOf!),
           Expanded(
             child: Padding(
               padding: const EdgeInsets.all(16.0),
@@ -121,8 +163,8 @@ class _NewPostScreenState extends State<NewPostScreen> {
                 controller: _controller,
                 maxLines: null,
                 autofocus: true,
-                decoration: const InputDecoration(
-                  hintText: 'いまどうしてる？',
+                decoration: InputDecoration(
+                  hintText: widget.replyTo != null ? '返信を入力...' : 'いまどうしてる？',
                   border: InputBorder.none,
                 ),
                 style: const TextStyle(fontSize: 18),
@@ -135,10 +177,11 @@ class _NewPostScreenState extends State<NewPostScreen> {
             color: Colors.grey.shade50,
             child: Row(
               children: [
-                IconButton(
-                  icon: Icon(Icons.schedule, color: _scheduledDate != null ? Colors.blue : Colors.grey),
-                  onPressed: _selectSchedule,
-                ),
+                if (widget.replyTo == null && widget.quoteOf == null)
+                  IconButton(
+                    icon: Icon(Icons.schedule, color: _scheduledDate != null ? Colors.blue : Colors.grey),
+                    onPressed: _selectSchedule,
+                  ),
                 if (_scheduledDate != null) ...[
                   Text(
                     DateFormat('MM/dd HH:mm').format(_scheduledDate!),
@@ -159,6 +202,36 @@ class _NewPostScreenState extends State<NewPostScreen> {
               ],
             ),
           ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildReferencePost(PostItem post) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      margin: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade100,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.black12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              if (post.avatar != null)
+                CircleAvatar(radius: 10, backgroundImage: NetworkImage(post.avatar!))
+              else
+                const Icon(Icons.account_circle, size: 20),
+              const SizedBox(width: 8),
+              Text(post.author, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(post.text, maxLines: 3, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 14)),
         ],
       ),
     );
