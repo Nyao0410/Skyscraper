@@ -11,7 +11,8 @@ import 'search_screen.dart';
 import 'new_post_screen.dart';
 
 class TimelineScreen extends StatefulWidget {
-  const TimelineScreen({super.key});
+  final bool showAppBar;
+  const TimelineScreen({super.key, this.showAppBar = true});
 
   @override
   State<TimelineScreen> createState() => _TimelineScreenState();
@@ -20,13 +21,29 @@ class TimelineScreen extends StatefulWidget {
 class _TimelineScreenState extends State<TimelineScreen> {
   final _service = BlueskyService();
   final _db = DatabaseService();
+  final _scrollController = ScrollController();
   List<PostItem> _posts = [];
+  String? _cursor;
   bool _loading = true;
+  bool _loadingMore = false;
 
   @override
   void initState() {
     super.initState();
+    _scrollController.addListener(_onScroll);
     _fetchTimeline();
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _onScroll() {
+    if (_scrollController.position.pixels >= _scrollController.position.maxScrollExtent - 500) {
+      _loadMore();
+    }
   }
 
   Future<void> _fetchTimeline() async {
@@ -45,10 +62,11 @@ class _TimelineScreenState extends State<TimelineScreen> {
 
     // 2. Fetch from network to update
     try {
-      final posts = await _service.getTimeline();
+      final response = await _service.getTimeline();
       if (mounted) {
         setState(() {
-          _posts = posts;
+          _posts = response.posts;
+          _cursor = response.cursor;
           _loading = false;
         });
       }
@@ -60,23 +78,45 @@ class _TimelineScreenState extends State<TimelineScreen> {
     }
   }
 
+  Future<void> _loadMore() async {
+    if (_loadingMore || _cursor == null) return;
+    setState(() => _loadingMore = true);
+    try {
+      final response = await _service.getTimeline(cursor: _cursor);
+      if (mounted) {
+        setState(() {
+          _posts.addAll(response.posts);
+          _cursor = response.cursor;
+          _loadingMore = false;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error loading more timeline: $e');
+      if (mounted) {
+        setState(() => _loadingMore = false);
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('タイムライン', style: TextStyle(fontWeight: FontWeight.bold)),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.search),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const SearchScreen()),
-              );
-            },
-          ),
-        ],
-      ),
+      appBar: widget.showAppBar
+          ? AppBar(
+              title: const Text('タイムライン', style: TextStyle(fontWeight: FontWeight.bold)),
+              actions: [
+                IconButton(
+                  icon: const Icon(Icons.search),
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const SearchScreen()),
+                    );
+                  },
+                ),
+              ],
+            )
+          : null,
       body: RefreshIndicator(
         onRefresh: _fetchTimeline,
         child: _loading
@@ -93,9 +133,16 @@ class _TimelineScreenState extends State<TimelineScreen> {
                     ),
                   )
                 : ListView.separated(
-                    itemCount: _posts.length,
+                    controller: _scrollController,
+                    itemCount: _posts.length + (_loadingMore ? 1 : 0),
                     separatorBuilder: (context, index) => const Divider(height: 1),
                     itemBuilder: (context, index) {
+                      if (index == _posts.length) {
+                        return const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 16),
+                          child: Center(child: CircularProgressIndicator()),
+                        );
+                      }
                       final post = _posts[index];
                       return _buildPostItem(post);
                     },

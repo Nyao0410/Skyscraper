@@ -5,7 +5,9 @@ import '../models/post_item.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'chat_screen.dart';
 import 'talk_list_screen.dart';
-import 'timeline_screen.dart';
+import 'home_screen.dart';
+import 'notifications_screen.dart';
+import 'search_screen.dart';
 import 'drafts_screen.dart';
 import 'new_post_screen.dart';
 
@@ -48,10 +50,10 @@ class _MainScreenState extends State<MainScreen> {
   @override
   Widget build(BuildContext context) {
     final List<Widget> screens = [
-      const Center(child: Text('ホーム (準備中)')),
+      const HomeScreen(),
       TalkListScreen(onFeedSelected: _navigateToChat),
-      const TimelineScreen(),
-      const Center(child: Text('ニュース (準備中)')),
+      const SearchScreen(),
+      const NotificationsScreen(),
       _buildOtherScreen(),
     ];
 
@@ -74,8 +76,8 @@ class _MainScreenState extends State<MainScreen> {
         items: [
           const BottomNavigationBarItem(icon: Icon(Icons.home_outlined), activeIcon: Icon(Icons.home), label: 'ホーム'),
           const BottomNavigationBarItem(icon: Icon(Icons.chat_outlined), activeIcon: Icon(Icons.chat), label: 'トーク'),
-          const BottomNavigationBarItem(icon: Icon(Icons.access_time), activeIcon: Icon(Icons.access_time_filled), label: 'タイムライン'),
-          const BottomNavigationBarItem(icon: Icon(Icons.newspaper_outlined), activeIcon: Icon(Icons.newspaper), label: 'ニュース'),
+          const BottomNavigationBarItem(icon: Icon(Icons.search), activeIcon: Icon(Icons.search), label: '検索'),
+          const BottomNavigationBarItem(icon: Icon(Icons.notifications_outlined), activeIcon: Icon(Icons.notifications), label: '通知'),
           BottomNavigationBarItem(
             icon: Badge(
               label: _draftCount > 0 ? Text(_draftCount.toString()) : null,
@@ -145,8 +147,10 @@ class ChatDetailWrapper extends StatefulWidget {
 class _ChatDetailWrapperState extends State<ChatDetailWrapper> {
   final _service = BlueskyService();
   List<PostItem> _feed = [];
+  String? _cursor;
   bool _loading = true;
   bool _refreshing = false;
+  bool _loadingMore = false;
 
   @override
   void initState() {
@@ -170,10 +174,11 @@ class _ChatDetailWrapperState extends State<ChatDetailWrapper> {
 
     // 2. Fetch from network
     try {
-      final posts = await _service.getCustomFeed(widget.feedUri);
+      final response = await _service.getCustomFeed(widget.feedUri);
       if (mounted) {
         setState(() {
-          _feed = posts;
+          _feed = response.posts;
+          _cursor = response.cursor;
           _loading = false;
         });
       }
@@ -192,13 +197,35 @@ class _ChatDetailWrapperState extends State<ChatDetailWrapper> {
   Future<void> _handleRefresh() async {
     setState(() => _refreshing = true);
     try {
-      final posts = await _service.getCustomFeed(widget.feedUri);
+      final response = await _service.getCustomFeed(widget.feedUri);
       setState(() {
-        _feed = posts;
+        _feed = response.posts;
+        _cursor = response.cursor;
         _refreshing = false;
       });
     } catch (e) {
       setState(() => _refreshing = false);
+    }
+  }
+
+  Future<void> _handleLoadMore() async {
+    if (_loadingMore || _cursor == null) return;
+    
+    setState(() => _loadingMore = true);
+    try {
+      final response = await _service.getCustomFeed(widget.feedUri, cursor: _cursor);
+      if (mounted) {
+        setState(() {
+          _feed.addAll(response.posts);
+          _cursor = response.cursor;
+          _loadingMore = false;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error loading more: $e');
+      if (mounted) {
+        setState(() => _loadingMore = false);
+      }
     }
   }
 
@@ -226,7 +253,9 @@ class _ChatDetailWrapperState extends State<ChatDetailWrapper> {
       title: widget.feedName,
       messages: _feed,
       isRefreshing: _refreshing,
+      isLoadingMore: _loadingMore,
       onRefresh: _handleRefresh,
+      onLoadMore: _handleLoadMore,
       onSendMessage: _handleSendMessage,
       onLike: (item) async {
         await _service.like(item.id, item.uri);

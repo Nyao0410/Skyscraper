@@ -8,7 +8,9 @@ class ChatScreen extends StatefulWidget {
   final String title;
   final List<PostItem> messages;
   final bool isRefreshing;
+  final bool isLoadingMore;
   final Function() onRefresh;
+  final Function() onLoadMore;
   final Function(String text) onSendMessage;
   final Function(PostItem item)? onLike;
   final Function(PostItem item)? onRepost;
@@ -21,7 +23,9 @@ class ChatScreen extends StatefulWidget {
     this.title = 'Bluesky タイムライン',
     required this.messages,
     required this.isRefreshing,
+    this.isLoadingMore = false,
     required this.onRefresh,
+    required this.onLoadMore,
     required this.onSendMessage,
     this.onLike,
     this.onRepost,
@@ -39,6 +43,18 @@ class _ChatScreenState extends State<ChatScreen> {
   final _textController = TextEditingController();
 
   @override
+  void initState() {
+    super.initState();
+    _scrollController.addListener(_onScroll);
+  }
+
+  void _onScroll() {
+    if (_scrollController.position.pixels >= _scrollController.position.maxScrollExtent - 200) {
+      widget.onLoadMore();
+    }
+  }
+
+  @override
   void dispose() {
     _scrollController.dispose();
     _textController.dispose();
@@ -48,7 +64,12 @@ class _ChatScreenState extends State<ChatScreen> {
   @override
   void didUpdateWidget(ChatScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.messages.length != oldWidget.messages.length) {
+    // 新しいメッセージが追加された場合（リストの先頭が変わった場合）のみスクロール
+    if (widget.messages.isNotEmpty && oldWidget.messages.isNotEmpty) {
+      if (widget.messages.first.id != oldWidget.messages.first.id) {
+        _scrollToBottom();
+      }
+    } else if (widget.messages.length > oldWidget.messages.length && oldWidget.messages.isEmpty) {
       _scrollToBottom();
     }
   }
@@ -161,8 +182,14 @@ class _ChatScreenState extends State<ChatScreen> {
     return ListView.builder(
       controller: _scrollController,
       reverse: true,
-      itemCount: widget.messages.length,
+      itemCount: widget.messages.length + (widget.isLoadingMore ? 1 : 0),
       itemBuilder: (context, index) {
+        if (index == widget.messages.length) {
+          return const Padding(
+            padding: EdgeInsets.symmetric(vertical: 16),
+            child: Center(child: CircularProgressIndicator(color: Colors.white)),
+          );
+        }
         final message = widget.messages[index];
         
         // 日付の区切りを表示するか判定

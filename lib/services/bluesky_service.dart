@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Notification;
 import 'package:bluesky/bluesky.dart';
 import 'package:bluesky/atproto.dart';
 import 'package:atproto_core/atproto_core.dart';
@@ -106,15 +106,16 @@ class BlueskyService {
     await _storage.delete(key: _sessionKey);
   }
 
-  Future<List<PostItem>> getTimeline({int limit = 40}) async {
+  Future<FeedResponse> getTimeline({int limit = 40, String? cursor}) async {
     if (_bluesky == null) {
       throw Exception('ログインしていません');
     }
 
     try {
       debugPrint('Fetching timeline...');
-      final response = await _bluesky!.feed.getTimeline(limit: limit);
+      final response = await _bluesky!.feed.getTimeline(limit: limit, cursor: cursor);
       final feedItems = response.data.feed;
+      final nextCursor = response.data.cursor;
       debugPrint('Fetched ${feedItems.length} feed items from timeline');
 
       final posts = feedItems
@@ -131,10 +132,12 @@ class BlueskyService {
       
       debugPrint('Parsed ${posts.length} posts from timeline');
       
-      // Save to cache
-      await _db.savePosts('following', posts);
+      // Save to cache (only for first page)
+      if (cursor == null) {
+        await _db.savePosts('following', posts);
+      }
       
-      return posts;
+      return FeedResponse(posts: posts, cursor: nextCursor);
     } on UnauthorizedException catch (e) {
       throw Exception('認証エラー: ${e.toString()}');
     } on XRPCException catch (e) {
@@ -148,7 +151,7 @@ class BlueskyService {
     return await _db.getCachedPosts('following', limit: limit);
   }
 
-  Future<List<PostItem>> getCustomFeed(String feedUri, {int limit = 40}) async {
+  Future<FeedResponse> getCustomFeed(String feedUri, {int limit = 40, String? cursor}) async {
     if (_bluesky == null) {
       throw Exception('ログインしていません');
     }
@@ -157,15 +160,19 @@ class BlueskyService {
       debugPrint('Fetching custom feed: $feedUri');
       
       final List<dynamic> feedItems;
+      final String? nextCursor;
       if (feedUri == 'following') {
-        final response = await _bluesky!.feed.getTimeline(limit: limit);
+        final response = await _bluesky!.feed.getTimeline(limit: limit, cursor: cursor);
         feedItems = response.data.feed;
+        nextCursor = response.data.cursor;
       } else {
         final response = await _bluesky!.feed.getFeed(
           feed: AtUri.parse(feedUri),
           limit: limit,
+          cursor: cursor,
         );
         feedItems = response.data.feed;
+        nextCursor = response.data.cursor;
       }
       
       debugPrint('Fetched ${feedItems.length} feed items from $feedUri');
@@ -184,16 +191,14 @@ class BlueskyService {
       
       debugPrint('Parsed ${posts.length} posts from $feedUri');
       
-      // Save to cache
-      await _db.savePosts(feedUri, posts);
+      // Save to cache (only for first page)
+      if (cursor == null) {
+        await _db.savePosts(feedUri, posts);
+      }
       
-      return posts;
-    } on UnauthorizedException catch (e) {
-      throw Exception('認証エラー: ${e.toString()}');
-    } on XRPCException catch (e) {
-      throw Exception('フィード取得失敗: ${e.toString()}');
+      return FeedResponse(posts: posts, cursor: nextCursor);
     } catch (e) {
-      throw Exception('ネットワークエラー: ${e.toString()}');
+      throw Exception('フィード取得失敗: ${e.toString()}');
     }
   }
 
@@ -664,6 +669,29 @@ class BlueskyService {
       return response.data.listsWithMembership;
     } catch (e) {
       throw Exception('被リスト一覧取得失敗: $e');
+    }
+  }
+
+  Future<List<dynamic>> getNotifications({int limit = 40, String? cursor}) async {
+    if (_bluesky == null) throw Exception('ログインしていません');
+    try {
+      final response = await _bluesky!.notification.listNotifications(
+        limit: limit,
+        cursor: cursor,
+      );
+      return response.data.notifications;
+    } catch (e) {
+      debugPrint('GetNotifications error: $e');
+      throw Exception('通知取得失敗: $e');
+    }
+  }
+
+  Future<void> updateNotificationsSeen() async {
+    if (_bluesky == null) return;
+    try {
+      await _bluesky!.notification.updateSeen(seenAt: DateTime.now());
+    } catch (e) {
+      debugPrint('UpdateNotificationsSeen error: $e');
     }
   }
 }

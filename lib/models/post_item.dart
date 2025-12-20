@@ -38,6 +38,12 @@ class StrongRef {
       );
 }
 
+class FeedResponse {
+  final List<PostItem> posts;
+  final String? cursor;
+  FeedResponse({required this.posts, this.cursor});
+}
+
 class PostItem {
   final String id; // CID
   final String uri; // AtUri
