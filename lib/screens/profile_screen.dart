@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../models/post_item.dart';
 import '../services/bluesky_service.dart';
+import '../widgets/linkified_text.dart';
 import 'thread_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -122,7 +123,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
           if (_profile.description != null && _profile.description!.isNotEmpty) ...[
             const SizedBox(height: 12),
-            Text(_profile.description!, style: const TextStyle(fontSize: 15)),
+            LinkifiedText(
+              text: _profile.description!,
+              style: const TextStyle(fontSize: 15),
+            ),
           ],
           const SizedBox(height: 16),
           Row(
@@ -196,7 +200,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     style: const TextStyle(color: Colors.grey, fontSize: 13),
                   ),
                   const SizedBox(height: 4),
-                  Text(post.text, style: const TextStyle(fontSize: 15)),
+                  LinkifiedText(text: post.text, style: const TextStyle(fontSize: 15)),
                   if (post.media.isNotEmpty) _buildMediaGrid(post.media),
                   const SizedBox(height: 12),
                   Row(

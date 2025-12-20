@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:flutter_linkify/flutter_linkify.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../models/post_item.dart';
 import '../services/bluesky_service.dart';
+import '../widgets/linkified_text.dart';
 import 'profile_screen.dart';
 
 class ThreadScreen extends StatefulWidget {
@@ -289,14 +289,10 @@ class _ThreadScreenState extends State<ThreadScreen> {
             ],
           ),
           const SizedBox(height: 16),
-          Linkify(
+          LinkifiedText(
             text: post.text,
             style: const TextStyle(fontSize: 18, height: 1.4),
             linkStyle: const TextStyle(color: Colors.blue, decoration: TextDecoration.none),
-            onOpen: (link) async {
-              final url = Uri.parse(link.url);
-              if (await canLaunchUrl(url)) await launchUrl(url);
-            },
           ),
           if (post.quotedPost != null) _buildQuotedPost(post.quotedPost!),
           if (post.media.isNotEmpty) _buildMediaGrid(post.media),
@@ -376,7 +372,7 @@ class _ThreadScreenState extends State<ThreadScreen> {
                     style: const TextStyle(color: Colors.grey, fontSize: 12),
                   ),
                   const SizedBox(height: 4),
-                  Linkify(
+                  LinkifiedText(
                     text: post.text,
                     style: const TextStyle(fontSize: 14),
                     linkStyle: const TextStyle(color: Colors.blue),
@@ -451,7 +447,10 @@ class _ThreadScreenState extends State<ThreadScreen> {
             ],
           ),
           const SizedBox(height: 4),
-          Text(quoted.text, maxLines: 3, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 14)),
+          LinkifiedText(
+            text: quoted.text,
+            style: const TextStyle(fontSize: 14),
+          ),
         ],
       ),
     );

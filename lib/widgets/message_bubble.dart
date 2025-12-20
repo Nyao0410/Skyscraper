@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:flutter_linkify/flutter_linkify.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../models/post_item.dart';
 import '../screens/thread_screen.dart';
 import '../screens/profile_screen.dart';
+import 'linkified_text.dart';
 
 class MessageBubble extends StatelessWidget {
   final PostItem message;
@@ -61,31 +61,225 @@ class MessageBubble extends StatelessWidget {
                     _buildAuthorName(),
                     const SizedBox(height: 4),
                   ],
-                  Row(
-                    mainAxisAlignment: isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      if (isMe) _buildTimestamp(),
-                      const SizedBox(width: 4),
-                      Flexible(
-                        child: Column(
-                          crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
-                          children: [
-                            if (message.quotedPost != null) _buildQuotedPost(maxBubbleWidth, context),
-                            if (message.text.isNotEmpty) _buildTextBubble(maxBubbleWidth, context),
-                            if (message.media.isNotEmpty)
-                              ..._buildMediaWidgets(message.media, maxBubbleWidth, context),
-                          ],
+                  if (message.replyParentPost != null) ...[
+                    _buildReplyPost(maxBubbleWidth, context),
+                    const SizedBox(height: 1),
+                  ] else if (message.replyParentHandle != null) ...[
+                    _buildReplyIndicator(),
+                    const SizedBox(height: 2),
+                  ],
+                  if (message.text.isNotEmpty || message.quotedPost != null)
+                    Row(
+                      mainAxisAlignment: isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        if (isMe) _buildTimestamp(),
+                        const SizedBox(width: 4),
+                        Flexible(
+                          child: _buildMainBubble(maxBubbleWidth, context),
                         ),
-                      ),
-                      const SizedBox(width: 4),
-                      if (!isMe) _buildTimestamp(),
-                    ],
-                  ),
+                        const SizedBox(width: 4),
+                        if (!isMe) _buildTimestamp(),
+                      ],
+                    ),
+                  if (message.media.isNotEmpty) ...[
+                    if (message.text.isNotEmpty || message.quotedPost != null)
+                      const SizedBox(height: 4),
+                    Row(
+                      mainAxisAlignment: isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        if (isMe) _buildTimestamp(),
+                        const SizedBox(width: 4),
+                        Flexible(
+                          child: Column(
+                            crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+                            children: _buildMediaWidgets(message.media, maxBubbleWidth, context),
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        if (!isMe) _buildTimestamp(),
+                      ],
+                    ),
+                  ],
                 ],
               ),
             ),
           ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildReplyIndicator() {
+    final handle = message.replyParentHandle;
+    final displayHandle = (handle != null && !handle.startsWith('@')) ? '@$handle' : handle;
+    
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 4),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.reply, size: 12, color: Colors.white70),
+          const SizedBox(width: 2),
+          Text(
+            '$displayHandle に返信',
+            style: const TextStyle(fontSize: 10, color: Colors.white70),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildReplyPost(double maxWidth, BuildContext context) {
+    final parent = message.replyParentPost!;
+    return Container(
+      constraints: BoxConstraints(maxWidth: maxWidth),
+      padding: const EdgeInsets.all(8),
+      decoration: BoxDecoration(
+        color: Colors.black.withOpacity(0.2),
+        borderRadius: const BorderRadius.only(
+          topLeft: Radius.circular(12),
+          topRight: Radius.circular(12),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.reply, size: 12, color: Colors.white70),
+              const SizedBox(width: 4),
+              Expanded(
+                child: Text(
+                  '${parent.author} (@${parent.handle})',
+                  style: const TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white70,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 2),
+          Text(
+            parent.text,
+            style: const TextStyle(fontSize: 11, color: Colors.white),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMainBubble(double maxWidth, BuildContext context) {
+    final hasReplyParent = message.replyParentPost != null;
+    return Container(
+      constraints: BoxConstraints(maxWidth: maxWidth),
+      decoration: BoxDecoration(
+        color: isMe ? const Color(0xFF8DE055) : Colors.white,
+        borderRadius: BorderRadius.only(
+          topLeft: Radius.circular(hasReplyParent ? 0 : 16),
+          topRight: Radius.circular(hasReplyParent ? 0 : 16),
+          bottomLeft: const Radius.circular(16),
+          bottomRight: Radius.circular(isMe ? 4 : 16),
+        ),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (message.text.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+              child: LinkifiedText(
+                text: message.text,
+                style: TextStyle(
+                  color: isMe ? Colors.black : Colors.black87,
+                  fontSize: 15,
+                ),
+                linkStyle: TextStyle(
+                  color: isMe ? Colors.blue.shade900 : Colors.blue.shade700,
+                  decoration: TextDecoration.underline,
+                ),
+              ),
+            ),
+          if (message.quotedPost != null)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
+              child: _buildQuotedPostInside(maxWidth - 16, context),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildQuotedPostInside(double maxWidth, BuildContext context) {
+    final quoted = message.quotedPost!;
+    return Container(
+      constraints: BoxConstraints(maxWidth: maxWidth),
+      padding: const EdgeInsets.all(8),
+      decoration: BoxDecoration(
+        color: isMe 
+            ? (quoted.isMe ? const Color(0xFF6FB83A) : const Color(0xFF7BC946))
+            : (quoted.isMe ? Colors.grey.shade100 : Colors.grey.shade200),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.black12, width: 0.5),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              if (quoted.avatar != null)
+                CircleAvatar(
+                  radius: 8,
+                  backgroundImage: CachedNetworkImageProvider(quoted.avatar!),
+                )
+              else
+                const Icon(Icons.account_circle, size: 16, color: Colors.grey),
+              const SizedBox(width: 4),
+              Expanded(
+                child: Text(
+                  quoted.isMe ? '自分' : quoted.author,
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                    color: quoted.isMe ? (isMe ? Colors.white : Colors.blue) : Colors.black54,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          LinkifiedText(
+            text: quoted.text,
+            style: const TextStyle(fontSize: 12, color: Colors.black87),
+          ),
+          if (quoted.media.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Wrap(
+                spacing: 4,
+                runSpacing: 4,
+                children: quoted.media.take(2).map((m) => Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(4),
+                    image: DecorationImage(
+                      image: CachedNetworkImageProvider(m.url),
+                      fit: BoxFit.cover,
+                    ),
+                  ),
+                )).toList(),
+              ),
+            ),
         ],
       ),
     );
@@ -219,210 +413,102 @@ class MessageBubble extends StatelessWidget {
     );
   }
 
-  Widget _buildTextBubble(double maxWidth, BuildContext context) {
-    return GestureDetector(
-      onLongPress: () => _showMenu(context),
-      child: Container(
-        constraints: BoxConstraints(maxWidth: maxWidth),
-        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
-        decoration: BoxDecoration(
-          color: isMe ? const Color(0xFF8DE055) : Colors.white,
-          borderRadius: BorderRadius.only(
-            topLeft: Radius.circular(isMe ? 16 : (message.quotedPost != null ? 0 : 4)),
-            topRight: Radius.circular(message.quotedPost != null ? 0 : 16),
-            bottomLeft: const Radius.circular(16),
-            bottomRight: Radius.circular(isMe ? 4 : 16),
-          ),
-        ),
-        child: Linkify(
-          onOpen: (link) async {
-            final uri = Uri.parse(link.url);
-            if (await canLaunchUrl(uri)) {
-              await launchUrl(uri, mode: LaunchMode.externalApplication);
-            }
-          },
-          text: message.text,
-          softWrap: true, // テキストを折り返して全文表示
-          style: TextStyle(
-            color: isMe ? Colors.black : Colors.black87,
-            fontSize: 15,
-          ),
-          linkStyle: TextStyle(
-            color: isMe ? Colors.blue.shade900 : Colors.blue.shade700,
-            decoration: TextDecoration.underline,
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildQuotedPost(double maxWidth, BuildContext context) {
-    final quoted = message.quotedPost!;
-    return Container(
-      constraints: BoxConstraints(maxWidth: maxWidth),
-      margin: const EdgeInsets.only(bottom: 1),
-      padding: const EdgeInsets.all(8),
-      decoration: BoxDecoration(
-        color: isMe 
-            ? (quoted.isMe ? const Color(0xFF6FB83A) : const Color(0xFF7BC946))
-            : (quoted.isMe ? Colors.grey.shade100 : Colors.grey.shade200),
-        borderRadius: BorderRadius.only(
-          topLeft: Radius.circular(isMe ? 16 : 4),
-          topRight: const Radius.circular(16),
-        ),
-        border: Border.all(color: Colors.black12, width: 0.5),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              if (quoted.avatar != null)
-                CircleAvatar(
-                  radius: 8,
-                  backgroundImage: CachedNetworkImageProvider(quoted.avatar!),
-                )
-              else
-                const Icon(Icons.account_circle, size: 16, color: Colors.grey),
-              const SizedBox(width: 4),
-              Expanded(
-                child: Text(
-                  quoted.isMe ? '自分' : quoted.author,
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.bold,
-                    color: quoted.isMe ? (isMe ? Colors.white : Colors.blue) : Colors.black54,
-                  ),
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-              if (quoted.isMe)
-                const Icon(Icons.person, size: 12, color: Colors.black26),
-            ],
-          ),
-          const SizedBox(height: 4),
-          Text(
-            quoted.text,
-            style: const TextStyle(fontSize: 12, color: Colors.black87),
-            maxLines: 3,
-            overflow: TextOverflow.ellipsis,
-          ),
-          if (quoted.media.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.only(top: 4),
-              child: Wrap(
-                spacing: 4,
-                runSpacing: 4,
-                children: quoted.media.take(2).map((m) => Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(4),
-                    image: DecorationImage(
-                      image: CachedNetworkImageProvider(m.url),
-                      fit: BoxFit.cover,
-                    ),
-                  ),
-                )).toList(),
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-
   List<Widget> _buildMediaWidgets(List<MediaItem> media, double maxWidth, BuildContext context) {
     if (media.isEmpty) return [];
 
     // 複数画像がある場合はグリッド表示を検討できるが、まずはシンプルに縦並び
-    return media.where((item) => item.url.isNotEmpty).map((item) {
-      if (item.type == MediaType.image) {
-        return Padding(
-          padding: const EdgeInsets.only(top: 4),
-          child: GestureDetector(
-            onLongPress: () => _showMenu(context),
-            onTap: () {
-              // TODO: 画像拡大表示
-            },
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(12),
-              child: Container(
-                constraints: BoxConstraints(
-                  maxWidth: maxWidth,
-                  maxHeight: 300, // LINE風に少し高さを抑える
+    return media.asMap().entries.where((e) => e.value.url.isNotEmpty).map((entry) {
+      final index = entry.key;
+      final item = entry.value;
+      
+      return Padding(
+        padding: EdgeInsets.only(top: index == 0 ? 0 : 4),
+        child: _buildSingleMedia(item, maxWidth, context),
+      );
+    }).toList();
+  }
+
+  Widget _buildSingleMedia(MediaItem item, double maxWidth, BuildContext context) {
+    if (item.type == MediaType.image) {
+      return GestureDetector(
+        onLongPress: () => _showMenu(context),
+        onTap: () {
+          // TODO: 画像拡大表示
+        },
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(12),
+          child: Container(
+            constraints: BoxConstraints(
+              maxWidth: maxWidth,
+              maxHeight: 300, // LINE風に少し高さを抑える
+            ),
+            child: CachedNetworkImage(
+              imageUrl: item.url,
+              fit: BoxFit.cover,
+              width: double.infinity,
+              memCacheWidth: 800,
+              placeholder: (context, url) => Container(
+                height: 150,
+                width: maxWidth,
+                color: Colors.grey.shade200,
+                child: const Center(
+                  child: CircularProgressIndicator(strokeWidth: 2),
                 ),
-                child: CachedNetworkImage(
-                  imageUrl: item.url,
+              ),
+              errorWidget: (context, url, error) => Container(
+                padding: const EdgeInsets.all(20),
+                width: maxWidth,
+                color: Colors.grey.shade200,
+                child: const Icon(Icons.broken_image, color: Colors.grey),
+              ),
+            ),
+          ),
+        ),
+      );
+    } else if (item.type == MediaType.video) {
+      return GestureDetector(
+        onLongPress: () => _showMenu(context),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(12),
+          child: Container(
+            constraints: BoxConstraints(
+              maxWidth: maxWidth,
+              maxHeight: 200,
+            ),
+            color: Colors.black87,
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                CachedNetworkImage(
+                  imageUrl: item.url, // 動画の場合はサムネイルURL
                   fit: BoxFit.cover,
                   width: double.infinity,
-                  memCacheWidth: 800,
-                  placeholder: (context, url) => Container(
-                    height: 150,
-                    width: maxWidth,
-                    color: Colors.grey.shade200,
-                    child: const Center(
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    ),
+                  height: double.infinity,
+                  placeholder: (context, url) => const Center(
+                    child: CircularProgressIndicator(strokeWidth: 2),
                   ),
-                  errorWidget: (context, url, error) => Container(
-                    padding: const EdgeInsets.all(20),
-                    width: maxWidth,
-                    color: Colors.grey.shade200,
-                    child: const Icon(Icons.broken_image, color: Colors.grey),
+                  errorWidget: (context, url, error) => const Icon(
+                    Icons.video_library,
+                    color: Colors.white54,
+                    size: 48,
                   ),
                 ),
-              ),
+                // 再生ボタンアイコン
+                Container(
+                  decoration: BoxDecoration(
+                    color: Colors.black26,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Colors.white, width: 2),
+                  ),
+                  padding: const EdgeInsets.all(8),
+                  child: const Icon(Icons.play_arrow, size: 32, color: Colors.white),
+                ),
+              ],
             ),
           ),
-        );
-      } else if (item.type == MediaType.video) {
-        return Padding(
-          padding: const EdgeInsets.only(top: 4),
-          child: GestureDetector(
-            onLongPress: () => _showMenu(context),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(12),
-              child: Container(
-                constraints: BoxConstraints(
-                  maxWidth: maxWidth,
-                  maxHeight: 200,
-                ),
-                color: Colors.black87,
-                child: Stack(
-                  alignment: Alignment.center,
-                  children: [
-                    CachedNetworkImage(
-                      imageUrl: item.url, // 動画の場合はサムネイルURL
-                      fit: BoxFit.cover,
-                      width: double.infinity,
-                      height: double.infinity,
-                      placeholder: (context, url) => const Center(
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      ),
-                      errorWidget: (context, url, error) => const Icon(
-                        Icons.video_library,
-                        color: Colors.white54,
-                        size: 48,
-                      ),
-                    ),
-                    // 再生ボタンアイコン
-                    Container(
-                      decoration: BoxDecoration(
-                        color: Colors.black26,
-                        shape: BoxShape.circle,
-                        border: Border.all(color: Colors.white, width: 2),
-                      ),
-                      padding: const EdgeInsets.all(8),
-                      child: const Icon(Icons.play_arrow, size: 32, color: Colors.white),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        );
-      }
-      return const SizedBox.shrink();
-    }).toList();
+        ),
+      );
+    }
+    return const SizedBox.shrink();
   }
 }

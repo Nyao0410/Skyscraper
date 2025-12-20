@@ -462,4 +462,40 @@ class BlueskyService {
       throw Exception('ユーザー投稿取得失敗: $e');
     }
   }
+
+  Future<List<PostItem>> searchPosts(String query, {int limit = 40, String? since, String? until}) async {
+    if (_bluesky == null) throw Exception('ログインしていません');
+    try {
+      final response = await _bluesky!.feed.searchPosts(
+        query,
+        limit: limit,
+        since: since,
+        until: until,
+      );
+      final posts = response.data.posts;
+      
+      return posts.map((p) {
+        // searchPosts returns PostView, which we can wrap in a fake FeedView-like structure or handle directly
+        // PostItem.fromFeedView expects a FeedView (which has a 'post' field)
+        return PostItem.fromFeedView({'post': p.toJson()}, handle);
+      }).toList();
+    } catch (e) {
+      debugPrint('SearchPosts error detail: $e');
+      throw Exception('投稿検索失敗: $e');
+    }
+  }
+
+  Future<List<dynamic>> searchActors(String term, {int limit = 40}) async {
+    if (_bluesky == null) throw Exception('ログインしていません');
+    try {
+      final response = await _bluesky!.actor.searchActors(
+        term: term,
+        limit: limit,
+      );
+      return response.data.actors;
+    } catch (e) {
+      debugPrint('SearchActors error detail: $e');
+      throw Exception('ユーザー検索失敗: $e');
+    }
+  }
 }

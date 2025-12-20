@@ -32,6 +32,8 @@ class PostItem {
   final int likeCount;
   final StrongRef? replyRoot;
   final StrongRef? replyParent;
+  final String? replyParentHandle;
+  final PostItem? replyParentPost;
 
   PostItem({
     required this.id,
@@ -49,6 +51,8 @@ class PostItem {
     this.likeCount = 0,
     this.replyRoot,
     this.replyParent,
+    this.replyParentHandle,
+    this.replyParentPost,
   });
 
   factory PostItem.fromFeedView(dynamic feedView, String? myHandle) {
@@ -121,6 +125,8 @@ class PostItem {
       // Reply parsing
       StrongRef? root;
       StrongRef? parent;
+      String? parentHandle;
+      PostItem? parentPost;
       if (reply != null && reply is Map) {
         if (reply['root'] != null) {
           root = StrongRef(
@@ -129,10 +135,24 @@ class PostItem {
           );
         }
         if (reply['parent'] != null) {
+          final parentData = reply['parent'];
           parent = StrongRef(
-            cid: reply['parent']['cid']?.toString() ?? '',
-            uri: reply['parent']['uri']?.toString() ?? '',
+            cid: parentData['cid']?.toString() ?? '',
+            uri: parentData['uri']?.toString() ?? '',
           );
+          // Extract parent handle if available
+          final parentAuthor = parentData['author'];
+          if (parentAuthor != null && parentAuthor is Map) {
+            parentHandle = parentAuthor['handle']?.toString();
+          }
+          // Try to parse parent as a PostItem if it looks like a post view
+          if (parentData.containsKey('record')) {
+            try {
+              parentPost = PostItem.fromFeedView(parentData, myHandle);
+            } catch (e) {
+              debugPrint('Failed to parse parent post: $e');
+            }
+          }
         }
       }
 
@@ -152,6 +172,8 @@ class PostItem {
         likeCount: postData['likeCount'] ?? 0,
         replyRoot: root,
         replyParent: parent,
+        replyParentHandle: parentHandle,
+        replyParentPost: parentPost,
       );
     } catch (e) {
       debugPrint('Critical error in PostItem.fromFeedView: $e');
