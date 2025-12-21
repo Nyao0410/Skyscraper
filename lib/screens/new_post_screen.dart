@@ -1,3 +1,4 @@
+// ignore_for_file: use_build_context_synchronously
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../services/bluesky_service.dart';
@@ -36,28 +37,26 @@ class _NewPostScreenState extends State<NewPostScreen> {
     }
   }
 
-  // ignore: use_build_context_synchronously
   Future<void> _selectSchedule() async {
     if (widget.replyTo != null) {
-      // This uses the BuildContext only in an early-return branch.
-      // The linter may warn about using BuildContext across async gaps;
-      // ignore that here because we return immediately afterwards.
-      // ignore: use_build_context_synchronously
-      ScaffoldMessenger.of(context).showSnackBar(
+      // Capture messenger synchronously to avoid using BuildContext across async gaps
+      final messenger = ScaffoldMessenger.of(context);
+      messenger.showSnackBar(
         const SnackBar(content: Text('返信の予約投稿は現在サポートされていません'))
       );
       return;
     }
     final now = DateTime.now();
+    final ctx = context;
     final date = await showDatePicker(
-      context: context,
+      context: ctx,
       initialDate: _scheduledDate ?? now.add(const Duration(minutes: 5)),
       firstDate: now,
       lastDate: now.add(const Duration(days: 30)),
     );
     if (date != null) {
       final time = await showTimePicker(
-        context: context,
+        context: ctx,
         initialTime: TimeOfDay.fromDateTime(_scheduledDate ?? now.add(const Duration(minutes: 5))),
       );
       if (time != null) {

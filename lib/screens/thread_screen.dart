@@ -40,10 +40,10 @@ class _ThreadScreenState extends State<ThreadScreen> {
       }
     } catch (e) {
       debugPrint('Error fetching thread: $e');
-      if (mounted) {
-        setState(() => _loading = false);
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('エラー: $e')));
-      }
+      if (!mounted) return;
+      setState(() => _loading = false);
+      final messenger = ScaffoldMessenger.of(context);
+      messenger.showSnackBar(SnackBar(content: Text('エラー: $e')));
     }
   }
 
@@ -578,6 +578,7 @@ class _ThreadScreenState extends State<ThreadScreen> {
               ),
               title: Text(isReposted ? 'リポストを取り消す' : 'リポスト'),
               onTap: () async {
+                final messenger = ScaffoldMessenger.of(context);
                 Navigator.pop(context);
                 try {
                   if (isReposted) {
@@ -587,7 +588,9 @@ class _ThreadScreenState extends State<ThreadScreen> {
                   }
                   _fetchThread();
                 } catch (e) {
-                  if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('エラー: $e')));
+                  if (mounted) {
+                    messenger.showSnackBar(SnackBar(content: Text('エラー: $e')));
+                  }
                 }
               },
             ),

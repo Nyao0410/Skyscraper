@@ -1,5 +1,6 @@
 import 'package:workmanager/workmanager.dart';
 import 'package:atproto_core/atproto_core.dart';
+import 'package:flutter/foundation.dart';
 import 'bluesky_service.dart';
 import 'database_service.dart';
 import 'dart:io';
@@ -46,12 +47,12 @@ void callbackDispatcher() {
                   }
                 }
               } catch (e) {
-                print("Error processing account ${account['handle']}: $e");
+                debugPrint("Error processing account ${account['handle']}: $e");
               }
             }
           }
         } catch (e) {
-          print("Background task error: $e");
+          debugPrint("Background task error: $e");
           return false;
         }
         break;
