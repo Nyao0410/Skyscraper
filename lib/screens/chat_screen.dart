@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../models/post_item.dart';
 import '../widgets/message_bubble.dart';
 import '../widgets/date_separator.dart';
+import 'new_post_screen.dart';
 
 class ChatScreen extends StatefulWidget {
   final String title;
@@ -45,11 +47,28 @@ class ChatScreen extends StatefulWidget {
 class _ChatScreenState extends State<ChatScreen> {
   final _scrollController = ScrollController();
   final _textController = TextEditingController();
+  final int _maxChars = 300;
+  bool _canSend = false;
+  int _remaining = 300;
 
   @override
   void initState() {
     super.initState();
     _scrollController.addListener(_onScroll);
+    _textController.addListener(_onTextChanged);
+    _onTextChanged();
+  }
+
+  void _onTextChanged() {
+    final len = _textController.text.length;
+    final remaining = (_maxChars - len).clamp(0, _maxChars);
+    final canSend = _textController.text.trim().isNotEmpty && len <= _maxChars;
+    if (remaining != _remaining || canSend != _canSend) {
+      setState(() {
+        _remaining = remaining;
+        _canSend = canSend;
+      });
+    }
   }
 
   void _onScroll() {
@@ -61,6 +80,7 @@ class _ChatScreenState extends State<ChatScreen> {
   @override
   void dispose() {
     _scrollController.dispose();
+    _textController.removeListener(_onTextChanged);
     _textController.dispose();
     super.dispose();
   }
@@ -267,27 +287,52 @@ class _ChatScreenState extends State<ChatScreen> {
                 ),
                 child: TextField(
                   controller: _textController,
-                  maxLines: null,
+                  // Limit input to 10 lines to avoid unlimited growth
+                  maxLines: 10,
                   minLines: 1,
-                  style: TextStyle(color: textColor),
+                  // Slightly smaller font for input text
+                  style: TextStyle(color: textColor, fontSize: 14),
                   keyboardType: TextInputType.multiline,
+                  // Restrict total characters to 300 (same as posting limit)
+                  maxLength: 300,
+                  maxLengthEnforcement: MaxLengthEnforcement.enforced,
                   decoration: InputDecoration(
                     border: InputBorder.none,
                     hintText: 'メッセージを入力',
                     hintStyle: TextStyle(color: textColor.withValues(alpha: 0.5)),
+                    counterText: '', // hide default counter to keep UI compact
                   ),
                   onSubmitted: (_) => _handleSend(),
                 ),
               ),
             ),
             const SizedBox(width: 8),
-            IconButton(
-              onPressed: _handleSend,
-              icon: Icon(
+            GestureDetector(
+              onTap: _canSend ? _handleSend : null,
+              onLongPress: () async {
+                // Open NewPostScreen with current input text and await result
+                final result = await Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => NewPostScreen(initialText: _textController.text),
+                  ),
+                );
+
+                // If NewPostScreen returned `true`, a post/draft/scheduled was created — clear input
+                if (result == true) {
+                  _textController.clear();
+                  _onTextChanged();
+                } else if (result is String) {
+                  // User returned with edited text — synchronize
+                  _textController.text = result;
+                  // place cursor at end
+                  _textController.selection = TextSelection.collapsed(offset: _textController.text.length);
+                  _onTextChanged();
+                }
+              },
+              child: Icon(
                 Icons.send,
-                color: _textController.text.trim().isEmpty
-                    ? Colors.grey.shade400
-                    : const Color(0xFF00C300),
+                color: _canSend ? Colors.blue : Colors.grey.shade400,
                 size: 28,
               ),
             ),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../services/database_service.dart';
 import '../services/bluesky_service.dart';
+import 'new_post_screen.dart';
 
 class DraftsScreen extends StatefulWidget {
   const DraftsScreen({super.key});
@@ -53,6 +54,20 @@ class _DraftsScreenState extends State<DraftsScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('下書き・予約投稿'),
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () async {
+          // Navigate to new post screen and refresh list after returning
+          final res = await Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const NewPostScreen()),
+          );
+          if (res != null) {
+            _loadDrafts();
+          }
+        },
+        backgroundColor: const Color(0xFF00C300),
+        child: const Icon(Icons.create),
       ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())

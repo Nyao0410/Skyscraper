@@ -36,6 +36,7 @@ class _ChatDetailWrapperState extends State<ChatDetailWrapper> {
           _feed = cachedPosts;
           _loading = false;
         });
+        _markAsSeen();
       }
     } catch (e) {
       debugPrint('Error loading cached feed: $e');
@@ -49,6 +50,7 @@ class _ChatDetailWrapperState extends State<ChatDetailWrapper> {
           _cursor = response.cursor;
           _loading = false;
         });
+        _markAsSeen();
       }
     } catch (e) {
       if (mounted) {
@@ -62,6 +64,13 @@ class _ChatDetailWrapperState extends State<ChatDetailWrapper> {
     }
   }
 
+  Future<void> _markAsSeen() async {
+    if (_feed.isNotEmpty) {
+      final latest = _feed.first;
+      await _service.updateLastSeen(widget.feedUri, latest.id, latest.createdAt);
+    }
+  }
+
   Future<void> _handleRefresh() async {
     setState(() => _refreshing = true);
     try {
@@ -71,6 +80,7 @@ class _ChatDetailWrapperState extends State<ChatDetailWrapper> {
         _cursor = response.cursor;
         _refreshing = false;
       });
+      _markAsSeen();
     } catch (e) {
       setState(() => _refreshing = false);
     }
@@ -143,7 +153,7 @@ class _ChatDetailWrapperState extends State<ChatDetailWrapper> {
         }
       },
       onDelete: (item) async {
-        await _service.delete(item.uri);
+        await _service.delete(item.uri, cid: item.id);
         _handleRefresh();
       },
       onReply: (item) async {

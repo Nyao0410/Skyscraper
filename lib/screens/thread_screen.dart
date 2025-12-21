@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import '../utils/avatar_provider.dart';
 // url_launcher not used in this file; remove unused import
 import '../models/post_item.dart';
 import '../services/bluesky_service.dart';
@@ -279,9 +280,7 @@ class _ThreadScreenState extends State<ThreadScreen> {
                 },
                 child: CircleAvatar(
                   radius: 24,
-                  backgroundImage: post.avatar != null
-                      ? CachedNetworkImageProvider(post.avatar!)
-                      : null,
+                  backgroundImage: avatarImageProvider(post.avatar),
                   child: post.avatar == null ? const Icon(Icons.person) : null,
                 ),
               ),
@@ -382,7 +381,7 @@ class _ThreadScreenState extends State<ThreadScreen> {
                   },
                   child: CircleAvatar(
                     radius: 20,
-                    backgroundImage: post.avatar != null ? CachedNetworkImageProvider(post.avatar!) : null,
+                    backgroundImage: avatarImageProvider(post.avatar),
                     child: post.avatar == null ? const Icon(Icons.person) : null,
                   ),
                 ),
@@ -491,8 +490,8 @@ class _ThreadScreenState extends State<ThreadScreen> {
                   );
                 },
                 child: quoted.avatar != null
-                    ? CircleAvatar(radius: 10, backgroundImage: CachedNetworkImageProvider(quoted.avatar!))
-                    : const Icon(Icons.person, size: 20),
+                  ? CircleAvatar(radius: 10, backgroundImage: avatarImageProvider(quoted.avatar))
+                  : const Icon(Icons.person, size: 20),
               ),
               const SizedBox(width: 8),
               Expanded(child: Text(quoted.author, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13))),

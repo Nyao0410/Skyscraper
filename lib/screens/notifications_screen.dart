@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart' hide Notification;
-import 'package:cached_network_image/cached_network_image.dart';
+import '../utils/avatar_provider.dart';
 import 'package:intl/intl.dart';
 import '../services/bluesky_service.dart';
 import 'profile_screen.dart';
@@ -130,9 +130,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
               );
             },
             child: CircleAvatar(
-              backgroundImage: notification.author.avatar != null
-                  ? CachedNetworkImageProvider(notification.author.avatar!)
-                  : null,
+              backgroundImage: avatarImageProvider(notification.author.avatar),
               child: notification.author.avatar == null
                   ? const Icon(Icons.person)
                   : null,

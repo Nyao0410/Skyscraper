@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import '../utils/avatar_provider.dart';
 import '../models/post_item.dart';
 import '../services/bluesky_service.dart';
 import '../widgets/linkified_text.dart';
@@ -200,9 +201,7 @@ class _TimelineScreenState extends State<TimelineScreen> {
                   },
                   child: CircleAvatar(
                     radius: 24,
-                    backgroundImage: post.avatar != null
-                        ? CachedNetworkImageProvider(post.avatar!)
-                        : null,
+                    backgroundImage: avatarImageProvider(post.avatar),
                     child: post.avatar == null ? const Icon(Icons.person) : null,
                   ),
                 ),
@@ -309,7 +308,7 @@ class _TimelineScreenState extends State<TimelineScreen> {
                 child: quoted.avatar != null
                     ? CircleAvatar(
                         radius: 10,
-                        backgroundImage: CachedNetworkImageProvider(quoted.avatar!),
+                        backgroundImage: avatarImageProvider(quoted.avatar),
                       )
                     : const Icon(Icons.person, size: 20),
               ),
@@ -481,7 +480,7 @@ class _TimelineScreenState extends State<TimelineScreen> {
                 title: const Text('削除', style: TextStyle(color: Colors.red)),
                 onTap: () async {
                   Navigator.pop(context);
-                  await _service.delete(post.uri);
+                  await _service.delete(post.uri, cid: post.id);
                   _fetchTimeline();
                 },
               ),

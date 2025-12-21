@@ -10,6 +10,7 @@ const taskCheckScheduledPosts = "checkScheduledPosts";
 @pragma('vm:entry-point')
 void callbackDispatcher() {
   Workmanager().executeTask((task, inputData) async {
+    debugPrint("Background task started: $task");
     switch (task) {
       case taskCheckScheduledPosts:
         try {
@@ -18,47 +19,73 @@ void callbackDispatcher() {
           
           final accounts = await service.getAccounts();
           final now = DateTime.now();
+          debugPrint("Checking scheduled posts for ${accounts.length} accounts at $now");
 
           if (accounts.isEmpty) {
-            // Fallback to single account restore if no accounts list
+            debugPrint("No accounts found, attempting session restore");
             final success = await service.restoreSession();
-            if (!success) return true;
-            
-            final scheduledPosts = await db.getScheduledPosts(service.did!);
-            for (final post in scheduledPosts) {
-              final scheduledAt = DateTime.parse(post['scheduled_at']);
-              if (scheduledAt.isBefore(now)) {
-                await service.post(post['text']);
-                await db.markAsSent(post['id']);
-              }
+            if (success) {
+              await _processScheduledPosts(db, service, service.did!, service.handle ?? "unknown", now);
             }
           } else {
             for (final account in accounts) {
               try {
+                debugPrint("Processing account: ${account['handle']}");
                 final session = Session.fromJson(account['session']);
                 await service.activateSession(session);
-                
-                final scheduledPosts = await db.getScheduledPosts(account['did']);
-                for (final post in scheduledPosts) {
-                  final scheduledAt = DateTime.parse(post['scheduled_at']);
-                  if (scheduledAt.isBefore(now)) {
-                    await service.post(post['text']);
-                    await db.markAsSent(post['id']);
-                  }
-                }
+                await _processScheduledPosts(db, service, account['did'], account['handle'], now);
               } catch (e) {
                 debugPrint("Error processing account ${account['handle']}: $e");
               }
             }
           }
+          
+          // For iOS, we need to schedule the next task manually
+          if (Platform.isIOS) {
+            await Workmanager().registerOneOffTask(
+              "1",
+              taskCheckScheduledPosts,
+              initialDelay: const Duration(minutes: 15),
+              constraints: Constraints(
+                networkType: NetworkType.connected,
+              ),
+            );
+          }
         } catch (e) {
-          debugPrint("Background task error: $e");
+          debugPrint("Background task critical error: $e");
           return false;
         }
         break;
     }
     return true;
   });
+}
+
+Future<void> _processScheduledPosts(DatabaseService db, BlueskyService service, String did, String handle, DateTime now) async {
+  final scheduledPosts = await db.getScheduledPosts(did);
+  debugPrint("Found ${scheduledPosts.length} scheduled posts for $handle");
+  for (final post in scheduledPosts) {
+    final scheduledAt = DateTime.parse(post['scheduled_at']);
+    if (scheduledAt.isBefore(now)) {
+      try {
+        await service.post(post['text']);
+        await db.markAsSent(post['id']);
+        debugPrint("Successfully posted scheduled post ${post['id']} for $handle");
+      } catch (e) {
+        debugPrint("Failed to post for $handle, attempting refresh: $e");
+        final refreshed = await service.refreshSession();
+        if (refreshed) {
+          try {
+            await service.post(post['text']);
+            await db.markAsSent(post['id']);
+            debugPrint("Successfully posted for $handle after refresh");
+          } catch (e2) {
+            debugPrint("Failed to post for $handle even after refresh: $e2");
+          }
+        }
+      }
+    }
+  }
 }
 
 class BackgroundService {
@@ -69,6 +96,7 @@ class BackgroundService {
   Future<void> init() async {
     await Workmanager().initialize(
       callbackDispatcher,
+      isInDebugMode: kDebugMode,
     );
     
     // Register periodic task
@@ -76,12 +104,22 @@ class BackgroundService {
       await Workmanager().registerPeriodicTask(
         "1",
         taskCheckScheduledPosts,
-        frequency: const Duration(minutes: 15), // Minimum for Android
+        frequency: const Duration(minutes: 15),
         existingWorkPolicy: ExistingPeriodicWorkPolicy.replace,
+        constraints: Constraints(
+          networkType: NetworkType.connected,
+        ),
       );
     } else if (Platform.isIOS) {
-      // iOS has stricter limitations, usually handled via background fetch
-      // Workmanager on iOS is limited
+      // For iOS, we register a one-off task that we'll re-register
+      await Workmanager().registerOneOffTask(
+        "1",
+        taskCheckScheduledPosts,
+        initialDelay: const Duration(minutes: 15),
+        constraints: Constraints(
+          networkType: NetworkType.connected,
+        ),
+      );
     }
   }
 }

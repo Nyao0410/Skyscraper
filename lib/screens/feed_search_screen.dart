@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:cached_network_image/cached_network_image.dart';
+import '../utils/avatar_provider.dart';
 import '../services/bluesky_service.dart';
 
 class FeedSearchScreen extends StatefulWidget {
@@ -80,9 +80,7 @@ class _FeedSearchScreenState extends State<FeedSearchScreen> {
                 final feed = _results[index];
                 return ListTile(
                   leading: CircleAvatar(
-                    backgroundImage: feed.avatar != null
-                        ? CachedNetworkImageProvider(feed.avatar!)
-                        : null,
+                    backgroundImage: avatarImageProvider(feed.avatar),
                     child: feed.avatar == null ? const Icon(Icons.rss_feed) : null,
                   ),
                   title: Text(feed.displayName),

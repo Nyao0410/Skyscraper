@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:cached_network_image/cached_network_image.dart';
+import '../utils/avatar_provider.dart';
 import '../services/bluesky_service.dart';
 import 'timeline_screen.dart';
 import 'profile_screen.dart';
@@ -33,10 +33,21 @@ class _HomeScreenState extends State<HomeScreen> {
     try {
       final profile = await _service.getProfile(_service.did!);
       final feeds = await _service.getSavedFeeds();
+      
+      // Fetch unread counts for each feed
+      final List<Map<String, String>> feedsWithUnread = [];
+      for (var feed in feeds) {
+        final unreadCount = await _service.getUnreadCount(feed['uri']!);
+        feedsWithUnread.add({
+          ...feed,
+          'unreadCount': unreadCount.toString(),
+        });
+      }
+
       if (mounted) {
         setState(() {
           _profile = profile;
-          _customFeeds = feeds;
+          _customFeeds = feedsWithUnread;
           _loading = false;
         });
       }
@@ -113,7 +124,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   child: CircleAvatar(
                     radius: 50,
                     backgroundColor: Colors.grey[300],
-                    backgroundImage: avatarUrl != null ? CachedNetworkImageProvider(avatarUrl) : null,
+                    backgroundImage: avatarImageProvider(avatarUrl),
                     child: avatarUrl == null ? const Icon(Icons.person, size: 50, color: Colors.white) : null,
                   ),
                 ),
@@ -289,14 +300,16 @@ class _HomeScreenState extends State<HomeScreen> {
           ..._customFeeds.where((f) => f['uri'] != 'following').map((feed) => _buildMenuItem(
             icon: Icons.rss_feed,
             title: feed['name'] ?? '不明なフィード',
-            onTap: () {
+            badge: feed['unreadCount'],
+            onTap: () async {
               // Navigate directly to the talk room for this feed
-              Navigator.push(
+              await Navigator.push(
                 context,
                 MaterialPageRoute(
                   builder: (context) => ChatDetailWrapper(feedName: feed['name'] ?? 'トーク', feedUri: feed['uri']!),
                 ),
               );
+              _fetchData(); // Refresh unread counts when returning
             },
           )),
         ],
@@ -304,12 +317,30 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildMenuItem({required IconData icon, required String title, required VoidCallback onTap}) {
+  Widget _buildMenuItem({required IconData icon, required String title, required VoidCallback onTap, String? badge}) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return ListTile(
       leading: Icon(icon, color: isDark ? Colors.grey[400] : Colors.grey[700]),
       title: Text(title, style: const TextStyle(fontSize: 15)),
-      trailing: const Icon(Icons.arrow_forward_ios, size: 14, color: Colors.grey),
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (badge != null && badge != '0')
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              decoration: BoxDecoration(
+                color: const Color(0xFF00C300),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Text(
+                badge,
+                style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+              ),
+            ),
+          const SizedBox(width: 8),
+          const Icon(Icons.arrow_forward_ios, size: 14, color: Colors.grey),
+        ],
+      ),
       onTap: onTap,
       contentPadding: const EdgeInsets.symmetric(horizontal: 20),
       visualDensity: VisualDensity.compact,

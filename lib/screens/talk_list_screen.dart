@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:cached_network_image/cached_network_image.dart';
+import '../utils/avatar_provider.dart';
 import '../services/bluesky_service.dart';
 import 'search_screen.dart';
 import 'feed_search_screen.dart';
@@ -15,7 +15,7 @@ class TalkListScreen extends StatefulWidget {
 
 class _TalkListScreenState extends State<TalkListScreen> {
   final _service = BlueskyService();
-  List<Map<String, String>> _feeds = [];
+  List<Map<String, dynamic>> _feeds = [];
   bool _loading = true;
 
   @override
@@ -27,9 +27,20 @@ class _TalkListScreenState extends State<TalkListScreen> {
   Future<void> _loadFeeds() async {
     try {
       final feeds = await _service.getSavedFeeds();
+      
+      // Fetch unread counts for each feed
+      final List<Map<String, dynamic>> feedsWithUnread = [];
+      for (var feed in feeds) {
+        final unreadCount = await _service.getUnreadCount(feed['uri']!);
+        feedsWithUnread.add({
+          ...feed,
+          'unreadCount': unreadCount,
+        });
+      }
+
       if (mounted) {
         setState(() {
-          _feeds = feeds;
+          _feeds = feedsWithUnread;
           _loading = false;
         });
       }
@@ -88,17 +99,37 @@ class _TalkListScreenState extends State<TalkListScreen> {
                   return ListTile(
                     leading: CircleAvatar(
                       backgroundColor: Colors.blue.shade100,
-                      backgroundImage: (avatarUrl != null && avatarUrl.isNotEmpty)
-                          ? CachedNetworkImageProvider(avatarUrl)
-                          : null,
+                      backgroundImage: avatarImageProvider(avatarUrl),
                       child: (avatarUrl == null || avatarUrl.isEmpty)
                           ? Text(feed['name']![0], style: const TextStyle(color: Colors.blue))
                           : null,
                     ),
                     title: Text(feed['name']!, style: const TextStyle(fontWeight: FontWeight.bold)),
                     subtitle: Text(feed['desc']!, maxLines: 1, overflow: TextOverflow.ellipsis),
-                    trailing: Text(timeStr, style: const TextStyle(fontSize: 12, color: Colors.grey)),
-                    onTap: () => widget.onFeedSelected(feed['name']!, feed['uri']!),
+                    trailing: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Text(timeStr, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                        if (feed['unreadCount'] != null && feed['unreadCount'] > 0)
+                          Container(
+                            margin: const EdgeInsets.only(top: 4),
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF00C300),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Text(
+                              feed['unreadCount'] > 99 ? '99+' : feed['unreadCount'].toString(),
+                              style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                      ],
+                    ),
+                    onTap: () async {
+                      await widget.onFeedSelected(feed['name']!, feed['uri']!);
+                      _loadFeeds(); // Refresh unread counts when returning
+                    },
                   );
                 },
               ),

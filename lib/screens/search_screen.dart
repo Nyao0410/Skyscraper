@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import '../utils/avatar_provider.dart';
 import '../models/post_item.dart';
 import '../services/bluesky_service.dart';
 import '../widgets/linkified_text.dart';
@@ -199,7 +200,7 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
         final avatar = user.avatar;
         return ListTile(
           leading: CircleAvatar(
-            backgroundImage: avatar != null ? CachedNetworkImageProvider(avatar) : null,
+            backgroundImage: avatarImageProvider(avatar),
             child: avatar == null ? const Icon(Icons.person) : null,
           ),
           title: Text(user.displayName ?? user.handle),
@@ -237,7 +238,7 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
               },
               child: CircleAvatar(
                 radius: 20,
-                backgroundImage: post.avatar != null ? CachedNetworkImageProvider(post.avatar!) : null,
+                backgroundImage: avatarImageProvider(post.avatar),
                 child: post.avatar == null ? const Icon(Icons.person) : null,
               ),
             ),

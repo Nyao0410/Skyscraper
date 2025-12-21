@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import '../utils/avatar_provider.dart';
 // url_launcher not used here; remove unused import
 
 import '../models/post_item.dart';
@@ -284,7 +285,7 @@ class MessageBubble extends StatelessWidget {
               if (quoted.avatar != null)
                 CircleAvatar(
                   radius: 8,
-                  backgroundImage: CachedNetworkImageProvider(quoted.avatar!),
+                  backgroundImage: avatarImageProvider(quoted.avatar),
                 )
               else
                 const Icon(Icons.account_circle, size: 16, color: Colors.grey),
@@ -349,7 +350,8 @@ class MessageBubble extends StatelessWidget {
 
   Widget _buildAvatar(BuildContext context) {
     final avatarUrl = message.avatar;
-    final isValidUrl = avatarUrl != null && avatarUrl.isNotEmpty && avatarUrl.startsWith('http');
+    final provider = avatarImageProvider(avatarUrl);
+    final isValidUrl = provider != null;
 
     return GestureDetector(
       onTap: () {
@@ -370,21 +372,9 @@ class MessageBubble extends StatelessWidget {
         child: isValidUrl
             ? Transform.scale(
                 scale: 1.2, // 内部の画像を20%拡大
-                child: CachedNetworkImage(
-                  imageUrl: avatarUrl,
+                child: Image(
+                  image: provider!,
                   fit: BoxFit.cover,
-                  memCacheWidth: 132,
-                  memCacheHeight: 132,
-                  placeholder: (context, url) => const Center(
-                    child: SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    ),
-                  ),
-                  errorWidget: (context, url, error) {
-                    return const Icon(Icons.person, color: Colors.white);
-                  },
                 ),
               )
             : const Icon(Icons.person, color: Colors.white),

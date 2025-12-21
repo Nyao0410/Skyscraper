@@ -4,6 +4,7 @@ import 'package:intl/date_symbol_data_local.dart';
 
 import 'screens/login_screen.dart';
 import 'screens/main_screen.dart';
+import 'widgets/rate_limit_notifier.dart';
 import 'services/bluesky_service.dart';
 import 'services/background_service.dart';
 
@@ -50,6 +51,10 @@ class BskyApp extends StatelessWidget {
         ),
       ),
       themeMode: ThemeMode.system,
+      builder: (context, child) {
+        // Wrap the app content so we can show MaterialBanners from a central place
+        return RateLimitNotifier(child: child ?? const SizedBox.shrink());
+      },
       home: const AuthCheck(),
       routes: {
         '/login': (context) => const LoginWrapper(),

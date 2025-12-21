@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
 import '../services/bluesky_service.dart';
 import '../services/database_service.dart';
-import 'package:cached_network_image/cached_network_image.dart';
+import '../utils/avatar_provider.dart';
 import 'talk_list_screen.dart';
 import 'home_screen.dart';
 import 'chat_detail_wrapper.dart';
 import 'notifications_screen.dart';
 import 'search_screen.dart';
 import 'drafts_screen.dart';
+import 'settings_screen.dart';
 
 
 class MainScreen extends StatefulWidget {
@@ -104,9 +105,7 @@ class _MainScreenState extends State<MainScreen> {
               // Current Account
               ListTile(
                 leading: CircleAvatar(
-                  backgroundImage: _service.avatar != null
-                      ? CachedNetworkImageProvider(_service.avatar!)
-                      : null,
+                  backgroundImage: avatarImageProvider(_service.avatar),
                   child: _service.avatar == null ? const Icon(Icons.person) : null,
                 ),
                 title: Text(_service.handle ?? 'ユーザー'),
@@ -122,10 +121,8 @@ class _MainScreenState extends State<MainScreen> {
                   child: Text('アカウント切り替え', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey)),
                 ),
                 ...accounts.where((a) => a['did'] != _service.did).map((account) => ListTile(
-                  leading: CircleAvatar(
-                    backgroundImage: account['avatar'] != null
-                        ? CachedNetworkImageProvider(account['avatar'])
-                        : null,
+                    leading: CircleAvatar(
+                    backgroundImage: avatarImageProvider(account['avatar']),
                     child: account['avatar'] == null ? const Icon(Icons.person) : null,
                   ),
                   title: Text(account['handle'] ?? ''),
@@ -157,6 +154,17 @@ class _MainScreenState extends State<MainScreen> {
                   Navigator.push(
                     context,
                     MaterialPageRoute(builder: (context) => const DraftsScreen()),
+                  );
+                },
+              ),
+              const Divider(),
+              ListTile(
+                leading: const Icon(Icons.settings),
+                title: const Text('設定'),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const SettingsScreen()),
                   );
                 },
               ),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import '../utils/avatar_provider.dart';
 import '../models/post_item.dart';
 import '../services/bluesky_service.dart';
 import '../widgets/linkified_text.dart';
@@ -189,7 +190,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
 
     return ListTile(
       leading: CircleAvatar(
-        backgroundImage: avatar != null ? CachedNetworkImageProvider(avatar) : null,
+        backgroundImage: avatarImageProvider(avatar),
         child: avatar == null ? const Icon(Icons.rss_feed) : null,
       ),
       title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
@@ -339,9 +340,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                 backgroundColor: isDark ? Colors.black : Colors.white,
                 child: CircleAvatar(
                   radius: 38,
-                  backgroundImage: _profile.avatar != null
-                      ? CachedNetworkImageProvider(_profile.avatar!)
-                      : null,
+                  backgroundImage: avatarImageProvider(_profile.avatar),
                   child: _profile.avatar == null ? const Icon(Icons.person, size: 40) : null,
                 ),
               ),
@@ -477,7 +476,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                       final user = users[index];
                       return ListTile(
                         leading: CircleAvatar(
-                          backgroundImage: user.avatar != null ? CachedNetworkImageProvider(user.avatar!) : null,
+                          backgroundImage: avatarImageProvider(user.avatar),
                           child: user.avatar == null ? const Icon(Icons.person) : null,
                         ),
                         title: Text(user.displayName ?? user.handle, style: const TextStyle(fontWeight: FontWeight.bold)),
@@ -532,9 +531,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
               children: [
                 CircleAvatar(
                   radius: 24,
-                  backgroundImage: post.avatar != null
-                      ? CachedNetworkImageProvider(post.avatar!)
-                      : null,
+                  backgroundImage: avatarImageProvider(post.avatar),
                   child: post.avatar == null ? const Icon(Icons.person) : null,
                 ),
                 const SizedBox(width: 12),

@@ -126,8 +126,18 @@ class _NewPostScreenState extends State<NewPostScreen> {
     if (widget.replyTo != null) title = '返信';
     if (widget.quoteOf != null) title = '引用';
 
-    return Scaffold(
+    return WillPopScope(
+      onWillPop: () async {
+        // Return current text when user navigates back without posting
+        Navigator.pop(context, _controller.text);
+        return false;
+      },
+      child: Scaffold(
       appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => Navigator.pop(context, _controller.text),
+        ),
         title: Text(title),
         actions: [
           if (widget.replyTo == null && widget.quoteOf == null)
@@ -203,6 +213,7 @@ class _NewPostScreenState extends State<NewPostScreen> {
           ),
         ],
       ),
+    )
     );
   }
 
