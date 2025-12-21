@@ -1,4 +1,5 @@
 import 'package:workmanager/workmanager.dart';
+import 'package:atproto_core/atproto_core.dart';
 import 'bluesky_service.dart';
 import 'database_service.dart';
 import 'dart:io';
@@ -14,18 +15,39 @@ void callbackDispatcher() {
           final db = DatabaseService();
           final service = BlueskyService();
           
-          // Restore session if needed
-          final success = await service.restoreSession();
-          if (!success) return true;
-
+          final accounts = await service.getAccounts();
           final now = DateTime.now();
-          final scheduledPosts = await db.getScheduledPosts();
 
-          for (final post in scheduledPosts) {
-            final scheduledAt = DateTime.parse(post['scheduled_at']);
-            if (scheduledAt.isBefore(now)) {
-              await service.post(post['text']);
-              await db.markAsSent(post['id']);
+          if (accounts.isEmpty) {
+            // Fallback to single account restore if no accounts list
+            final success = await service.restoreSession();
+            if (!success) return true;
+            
+            final scheduledPosts = await db.getScheduledPosts(service.did!);
+            for (final post in scheduledPosts) {
+              final scheduledAt = DateTime.parse(post['scheduled_at']);
+              if (scheduledAt.isBefore(now)) {
+                await service.post(post['text']);
+                await db.markAsSent(post['id']);
+              }
+            }
+          } else {
+            for (final account in accounts) {
+              try {
+                final session = Session.fromJson(account['session']);
+                await service.activateSession(session);
+                
+                final scheduledPosts = await db.getScheduledPosts(account['did']);
+                for (final post in scheduledPosts) {
+                  final scheduledAt = DateTime.parse(post['scheduled_at']);
+                  if (scheduledAt.isBefore(now)) {
+                    await service.post(post['text']);
+                    await db.markAsSent(post['id']);
+                  }
+                }
+              } catch (e) {
+                print("Error processing account ${account['handle']}: $e");
+              }
             }
           }
         } catch (e) {

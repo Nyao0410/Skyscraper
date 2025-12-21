@@ -24,11 +24,23 @@ class BlueskyService {
   final _storage = const FlutterSecureStorage();
   final _db = DatabaseService();
   static const _sessionKey = 'bsky_session';
+  static const _accountsKey = 'bsky_accounts';
 
   bool get isLoggedIn => _bluesky != null;
 
   Future<void> login(String inputHandle, String password) async {
     try {
+      // If we have a current session, make sure it's saved to the accounts list before we overwrite it
+      final currentSessionJson = await _storage.read(key: _sessionKey);
+      if (currentSessionJson != null) {
+        try {
+          final session = Session.fromJson(jsonDecode(currentSessionJson));
+          await _addAccount(session);
+        } catch (e) {
+          debugPrint('Failed to save current session before login: $e');
+        }
+      }
+
       // If user did not include a domain, append .bsky.social
       final normalized = inputHandle.contains('.')
           ? inputHandle
@@ -42,22 +54,13 @@ class BlueskyService {
       );
       final session = sessionResponse.data;
 
-      // Initialize Bluesky client with session
-      _bluesky = Bluesky.fromSession(session);
-
-      handle = session.handle;
-      did = session.did;
-
-      // Fetch profile to get avatar
-      try {
-        final profile = await _bluesky!.actor.getProfile(actor: did!);
-        avatar = profile.data.avatar;
-      } catch (e) {
-        debugPrint('Failed to fetch profile avatar: $e');
-      }
+      await activateSession(session);
 
       // Save session for persistence
       await _storage.write(key: _sessionKey, value: jsonEncode(session.toJson()));
+      
+      // Add to accounts list
+      await _addAccount(session);
 
       debugPrint('Login successful. Handle: ${handle ?? "null"}, DID: ${did ?? "null"}');
     } on UnauthorizedException catch (e) {
@@ -69,6 +72,60 @@ class BlueskyService {
     }
   }
 
+  Future<void> activateSession(Session session) async {
+    // Initialize Bluesky client with session
+    _bluesky = Bluesky.fromSession(session);
+
+    handle = session.handle;
+    did = session.did;
+
+    // Fetch profile to get avatar
+    try {
+      final profile = await _bluesky!.actor.getProfile(actor: did!);
+      avatar = profile.data.avatar;
+    } catch (e) {
+      debugPrint('Failed to fetch profile avatar: $e');
+    }
+  }
+
+  Future<void> _addAccount(Session session) async {
+    final accountsJson = await _storage.read(key: _accountsKey);
+    List<dynamic> accounts = [];
+    if (accountsJson != null) {
+      accounts = jsonDecode(accountsJson);
+    }
+
+    // Remove if already exists
+    accounts.removeWhere((a) => a['did'] == session.did);
+    
+    // Add new account info
+    accounts.add({
+      'handle': session.handle,
+      'did': session.did,
+      'avatar': avatar,
+      'session': session.toJson(),
+    });
+
+    await _storage.write(key: _accountsKey, value: jsonEncode(accounts));
+  }
+
+  Future<List<Map<String, dynamic>>> getAccounts() async {
+    final accountsJson = await _storage.read(key: _accountsKey);
+    if (accountsJson == null) return [];
+    return List<Map<String, dynamic>>.from(jsonDecode(accountsJson));
+  }
+
+  Future<void> switchAccount(String targetDid) async {
+    final accounts = await getAccounts();
+    final account = accounts.firstWhere((a) => a['did'] == targetDid, orElse: () => throw Exception('アカウントが見つかりません'));
+    
+    final session = Session.fromJson(account['session']);
+    await activateSession(session);
+    
+    // Update current session key
+    await _storage.write(key: _sessionKey, value: jsonEncode(session.toJson()));
+  }
+
   Future<bool> restoreSession() async {
     try {
       final sessionJson = await _storage.read(key: _sessionKey);
@@ -77,18 +134,10 @@ class BlueskyService {
       final sessionData = jsonDecode(sessionJson) as Map<String, dynamic>;
       final session = Session.fromJson(sessionData);
 
-      // Initialize Bluesky client with session
-      _bluesky = Bluesky.fromSession(session);
-      handle = session.handle;
-      did = session.did;
+      await activateSession(session);
 
-      // Fetch profile to get avatar
-      try {
-        final profile = await _bluesky!.actor.getProfile(actor: did!);
-        avatar = profile.data.avatar;
-      } catch (e) {
-        debugPrint('Failed to fetch profile avatar: $e');
-      }
+      // Ensure the current account is in the accounts list (for migration/consistency)
+      await _addAccount(session);
 
       debugPrint('Session restored. Handle: $handle');
       return true;
@@ -100,14 +149,22 @@ class BlueskyService {
   }
 
   Future<void> logout() async {
+    final currentDid = did;
     _bluesky = null;
     handle = null;
     did = null;
+    avatar = null;
     await _storage.delete(key: _sessionKey);
+    
+    if (currentDid != null) {
+      final accounts = await getAccounts();
+      accounts.removeWhere((a) => a['did'] == currentDid);
+      await _storage.write(key: _accountsKey, value: jsonEncode(accounts));
+    }
   }
 
   Future<FeedResponse> getTimeline({int limit = 40, String? cursor}) async {
-    if (_bluesky == null) {
+    if (_bluesky == null || did == null) {
       throw Exception('ログインしていません');
     }
 
@@ -134,7 +191,7 @@ class BlueskyService {
       
       // Save to cache (only for first page)
       if (cursor == null) {
-        await _db.savePosts('following', posts);
+        await _db.savePosts(did!, 'following', posts);
       }
       
       return FeedResponse(posts: posts, cursor: nextCursor);
@@ -148,11 +205,12 @@ class BlueskyService {
   }
 
   Future<List<PostItem>> getCachedTimeline({int limit = 40}) async {
-    return await _db.getCachedPosts('following', limit: limit);
+    if (did == null) return [];
+    return await _db.getCachedPosts(did!, 'following', limit: limit);
   }
 
   Future<FeedResponse> getCustomFeed(String feedUri, {int limit = 40, String? cursor}) async {
-    if (_bluesky == null) {
+    if (_bluesky == null || did == null) {
       throw Exception('ログインしていません');
     }
 
@@ -193,7 +251,7 @@ class BlueskyService {
       
       // Save to cache (only for first page)
       if (cursor == null) {
-        await _db.savePosts(feedUri, posts);
+        await _db.savePosts(did!, feedUri, posts);
       }
       
       return FeedResponse(posts: posts, cursor: nextCursor);
@@ -203,7 +261,8 @@ class BlueskyService {
   }
 
   Future<List<PostItem>> getCachedCustomFeed(String feedUri, {int limit = 40}) async {
-    return await _db.getCachedPosts(feedUri, limit: limit);
+    if (did == null) return [];
+    return await _db.getCachedPosts(did!, feedUri, limit: limit);
   }
 
   Future<List<Map<String, String>>> getSavedFeeds() async {
@@ -667,7 +726,9 @@ class BlueskyService {
 
       // Save to cache (using a unique key for this author and filter)
       final cacheKey = 'author_feed_${actor}_${filter ?? "all"}';
-      await _db.savePosts(cacheKey, allPosts);
+      if (did != null) {
+        await _db.savePosts(did!, cacheKey, allPosts);
+      }
 
       if (filter == null) return allPosts;
 
@@ -689,12 +750,13 @@ class BlueskyService {
   }
 
   Future<List<PostItem>> getCachedAuthorFeed(String actor, {String? filter, int limit = 40}) async {
+    if (did == null) return [];
     final cacheKey = 'author_feed_${actor}_${filter ?? "all"}';
-    return await _db.getCachedPosts(cacheKey, limit: limit);
+    return await _db.getCachedPosts(did!, cacheKey, limit: limit);
   }
 
   Future<List<PostItem>> getActorLikes(String actor, {int limit = 40}) async {
-    if (_bluesky == null) throw Exception('ログインしていません');
+    if (_bluesky == null || did == null) throw Exception('ログインしていません');
     try {
       final response = await _bluesky!.feed.getActorLikes(actor: actor, limit: limit);
       final posts = response.data.feed
@@ -710,7 +772,7 @@ class BlueskyService {
 
       // Save to cache
       final cacheKey = 'actor_likes_$actor';
-      await _db.savePosts(cacheKey, posts);
+      await _db.savePosts(did!, cacheKey, posts);
 
       return posts;
     } catch (e) {
@@ -719,8 +781,9 @@ class BlueskyService {
   }
 
   Future<List<PostItem>> getCachedActorLikes(String actor, {int limit = 40}) async {
+    if (did == null) return [];
     final cacheKey = 'actor_likes_$actor';
-    return await _db.getCachedPosts(cacheKey, limit: limit);
+    return await _db.getCachedPosts(did!, cacheKey, limit: limit);
   }
 
   Future<List<dynamic>> getActorFeeds(String actor, {int limit = 50}) async {

@@ -22,27 +22,31 @@ class DatabaseService {
 
     return await openDatabase(
       path,
-      version: 2,
+      version: 3,
       onCreate: (db, version) async {
         await db.execute('''
           CREATE TABLE posts (
-            cid TEXT PRIMARY KEY,
+            cid TEXT,
+            user_did TEXT,
             data TEXT NOT NULL,
-            created_at TEXT NOT NULL
+            created_at TEXT NOT NULL,
+            PRIMARY KEY (cid, user_did)
           )
         ''');
         await db.execute('''
           CREATE TABLE feed_posts (
             feed_uri TEXT,
             post_cid TEXT,
+            user_did TEXT,
             indexed_at INTEGER,
-            PRIMARY KEY (feed_uri, post_cid),
-            FOREIGN KEY (post_cid) REFERENCES posts (cid) ON DELETE CASCADE
+            PRIMARY KEY (feed_uri, post_cid, user_did),
+            FOREIGN KEY (post_cid, user_did) REFERENCES posts (cid, user_did) ON DELETE CASCADE
           )
         ''');
         await db.execute('''
           CREATE TABLE drafts (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_did TEXT,
             text TEXT NOT NULL,
             scheduled_at TEXT, -- ISO8601 string for scheduled posts
             created_at TEXT NOT NULL,
@@ -62,14 +66,53 @@ class DatabaseService {
             )
           ''');
         }
+        if (oldVersion < 3) {
+          // Migration to multi-user support
+          // For simplicity in this beta, we'll just recreate the tables if they exist
+          // or add the user_did column. Recreating is safer for schema changes.
+          await db.execute('DROP TABLE IF EXISTS feed_posts');
+          await db.execute('DROP TABLE IF EXISTS posts');
+          await db.execute('DROP TABLE IF EXISTS drafts');
+          
+          await db.execute('''
+            CREATE TABLE posts (
+              cid TEXT,
+              user_did TEXT,
+              data TEXT NOT NULL,
+              created_at TEXT NOT NULL,
+              PRIMARY KEY (cid, user_did)
+            )
+          ''');
+          await db.execute('''
+            CREATE TABLE feed_posts (
+              feed_uri TEXT,
+              post_cid TEXT,
+              user_did TEXT,
+              indexed_at INTEGER,
+              PRIMARY KEY (feed_uri, post_cid, user_did),
+              FOREIGN KEY (post_cid, user_did) REFERENCES posts (cid, user_did) ON DELETE CASCADE
+            )
+          ''');
+          await db.execute('''
+            CREATE TABLE drafts (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              user_did TEXT,
+              text TEXT NOT NULL,
+              scheduled_at TEXT, -- ISO8601 string for scheduled posts
+              created_at TEXT NOT NULL,
+              is_sent INTEGER DEFAULT 0
+            )
+          ''');
+        }
       },
     );
   }
 
   // Draft & Scheduled Post Methods
-  Future<int> saveDraft(String text, {DateTime? scheduledAt}) async {
+  Future<int> saveDraft(String userDid, String text, {DateTime? scheduledAt}) async {
     final db = await database;
     return await db.insert('drafts', {
+      'user_did': userDid,
       'text': text,
       'scheduled_at': scheduledAt?.toIso8601String(),
       'created_at': DateTime.now().toIso8601String(),
@@ -77,16 +120,22 @@ class DatabaseService {
     });
   }
 
-  Future<List<Map<String, dynamic>>> getDrafts() async {
+  Future<List<Map<String, dynamic>>> getDrafts(String userDid) async {
     final db = await database;
-    return await db.query('drafts', where: 'is_sent = 0', orderBy: 'created_at DESC');
+    return await db.query(
+      'drafts', 
+      where: 'is_sent = 0 AND user_did = ?', 
+      whereArgs: [userDid],
+      orderBy: 'created_at DESC'
+    );
   }
 
-  Future<List<Map<String, dynamic>>> getScheduledPosts() async {
+  Future<List<Map<String, dynamic>>> getScheduledPosts(String userDid) async {
     final db = await database;
     return await db.query(
       'drafts',
-      where: 'is_sent = 0 AND scheduled_at IS NOT NULL',
+      where: 'is_sent = 0 AND scheduled_at IS NOT NULL AND user_did = ?',
+      whereArgs: [userDid],
       orderBy: 'scheduled_at ASC',
     );
   }
@@ -101,13 +150,13 @@ class DatabaseService {
     await db.delete('drafts', where: 'id = ?', whereArgs: [id]);
   }
 
-  Future<int> getDraftCount() async {
+  Future<int> getDraftCount(String userDid) async {
     final db = await database;
-    final result = await db.rawQuery('SELECT COUNT(*) as count FROM drafts WHERE is_sent = 0');
+    final result = await db.rawQuery('SELECT COUNT(*) as count FROM drafts WHERE is_sent = 0 AND user_did = ?', [userDid]);
     return Sqflite.firstIntValue(result) ?? 0;
   }
 
-  Future<void> savePosts(String feedUri, List<PostItem> posts) async {
+  Future<void> savePosts(String userDid, String feedUri, List<PostItem> posts) async {
     final db = await database;
     final batch = db.batch();
 
@@ -117,6 +166,7 @@ class DatabaseService {
         'posts',
         {
           'cid': post.id,
+          'user_did': userDid,
           'data': jsonEncode(post.toJson()),
           'created_at': post.createdAt.toIso8601String(),
         },
@@ -129,6 +179,7 @@ class DatabaseService {
         {
           'feed_uri': feedUri,
           'post_cid': post.id,
+          'user_did': userDid,
           'indexed_at': DateTime.now().millisecondsSinceEpoch,
         },
         conflictAlgorithm: ConflictAlgorithm.replace,
@@ -138,15 +189,15 @@ class DatabaseService {
     await batch.commit(noResult: true);
   }
 
-  Future<List<PostItem>> getCachedPosts(String feedUri, {int limit = 40}) async {
+  Future<List<PostItem>> getCachedPosts(String userDid, String feedUri, {int limit = 40}) async {
     final db = await database;
     final List<Map<String, dynamic>> maps = await db.rawQuery('''
       SELECT p.data FROM posts p
-      JOIN feed_posts fp ON p.cid = fp.post_cid
-      WHERE fp.feed_uri = ?
+      JOIN feed_posts fp ON p.cid = fp.post_cid AND p.user_did = fp.user_did
+      WHERE fp.feed_uri = ? AND fp.user_did = ?
       ORDER BY p.created_at DESC
       LIMIT ?
-    ''', [feedUri, limit]);
+    ''', [feedUri, userDid, limit]);
 
     return maps.map((m) {
       final data = jsonDecode(m['data'] as String) as Map<String, dynamic>;

@@ -19,9 +19,6 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
   List<dynamic> _currentData = [];
   bool _loading = true;
   late TabController _tabController;
-  
-  // Filter for feed
-  String _currentFilter = 'posts_no_replies';
 
   @override
   void initState() {
@@ -573,7 +570,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                         text: post.text,
                         style: TextStyle(
                           fontSize: 15,
-                          color: isDark ? Colors.white.withOpacity(0.9) : Colors.black87,
+                          color: isDark ? Colors.white.withValues(alpha: 0.9) : Colors.black87,
                         ),
                       ),
                       if (post.media.isNotEmpty) _buildMediaGrid(post.media),

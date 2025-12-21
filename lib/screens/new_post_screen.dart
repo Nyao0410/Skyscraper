@@ -74,7 +74,7 @@ class _NewPostScreenState extends State<NewPostScreen> {
     if (text.isEmpty) return;
 
     // For simplicity, we only save text drafts for now
-    await _db.saveDraft(text);
+    await _db.saveDraft(_service.did!, text);
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('下書きを保存しました')));
       Navigator.pop(context, true);
@@ -88,7 +88,7 @@ class _NewPostScreenState extends State<NewPostScreen> {
     setState(() => _isPosting = true);
     try {
       if (_scheduledDate != null) {
-        await _db.saveDraft(text, scheduledAt: _scheduledDate);
+        await _db.saveDraft(_service.did!, text, scheduledAt: _scheduledDate);
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('投稿を予約しました')));
           Navigator.pop(context, true);

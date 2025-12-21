@@ -115,7 +115,7 @@ class _LoginWrapperState extends State<LoginWrapper> {
     try {
       await _service.login(handle, password);
       if (mounted) {
-        Navigator.of(context).pushReplacementNamed('/main');
+        Navigator.of(context).pushNamedAndRemoveUntil('/', (route) => false);
       }
     } catch (e) {
       setState(() => _error = e.toString());

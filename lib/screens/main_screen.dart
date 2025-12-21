@@ -31,7 +31,8 @@ class _MainScreenState extends State<MainScreen> {
   }
 
   Future<void> _updateDraftCount() async {
-    final count = await _db.getDraftCount();
+    if (_service.did == null) return;
+    final count = await _db.getDraftCount(_service.did!);
     if (mounted) {
       setState(() {
         _draftCount = count;
@@ -92,44 +93,97 @@ class _MainScreenState extends State<MainScreen> {
   }
 
   Widget _buildOtherScreen() {
-    return Scaffold(
-      appBar: AppBar(title: const Text('その他')),
-      body: ListView(
-        children: [
-          ListTile(
-            leading: CircleAvatar(
-              backgroundImage: _service.avatar != null
-                  ? CachedNetworkImageProvider(_service.avatar!)
-                  : null,
-              child: _service.avatar == null ? const Icon(Icons.person) : null,
-            ),
-            title: Text(_service.handle ?? 'ユーザー'),
-            subtitle: Text(_service.did ?? ''),
+    return FutureBuilder<List<Map<String, dynamic>>>(
+      future: _service.getAccounts(),
+      builder: (context, snapshot) {
+        final accounts = snapshot.data ?? [];
+        
+        return Scaffold(
+          appBar: AppBar(title: const Text('その他')),
+          body: ListView(
+            children: [
+              // Current Account
+              ListTile(
+                leading: CircleAvatar(
+                  backgroundImage: _service.avatar != null
+                      ? CachedNetworkImageProvider(_service.avatar!)
+                      : null,
+                  child: _service.avatar == null ? const Icon(Icons.person) : null,
+                ),
+                title: Text(_service.handle ?? 'ユーザー'),
+                subtitle: Text(_service.did ?? ''),
+                trailing: const Icon(Icons.check, color: Colors.green),
+              ),
+              const Divider(),
+              
+              // Other Accounts
+              if (accounts.length > 1) ...[
+                const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  child: Text('アカウント切り替え', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey)),
+                ),
+                ...accounts.where((a) => a['did'] != _service.did).map((account) => ListTile(
+                  leading: CircleAvatar(
+                    backgroundImage: account['avatar'] != null
+                        ? CachedNetworkImageProvider(account['avatar'])
+                        : null,
+                    child: account['avatar'] == null ? const Icon(Icons.person) : null,
+                  ),
+                  title: Text(account['handle'] ?? ''),
+                  onTap: () async {
+                    final navigator = Navigator.of(context);
+                    await _service.switchAccount(account['did']);
+                    if (mounted) {
+                      // Reload the whole app state
+                      navigator.pushNamedAndRemoveUntil('/', (route) => false);
+                    }
+                  },
+                )),
+                const Divider(),
+              ],
+
+              ListTile(
+                leading: const Icon(Icons.person_add_alt_1),
+                title: const Text('別のアカウントを追加'),
+                onTap: () {
+                  // Navigate to login but don't clear current session yet
+                  Navigator.pushNamed(context, '/login');
+                },
+              ),
+              const Divider(),
+              ListTile(
+                leading: const Icon(Icons.edit_note),
+                title: const Text('下書き・予約投稿'),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const DraftsScreen()),
+                  );
+                },
+              ),
+              const Divider(),
+              ListTile(
+                leading: const Icon(Icons.logout, color: Colors.red),
+                title: const Text('ログアウト', style: TextStyle(color: Colors.red)),
+                onTap: () async {
+                  final navigator = Navigator.of(context);
+                  await _service.logout();
+                  if (mounted) {
+                    final remaining = await _service.getAccounts();
+                    if (remaining.isEmpty) {
+                      navigator.pushReplacementNamed('/login');
+                    } else {
+                      // Switch to the first remaining account
+                      await _service.switchAccount(remaining.first['did']);
+                      navigator.pushNamedAndRemoveUntil('/', (route) => false);
+                    }
+                  }
+                },
+              ),
+            ],
           ),
-          const Divider(),
-          ListTile(
-            leading: const Icon(Icons.edit_note),
-            title: const Text('下書き・予約投稿'),
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const DraftsScreen()),
-              );
-            },
-          ),
-          const Divider(),
-          ListTile(
-            leading: const Icon(Icons.logout, color: Colors.red),
-            title: const Text('ログアウト', style: TextStyle(color: Colors.red)),
-            onTap: () async {
-              await _service.logout();
-              if (mounted) {
-                Navigator.of(context).pushReplacementNamed('/login');
-              }
-            },
-          ),
-        ],
-      ),
+        );
+      }
     );
   }
 }
@@ -261,9 +315,21 @@ class _ChatDetailWrapperState extends State<ChatDetailWrapper> {
         await _service.like(item.id, item.uri);
         _handleRefresh();
       },
+      onUnlike: (item) async {
+        if (item.viewerLike != null) {
+          await _service.delete(item.viewerLike!);
+          _handleRefresh();
+        }
+      },
       onRepost: (item) async {
         await _service.repost(item.id, item.uri);
         _handleRefresh();
+      },
+      onUnrepost: (item) async {
+        if (item.viewerRepost != null) {
+          await _service.delete(item.viewerRepost!);
+          _handleRefresh();
+        }
       },
       onDelete: (item) async {
         await _service.delete(item.uri);

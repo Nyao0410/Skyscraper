@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:intl/intl.dart';
 import '../models/post_item.dart';
 import '../services/bluesky_service.dart';
-import '../services/database_service.dart';
 import '../widgets/linkified_text.dart';
 import 'thread_screen.dart';
 import 'profile_screen.dart';
@@ -20,7 +18,6 @@ class TimelineScreen extends StatefulWidget {
 
 class _TimelineScreenState extends State<TimelineScreen> {
   final _service = BlueskyService();
-  final _db = DatabaseService();
   final _scrollController = ScrollController();
   List<PostItem> _posts = [];
   String? _cursor;
@@ -260,10 +257,20 @@ class _TimelineScreenState extends State<TimelineScreen> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          _buildActionIcon(Icons.chat_bubble_outline, post.replyCount, () => _showReplyDialog(post)),
-                          _buildActionIcon(Icons.repeat, post.repostCount, () => _handleRepost(post)),
-                          _buildActionIcon(Icons.favorite_border, post.likeCount, () => _handleLike(post)),
-                          _buildActionIcon(Icons.more_horiz, null, () => _showPostMenu(post)),
+                          _buildActionIcon(Icons.chat_bubble_outline, post.replyCount, false, () => _showReplyDialog(post)),
+                          _buildActionIcon(
+                            post.viewerRepost != null ? Icons.repeat_on : Icons.repeat,
+                            post.repostCount,
+                            post.viewerRepost != null,
+                            () => _handleRepost(post),
+                          ),
+                          _buildActionIcon(
+                            post.viewerLike != null ? Icons.favorite : Icons.favorite_border,
+                            post.likeCount,
+                            post.viewerLike != null,
+                            () => _handleLike(post),
+                          ),
+                          _buildActionIcon(Icons.more_horiz, null, false, () => _showPostMenu(post)),
                         ],
                       ),
                     ],
@@ -285,7 +292,7 @@ class _TimelineScreenState extends State<TimelineScreen> {
       decoration: BoxDecoration(
         border: Border.all(color: isDark ? Colors.white10 : Colors.grey.shade300),
         borderRadius: BorderRadius.circular(12),
-        color: isDark ? Colors.white.withOpacity(0.05) : null,
+        color: isDark ? Colors.white.withValues(alpha: 0.05) : null,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -325,7 +332,7 @@ class _TimelineScreenState extends State<TimelineScreen> {
             text: quoted.text,
             style: TextStyle(
               fontSize: 14,
-              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.9),
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.9),
             ),
           ),
           if (quoted.media.isNotEmpty) _buildMediaGrid(quoted.media),
@@ -387,17 +394,26 @@ class _TimelineScreenState extends State<TimelineScreen> {
     );
   }
 
-  Widget _buildActionIcon(IconData icon, int? count, VoidCallback onTap) {
+  Widget _buildActionIcon(IconData icon, int? count, bool isActive, VoidCallback onTap) {
+    Color iconColor = Colors.grey.shade600;
+    if (isActive) {
+      if (icon == Icons.favorite || icon == Icons.favorite_border) {
+        iconColor = Colors.pink;
+      } else if (icon == Icons.repeat || icon == Icons.repeat_on) {
+        iconColor = Colors.green;
+      }
+    }
+
     return InkWell(
       onTap: onTap,
       child: Row(
         children: [
-          Icon(icon, size: 18, color: Colors.grey.shade600),
+          Icon(icon, size: 18, color: iconColor),
           if (count != null) ...[
             const SizedBox(width: 4),
             Text(
               count > 0 ? count.toString() : '',
-              style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
+              style: TextStyle(color: iconColor, fontSize: 12),
             ),
           ],
         ],
@@ -416,7 +432,11 @@ class _TimelineScreenState extends State<TimelineScreen> {
 
   void _handleLike(PostItem post) async {
     try {
-      await _service.like(post.id, post.uri);
+      if (post.viewerLike != null) {
+        await _service.delete(post.viewerLike!);
+      } else {
+        await _service.like(post.id, post.uri);
+      }
       _fetchTimeline();
     } catch (e) {
       if (mounted) {
@@ -427,7 +447,11 @@ class _TimelineScreenState extends State<TimelineScreen> {
 
   void _handleRepost(PostItem post) async {
     try {
-      await _service.repost(post.id, post.uri);
+      if (post.viewerRepost != null) {
+        await _service.delete(post.viewerRepost!);
+      } else {
+        await _service.repost(post.id, post.uri);
+      }
       _fetchTimeline();
     } catch (e) {
       if (mounted) {

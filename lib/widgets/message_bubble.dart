@@ -11,7 +11,9 @@ class MessageBubble extends StatelessWidget {
   final PostItem message;
   final bool isMe;
   final Function(PostItem)? onLike;
+  final Function(PostItem)? onUnlike;
   final Function(PostItem)? onRepost;
+  final Function(PostItem)? onUnrepost;
   final Function(PostItem)? onReply;
   final Function(PostItem)? onQuote;
   final Function(PostItem)? onDelete;
@@ -21,7 +23,9 @@ class MessageBubble extends StatelessWidget {
     required this.message,
     required this.isMe,
     this.onLike,
+    this.onUnlike,
     this.onRepost,
+    this.onUnrepost,
     this.onReply,
     this.onQuote,
     this.onDelete,
@@ -140,8 +144,8 @@ class MessageBubble extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
       decoration: BoxDecoration(
-        color: Colors.black.withOpacity(0.12),
-        borderRadius: BorderRadius.circular(12),
+        color: Colors.black.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(8),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -166,7 +170,7 @@ class MessageBubble extends StatelessWidget {
       constraints: BoxConstraints(maxWidth: maxWidth),
       padding: const EdgeInsets.all(8),
       decoration: BoxDecoration(
-        color: Colors.black.withOpacity(0.2),
+        color: Colors.black.withValues(alpha: 0.2),
         borderRadius: const BorderRadius.only(
           topLeft: Radius.circular(12),
           topRight: Radius.circular(12),
@@ -400,6 +404,9 @@ class MessageBubble extends StatelessWidget {
   }
 
   void _showMenu(BuildContext context) {
+    final isLiked = message.viewerLike != null;
+    final isReposted = message.viewerRepost != null;
+
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.white,
@@ -412,19 +419,33 @@ class MessageBubble extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               ListTile(
-                leading: const Icon(Icons.favorite_border, color: Colors.pink),
-                title: const Text('いいね'),
+                leading: Icon(
+                  isLiked ? Icons.favorite : Icons.favorite_border,
+                  color: Colors.pink,
+                ),
+                title: Text(isLiked ? 'いいねを取り消す' : 'いいね'),
                 onTap: () {
                   Navigator.pop(context);
-                  onLike?.call(message);
+                  if (isLiked) {
+                    onUnlike?.call(message);
+                  } else {
+                    onLike?.call(message);
+                  }
                 },
               ),
               ListTile(
-                leading: const Icon(Icons.repeat, color: Colors.green),
-                title: const Text('リポスト'),
+                leading: Icon(
+                  isReposted ? Icons.repeat_on : Icons.repeat,
+                  color: Colors.green,
+                ),
+                title: Text(isReposted ? 'リポストを取り消す' : 'リポスト'),
                 onTap: () {
                   Navigator.pop(context);
-                  onRepost?.call(message);
+                  if (isReposted) {
+                    onUnrepost?.call(message);
+                  } else {
+                    onRepost?.call(message);
+                  }
                 },
               ),
               ListTile(

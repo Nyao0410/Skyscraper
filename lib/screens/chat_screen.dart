@@ -13,7 +13,9 @@ class ChatScreen extends StatefulWidget {
   final Function() onLoadMore;
   final Function(String text) onSendMessage;
   final Function(PostItem item)? onLike;
+  final Function(PostItem item)? onUnlike;
   final Function(PostItem item)? onRepost;
+  final Function(PostItem item)? onUnrepost;
   final Function(PostItem item)? onReply;
   final Function(PostItem item)? onQuote;
   final Function(PostItem item)? onDelete;
@@ -28,7 +30,9 @@ class ChatScreen extends StatefulWidget {
     required this.onLoadMore,
     required this.onSendMessage,
     this.onLike,
+    this.onUnlike,
     this.onRepost,
+    this.onUnrepost,
     this.onReply,
     this.onQuote,
     this.onDelete,
@@ -140,7 +144,7 @@ class _ChatScreenState extends State<ChatScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(widget.title, style: TextStyle(fontWeight: FontWeight.bold, color: textColor)),
-          Text('オンライン', style: TextStyle(fontSize: 12, color: textColor.withOpacity(0.7))),
+          Text('オンライン', style: TextStyle(fontSize: 12, color: textColor.withValues(alpha: 0.7))),
         ],
       ),
       actions: [
@@ -215,7 +219,9 @@ class _ChatScreenState extends State<ChatScreen> {
                 message: message,
                 isMe: message.isMe,
                 onLike: widget.onLike,
+                onUnlike: widget.onUnlike,
                 onRepost: widget.onRepost,
+                onUnrepost: widget.onUnrepost,
                 onReply: widget.onReply,
                 onQuote: widget.onQuote,
                 onDelete: widget.onDelete,
@@ -228,7 +234,9 @@ class _ChatScreenState extends State<ChatScreen> {
           message: message,
           isMe: message.isMe,
           onLike: widget.onLike,
+          onUnlike: widget.onUnlike,
           onRepost: widget.onRepost,
+          onUnrepost: widget.onUnrepost,
           onReply: widget.onReply,
           onQuote: widget.onQuote,
           onDelete: widget.onDelete,
@@ -266,7 +274,7 @@ class _ChatScreenState extends State<ChatScreen> {
                   decoration: InputDecoration(
                     border: InputBorder.none,
                     hintText: 'メッセージを入力',
-                    hintStyle: TextStyle(color: textColor.withOpacity(0.5)),
+                    hintStyle: TextStyle(color: textColor.withValues(alpha: 0.5)),
                   ),
                   onSubmitted: (_) => _handleSend(),
                 ),

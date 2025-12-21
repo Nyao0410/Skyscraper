@@ -63,6 +63,8 @@ class PostItem {
   final String? replyParentHandle;
   final PostItem? replyParentPost;
   final String? repostedBy; // Display name of the person who reposted
+  final String? viewerLike; // URI of the like record if liked
+  final String? viewerRepost; // URI of the repost record if reposted
 
   PostItem({
     required this.id,
@@ -83,6 +85,8 @@ class PostItem {
     this.replyParentHandle,
     this.replyParentPost,
     this.repostedBy,
+    this.viewerLike,
+    this.viewerRepost,
   });
 
   Map<String, dynamic> toJson() => {
@@ -104,6 +108,8 @@ class PostItem {
         'replyParentHandle': replyParentHandle,
         'replyParentPost': replyParentPost?.toJson(),
         'repostedBy': repostedBy,
+        'viewerLike': viewerLike,
+        'viewerRepost': viewerRepost,
       };
 
   factory PostItem.fromJson(Map<String, dynamic> json) {
@@ -137,6 +143,8 @@ class PostItem {
           ? PostItem.fromJson(json['replyParentPost'] as Map<String, dynamic>)
           : null,
       repostedBy: json['repostedBy'] as String?,
+      viewerLike: json['viewerLike'] as String?,
+      viewerRepost: json['viewerRepost'] as String?,
     );
   }
 
@@ -179,6 +187,7 @@ class PostItem {
       final record = postData['record'] ?? {};
       final reply = data['reply'] ?? postData['reply'];
       final reason = data['reason'];
+      final viewer = postData['viewer'] ?? {};
 
       String? repostedBy;
       if (reason != null && reason is Map) {
@@ -189,6 +198,13 @@ class PostItem {
             repostedBy = (by['displayName'] ?? by['handle'] ?? '').toString();
           }
         }
+      }
+
+      String? viewerLike;
+      String? viewerRepost;
+      if (viewer is Map) {
+        viewerLike = viewer['like']?.toString();
+        viewerRepost = viewer['repost']?.toString();
       }
 
       List<MediaItem> mediaList = [];
@@ -272,6 +288,8 @@ class PostItem {
         replyParentHandle: parentHandle,
         replyParentPost: parentPost,
         repostedBy: repostedBy,
+        viewerLike: viewerLike,
+        viewerRepost: viewerRepost,
       );
     } catch (e) {
       debugPrint('Critical error in PostItem.fromFeedView: $e');

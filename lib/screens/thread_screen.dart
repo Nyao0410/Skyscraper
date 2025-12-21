@@ -320,10 +320,20 @@ class _ThreadScreenState extends State<ThreadScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-              _buildActionIcon(Icons.chat_bubble_outline, post.replyCount, () => _showReplyDialog(post)),
-              _buildActionIcon(Icons.repeat, post.repostCount, () => _handleRepost(post)),
-              _buildActionIcon(Icons.favorite_border, post.likeCount, () => _handleLike(post)),
-              _buildActionIcon(Icons.share_outlined, null, () {}),
+              _buildActionIcon(Icons.chat_bubble_outline, post.replyCount, false, () => _showReplyDialog(post)),
+              _buildActionIcon(
+                post.viewerRepost != null ? Icons.repeat_on : Icons.repeat,
+                post.repostCount,
+                post.viewerRepost != null,
+                () => _showRepostMenu(post),
+              ),
+              _buildActionIcon(
+                post.viewerLike != null ? Icons.favorite : Icons.favorite_border,
+                post.likeCount,
+                post.viewerLike != null,
+                () => _handleLike(post),
+              ),
+              _buildActionIcon(Icons.share_outlined, null, false, () {}),
             ],
           ),
         ],
@@ -412,9 +422,19 @@ class _ThreadScreenState extends State<ThreadScreen> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          _buildActionIcon(Icons.chat_bubble_outline, post.replyCount, () => _showReplyDialog(post)),
-                          _buildActionIcon(Icons.repeat, post.repostCount, () => _handleRepost(post)),
-                          _buildActionIcon(Icons.favorite_border, post.likeCount, () => _handleLike(post)),
+                          _buildActionIcon(Icons.chat_bubble_outline, post.replyCount, false, () => _showReplyDialog(post)),
+                          _buildActionIcon(
+                            post.viewerRepost != null ? Icons.repeat_on : Icons.repeat,
+                            post.repostCount,
+                            post.viewerRepost != null,
+                            () => _showRepostMenu(post),
+                          ),
+                          _buildActionIcon(
+                            post.viewerLike != null ? Icons.favorite : Icons.favorite_border,
+                            post.likeCount,
+                            post.viewerLike != null,
+                            () => _handleLike(post),
+                          ),
                           const Icon(Icons.more_horiz, size: 18, color: Colors.grey),
                         ],
                       ),
@@ -488,15 +508,27 @@ class _ThreadScreenState extends State<ThreadScreen> {
     );
   }
 
-  Widget _buildActionIcon(IconData icon, int? count, VoidCallback onTap) {
+  Widget _buildActionIcon(IconData icon, int? count, bool isActive, VoidCallback onTap) {
+    Color iconColor = Colors.grey.shade600;
+    if (isActive) {
+      if (icon == Icons.favorite || icon == Icons.favorite_border) {
+        iconColor = Colors.pink;
+      } else if (icon == Icons.repeat || icon == Icons.repeat_on) {
+        iconColor = Colors.green;
+      }
+    }
+
     return InkWell(
       onTap: onTap,
       child: Row(
         children: [
-          Icon(icon, size: 18, color: Colors.grey.shade600),
+          Icon(icon, size: 18, color: iconColor),
           if (count != null) ...[
             const SizedBox(width: 4),
-            Text(count > 0 ? count.toString() : '', style: TextStyle(color: Colors.grey.shade600, fontSize: 12)),
+            Text(
+              count > 0 ? count.toString() : '',
+              style: TextStyle(color: iconColor, fontSize: 12),
+            ),
           ],
         ],
       ),
@@ -519,26 +551,74 @@ class _ThreadScreenState extends State<ThreadScreen> {
 
   void _handleLike(PostItem post) async {
     try {
-      await _service.like(post.id, post.uri);
+      if (post.viewerLike != null) {
+        await _service.delete(post.viewerLike!);
+      } else {
+        await _service.like(post.id, post.uri);
+      }
       _fetchThread();
     } catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('エラー: $e')));
     }
   }
 
-  void _handleRepost(PostItem post) async {
-    try {
-      await _service.repost(post.id, post.uri);
-      _fetchThread();
-    } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('エラー: $e')));
-    }
+  void _showRepostMenu(PostItem post) {
+    final isReposted = post.viewerRepost != null;
+    
+    showModalBottomSheet(
+      context: context,
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: Icon(
+                isReposted ? Icons.repeat_on : Icons.repeat,
+                color: isReposted ? Colors.green : null,
+              ),
+              title: Text(isReposted ? 'リポストを取り消す' : 'リポスト'),
+              onTap: () async {
+                Navigator.pop(context);
+                try {
+                  if (isReposted) {
+                    await _service.delete(post.viewerRepost!);
+                  } else {
+                    await _service.repost(post.id, post.uri);
+                  }
+                  _fetchThread();
+                } catch (e) {
+                  if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('エラー: $e')));
+                }
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.format_quote),
+              title: const Text('引用して投稿'),
+              onTap: () {
+                Navigator.pop(context);
+                _showQuoteDialog(post);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   void _showReplyDialog(PostItem post) async {
     final result = await Navigator.push(
       context,
       MaterialPageRoute(builder: (context) => NewPostScreen(replyTo: post)),
+    );
+    if (result == true) {
+      _fetchThread();
+    }
+  }
+
+  void _showQuoteDialog(PostItem post) async {
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => NewPostScreen(quoteOf: post)),
     );
     if (result == true) {
       _fetchThread();
