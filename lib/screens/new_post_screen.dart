@@ -10,12 +10,18 @@ class NewPostScreen extends StatefulWidget {
   final String? initialText;
   final PostItem? replyTo;
   final PostItem? quoteOf;
+  final int? draftId;
+  final DateTime? scheduledAt;
+  final bool preferDraft; // if true, primary action defaults to saving draft
   
   const NewPostScreen({
     super.key, 
     this.initialText,
     this.replyTo,
     this.quoteOf,
+    this.draftId,
+    this.scheduledAt,
+    this.preferDraft = false,
   });
 
   @override
@@ -34,6 +40,9 @@ class _NewPostScreenState extends State<NewPostScreen> {
     super.initState();
     if (widget.initialText != null) {
       _controller.text = widget.initialText!;
+    }
+    if (widget.scheduledAt != null) {
+      _scheduledDate = widget.scheduledAt;
     }
   }
 
@@ -73,7 +82,11 @@ class _NewPostScreenState extends State<NewPostScreen> {
     if (text.isEmpty) return;
 
     // For simplicity, we only save text drafts for now
-    await _db.saveDraft(_service.did!, text);
+    if (widget.draftId != null) {
+      await _db.updateDraft(widget.draftId!, text, scheduledAt: _scheduledDate);
+    } else {
+      await _db.saveDraft(_service.did!, text, scheduledAt: _scheduledDate);
+    }
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('下書きを保存しました')));
       Navigator.pop(context, true);
@@ -87,7 +100,11 @@ class _NewPostScreenState extends State<NewPostScreen> {
     setState(() => _isPosting = true);
     try {
       if (_scheduledDate != null) {
-        await _db.saveDraft(_service.did!, text, scheduledAt: _scheduledDate);
+        if (widget.draftId != null) {
+          await _db.updateDraft(widget.draftId!, text, scheduledAt: _scheduledDate);
+        } else {
+          await _db.saveDraft(_service.did!, text, scheduledAt: _scheduledDate);
+        }
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('投稿を予約しました')));
           Navigator.pop(context, true);
@@ -106,6 +123,10 @@ class _NewPostScreenState extends State<NewPostScreen> {
         }
       } else {
         await _service.post(text);
+        if (widget.draftId != null) {
+          // mark existing draft as sent
+          await _db.markAsSent(widget.draftId!);
+        }
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('投稿しました')));
           Navigator.pop(context, true);
@@ -122,7 +143,9 @@ class _NewPostScreenState extends State<NewPostScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final bool isDraftMode = widget.preferDraft || widget.draftId != null;
     String title = '新規投稿';
+    if (widget.draftId != null) title = '下書き編集';
     if (widget.replyTo != null) title = '返信';
     if (widget.quoteOf != null) title = '引用';
 
@@ -140,7 +163,7 @@ class _NewPostScreenState extends State<NewPostScreen> {
         ),
         title: Text(title),
         actions: [
-          if (widget.replyTo == null && widget.quoteOf == null)
+          if (!isDraftMode && widget.replyTo == null && widget.quoteOf == null)
             TextButton(
               onPressed: _isPosting ? null : _saveDraft,
               child: const Text('下書き'),
@@ -148,7 +171,9 @@ class _NewPostScreenState extends State<NewPostScreen> {
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 8.0),
             child: ElevatedButton(
-              onPressed: _isPosting ? null : _post,
+              onPressed: _isPosting
+                  ? null
+                  : (isDraftMode ? _saveDraft : _post),
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF00C300),
                 foregroundColor: Colors.white,
@@ -156,7 +181,12 @@ class _NewPostScreenState extends State<NewPostScreen> {
               ),
               child: _isPosting 
                 ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                : Text(_scheduledDate != null ? '予約' : '投稿'),
+                : Text(
+                    // If in draft mode, primary action is to save draft
+                    isDraftMode
+                        ? '下書き保存'
+                        : (_scheduledDate != null ? '予約' : '投稿'),
+                  ),
             ),
           ),
         ],

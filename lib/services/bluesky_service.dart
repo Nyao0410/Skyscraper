@@ -44,6 +44,7 @@ class BlueskyService {
   static const int _maxAvatarManifestEntries = 2000;
   static const _rateLimitNotifyEnabledKey = 'bsky_notify_rate_limit';
   static const _rateLimitThresholdKey = 'bsky_rate_limit_threshold';
+  static const _rateLimitSnapshotKey = 'bsky_rate_limit_snapshot';
   // Rate limit tracking
   int? rateLimitRemaining;
   int? rateLimitLimit;
@@ -55,6 +56,7 @@ class BlueskyService {
   int rateLimitNotifyThreshold = 10;
   DateTime? _lastRateLimitNotifiedAt;
   static const _rateLimitNotifyCooldown = Duration(minutes: 30);
+  DateTime? _rateLimitLastReset;
 
   bool get isLoggedIn => _bluesky != null;
 
@@ -99,6 +101,91 @@ class BlueskyService {
       throw Exception('API エラー: ${e.toString()}');
     } catch (e) {
       throw Exception('ネットワークエラー: ${e.toString()}');
+    }
+  }
+
+  Future<void> _saveRateLimitSnapshot() async {
+    try {
+      // Ensure we have a last-reset timestamp. Normalize it to local midnight
+      _rateLimitLastReset ??= DateTime.now();
+      final normalizedLastReset = DateTime(
+        _rateLimitLastReset!.year,
+        _rateLimitLastReset!.month,
+        _rateLimitLastReset!.day,
+      );
+
+      final map = {
+        'remaining': rateLimitRemaining,
+        'limit': rateLimitLimit,
+        'reset': rateLimitReset?.toIso8601String(),
+        // store normalized (midnight) last_reset so that reload can compare by date
+        'last_reset': normalizedLastReset.toIso8601String(),
+      };
+
+      await _storage.write(key: _rateLimitSnapshotKey, value: jsonEncode(map));
+    } catch (e) {
+      debugPrint('Failed to save rate limit snapshot: $e');
+    }
+  }
+
+  Future<void> _loadRateLimitSnapshot() async {
+    try {
+      final raw = await _storage.read(key: _rateLimitSnapshotKey);
+      if (raw == null) return;
+      final Map<String, dynamic> m = jsonDecode(raw);
+
+      // Restore basic fields if present
+      if (m.containsKey('remaining')) {
+        rateLimitRemaining = (m['remaining'] is int) ? m['remaining'] as int : int.tryParse(m['remaining'].toString());
+      }
+      if (m.containsKey('limit')) {
+        rateLimitLimit = (m['limit'] is int) ? m['limit'] as int : int.tryParse(m['limit'].toString());
+      }
+      if (m.containsKey('reset')) {
+        try {
+          rateLimitReset = DateTime.parse(m['reset']);
+        } catch (_) {}
+      }
+      if (m.containsKey('last_reset')) {
+        try {
+          _rateLimitLastReset = DateTime.parse(m['last_reset']);
+        } catch (_) {}
+      }
+
+      // If last_reset is not today (local date), reset remaining to limit.
+      if (rateLimitLimit != null) {
+        final now = DateTime.now();
+        bool needsReset = false;
+        if (_rateLimitLastReset == null) {
+          needsReset = true;
+        } else {
+          final last = DateTime(
+            _rateLimitLastReset!.year,
+            _rateLimitLastReset!.month,
+            _rateLimitLastReset!.day,
+          );
+          final today = DateTime(now.year, now.month, now.day);
+          if (!last.isAtSameMomentAs(today)) {
+            needsReset = true;
+          }
+        }
+
+        if (needsReset) {
+          // reset remaining to the known limit and mark last reset as today's midnight
+          rateLimitRemaining = rateLimitLimit;
+          _rateLimitLastReset = DateTime(now.year, now.month, now.day);
+          await _saveRateLimitSnapshot();
+        }
+      }
+
+      // Notify listeners of restored values
+      rateLimitNotifier.value = {
+        'remaining': rateLimitRemaining,
+        'limit': rateLimitLimit,
+        'reset': rateLimitReset?.toIso8601String(),
+      };
+    } catch (e) {
+      debugPrint('Failed to load rate limit snapshot: $e');
     }
   }
 
@@ -163,6 +250,8 @@ class BlueskyService {
       rateLimitNotifyEnabled = (v.toLowerCase() != 'false');
       // also load threshold
       await _loadRateLimitThreshold();
+      // also load persisted rate-limit snapshot (remaining/limit/reset/last_reset)
+      await _loadRateLimitSnapshot();
     } catch (e) {
       debugPrint('Failed to load rate-limit prefs: $e');
     }
@@ -314,13 +403,9 @@ class BlueskyService {
         'reset': rateLimitReset?.toIso8601String(),
       };
 
-      // Persist simple snapshot
+      // Persist snapshot (including last_reset) asynchronously
       try {
-        _storage.write(key: 'bsky_rate_limit', value: jsonEncode({
-          'remaining': rateLimitRemaining,
-          'limit': rateLimitLimit,
-          'reset': rateLimitReset?.toIso8601String(),
-        }));
+        _saveRateLimitSnapshot();
       } catch (_) {}
 
       // Trigger in-app notification callback: simple cooldown to avoid spamming

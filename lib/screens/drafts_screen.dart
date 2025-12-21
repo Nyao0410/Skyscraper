@@ -60,7 +60,7 @@ class _DraftsScreenState extends State<DraftsScreen> {
           // Navigate to new post screen and refresh list after returning
           final res = await Navigator.push(
             context,
-            MaterialPageRoute(builder: (context) => const NewPostScreen()),
+            MaterialPageRoute(builder: (context) => const NewPostScreen(preferDraft: true)),
           );
           if (res != null) {
             _loadDrafts();
@@ -95,6 +95,19 @@ class _DraftsScreenState extends State<DraftsScreen> {
                             ),
                         ],
                       ),
+                      onTap: () async {
+                        // Open NewPostScreen for editing this draft
+                        final id = draft['id'] as int?;
+                        final text = draft['text'] as String?;
+                        final sched = draft['scheduled_at'] != null ? DateTime.parse(draft['scheduled_at']) : null;
+                        final res = await Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (context) => NewPostScreen(initialText: text, draftId: id, scheduledAt: sched, preferDraft: true)),
+                        );
+                        if (res != null) {
+                          _loadDrafts();
+                        }
+                      },
                       trailing: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
