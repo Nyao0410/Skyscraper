@@ -4,6 +4,7 @@ import '../utils/avatar_provider.dart';
 import '../models/post_item.dart';
 import '../services/bluesky_service.dart';
 import '../widgets/linkified_text.dart';
+import '../widgets/media_grid.dart';
 import '../utils/feed_utils.dart';
 import 'thread_screen.dart';
 
@@ -579,7 +580,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                           color: isDark ? Colors.white.withValues(alpha: 0.9) : Colors.black87,
                         ),
                       ),
-                      if (post.media.isNotEmpty) _buildMediaGrid(post.media),
+                      if (post.media.isNotEmpty) MediaGrid(media: post.media),
                       const SizedBox(height: 12),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -597,16 +598,6 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _buildMediaGrid(List<MediaItem> media) {
-    return Padding(
-      padding: const EdgeInsets.only(top: 8),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(8),
-        child: CachedNetworkImage(imageUrl: media.first.url, fit: BoxFit.cover),
       ),
     );
   }

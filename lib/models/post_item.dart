@@ -4,20 +4,28 @@ enum MediaType { image, video }
 
 class MediaItem {
   final MediaType type;
-  final String url;
+  final String url; // Thumbnail or Image URL
+  final String? videoUrl; // HLS playlist URL for videos
   final String alt;
 
-  MediaItem({required this.type, required this.url, this.alt = ''});
+  MediaItem({
+    required this.type,
+    required this.url,
+    this.videoUrl,
+    this.alt = '',
+  });
 
   Map<String, dynamic> toJson() => {
         'type': type.index,
         'url': url,
+        'videoUrl': videoUrl,
         'alt': alt,
       };
 
   factory MediaItem.fromJson(Map<String, dynamic> json) => MediaItem(
         type: MediaType.values[json['type'] as int],
         url: json['url'] as String,
+        videoUrl: json['videoUrl'] as String?,
         alt: json['alt'] as String? ?? '',
       );
 }
@@ -315,7 +323,8 @@ class PostItem {
       mediaList.add(MediaItem(
         type: MediaType.video,
         url: embedMap['thumbnail']?.toString() ?? '',
-        alt: 'Video',
+        videoUrl: embedMap['playlist']?.toString(),
+        alt: embedMap['alt']?.toString() ?? 'Video',
       ));
     } else if (typeStr.contains('app.bsky.embed.external#view')) {
       final external = embedMap['external'];

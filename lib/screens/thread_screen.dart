@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import '../utils/avatar_provider.dart';
 // url_launcher not used in this file; remove unused import
 import '../models/post_item.dart';
 import '../services/bluesky_service.dart';
 import '../widgets/linkified_text.dart';
+import '../widgets/media_grid.dart';
 import 'profile_screen.dart';
 import 'new_post_screen.dart';
 
@@ -311,7 +311,7 @@ class _ThreadScreenState extends State<ThreadScreen> {
             linkStyle: const TextStyle(color: Colors.blue, decoration: TextDecoration.none),
           ),
           if (post.quotedPost != null) _buildQuotedPost(post.quotedPost!),
-          if (post.media.isNotEmpty) _buildMediaGrid(post.media),
+          if (post.media.isNotEmpty) MediaGrid(media: post.media),
           const SizedBox(height: 16),
           Text(
             _formatFullDate(post.createdAt),
@@ -418,7 +418,7 @@ class _ThreadScreenState extends State<ThreadScreen> {
                         style: const TextStyle(fontSize: 14),
                         linkStyle: const TextStyle(color: Colors.blue),
                       ),
-                      if (post.media.isNotEmpty) _buildMediaGrid(post.media),
+                      if (post.media.isNotEmpty) MediaGrid(media: post.media),
                       const SizedBox(height: 8),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -446,27 +446,6 @@ class _ThreadScreenState extends State<ThreadScreen> {
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  // Helper methods (copied from TimelineScreen for now, should be refactored later)
-  Widget _buildMediaGrid(List<MediaItem> media) {
-    if (media.isEmpty) return const SizedBox.shrink();
-    return Padding(
-      padding: const EdgeInsets.only(top: 8),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(8),
-        child: media.length == 1
-            ? CachedNetworkImage(imageUrl: media.first.url, fit: BoxFit.cover)
-            : GridView.count(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                crossAxisCount: 2,
-                mainAxisSpacing: 4,
-                crossAxisSpacing: 4,
-                children: media.map((m) => CachedNetworkImage(imageUrl: m.url, fit: BoxFit.cover)).toList(),
-              ),
       ),
     );
   }
@@ -504,6 +483,7 @@ class _ThreadScreenState extends State<ThreadScreen> {
             text: quoted.text,
             style: const TextStyle(fontSize: 14),
           ),
+          if (quoted.media.isNotEmpty) MediaGrid(media: quoted.media),
         ],
       ),
     );

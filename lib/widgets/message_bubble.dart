@@ -7,6 +7,8 @@ import '../models/post_item.dart';
 import '../screens/thread_screen.dart';
 import '../screens/profile_screen.dart';
 import 'linkified_text.dart';
+import 'media_viewer.dart';
+import 'video_player_widget.dart';
 
 class MessageBubble extends StatelessWidget {
   final PostItem message;
@@ -495,39 +497,46 @@ class MessageBubble extends StatelessWidget {
       return GestureDetector(
         onLongPress: () => _showMenu(context),
         onTap: () {
-          // TODO: 画像拡大表示
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (context) => MediaViewer(media: [item], initialIndex: 0),
+            ),
+          );
         },
         child: ClipRRect(
           borderRadius: BorderRadius.circular(12),
           child: Container(
             constraints: BoxConstraints(
               maxWidth: maxWidth,
-              maxHeight: 300, // LINE風に少し高さを抑える
+              maxHeight: 300,
             ),
-            child: CachedNetworkImage(
-              imageUrl: item.url,
-              fit: BoxFit.cover,
-              width: double.infinity,
-              memCacheWidth: 800,
-              placeholder: (context, url) => Container(
-                height: 150,
-                width: maxWidth,
-                color: Colors.grey.shade200,
-                child: const Center(
-                  child: CircularProgressIndicator(strokeWidth: 2),
+            child: Hero(
+              tag: item.url,
+              child: CachedNetworkImage(
+                imageUrl: item.url,
+                fit: BoxFit.cover,
+                width: double.infinity,
+                memCacheWidth: 800,
+                placeholder: (context, url) => Container(
+                  height: 150,
+                  width: maxWidth,
+                  color: Colors.grey.shade200,
+                  child: const Center(
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
                 ),
-              ),
-              errorWidget: (context, url, error) => Container(
-                padding: const EdgeInsets.all(20),
-                width: maxWidth,
-                color: Colors.grey.shade200,
-                child: const Icon(Icons.broken_image, color: Colors.grey),
+                errorWidget: (context, url, error) => Container(
+                  padding: const EdgeInsets.all(20),
+                  width: maxWidth,
+                  color: Colors.grey.shade200,
+                  child: const Icon(Icons.broken_image, color: Colors.grey),
+                ),
               ),
             ),
           ),
         ),
       );
-    } else if (item.type == MediaType.video) {
+    } else if (item.type == MediaType.video && item.videoUrl != null) {
       return GestureDetector(
         onLongPress: () => _showMenu(context),
         child: ClipRRect(
@@ -535,38 +544,8 @@ class MessageBubble extends StatelessWidget {
           child: Container(
             constraints: BoxConstraints(
               maxWidth: maxWidth,
-              maxHeight: 200,
             ),
-            color: Colors.black87,
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                CachedNetworkImage(
-                  imageUrl: item.url, // 動画の場合はサムネイルURL
-                  fit: BoxFit.cover,
-                  width: double.infinity,
-                  height: double.infinity,
-                  placeholder: (context, url) => const Center(
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  ),
-                  errorWidget: (context, url, error) => const Icon(
-                    Icons.video_library,
-                    color: Colors.white54,
-                    size: 48,
-                  ),
-                ),
-                // 再生ボタンアイコン
-                Container(
-                  decoration: BoxDecoration(
-                    color: Colors.black26,
-                    shape: BoxShape.circle,
-                    border: Border.all(color: Colors.white, width: 2),
-                  ),
-                  padding: const EdgeInsets.all(8),
-                  child: const Icon(Icons.play_arrow, size: 32, color: Colors.white),
-                ),
-              ],
-            ),
+            child: VideoPlayerWidget(url: item.videoUrl!),
           ),
         ),
       );

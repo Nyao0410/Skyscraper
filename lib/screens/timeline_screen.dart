@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import '../utils/avatar_provider.dart';
 import '../models/post_item.dart';
 import '../services/bluesky_service.dart';
 import '../widgets/linkified_text.dart';
+import '../widgets/media_grid.dart';
 import '../utils/feed_utils.dart';
 import 'thread_screen.dart';
 import 'profile_screen.dart';
@@ -254,7 +254,7 @@ class _TimelineScreenState extends State<TimelineScreen> {
                         linkStyle: const TextStyle(color: Colors.blue, decoration: TextDecoration.none),
                       ),
                       if (post.quotedPost != null) _buildQuotedPost(post.quotedPost!),
-                      if (post.media.isNotEmpty) _buildMediaGrid(post.media),
+                      if (post.media.isNotEmpty) MediaGrid(media: post.media),
                       const SizedBox(height: 12),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -337,60 +337,7 @@ class _TimelineScreenState extends State<TimelineScreen> {
               color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.9),
             ),
           ),
-          if (quoted.media.isNotEmpty) _buildMediaGrid(quoted.media),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildMediaGrid(List<MediaItem> media) {
-    if (media.isEmpty) return const SizedBox.shrink();
-    debugPrint('Building media grid for ${media.length} items');
-
-    return Padding(
-      padding: const EdgeInsets.only(top: 8),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(12),
-        child: media.length == 1
-            ? _buildMediaItem(media.first, isSingle: true)
-            : GridView.count(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                crossAxisCount: 2,
-                mainAxisSpacing: 4,
-                crossAxisSpacing: 4,
-                childAspectRatio: 1.0,
-                children: media.map((m) => _buildMediaItem(m)).toList(),
-              ),
-      ),
-    );
-  }
-
-  Widget _buildMediaItem(MediaItem item, {bool isSingle = false}) {
-    return AspectRatio(
-      aspectRatio: isSingle ? 16 / 9 : 1.0,
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          CachedNetworkImage(
-            imageUrl: item.url,
-            fit: BoxFit.cover,
-            placeholder: (context, url) => Container(
-              color: Colors.grey.shade200,
-              child: const Center(child: CircularProgressIndicator(strokeWidth: 2)),
-            ),
-            errorWidget: (context, url, error) {
-              debugPrint('Error loading image: $url, error: $error');
-              return Container(
-                color: Colors.grey.shade200,
-                child: const Icon(Icons.broken_image, color: Colors.grey),
-              );
-            },
-          ),
-          if (item.type == MediaType.video)
-            const Center(
-              child: Icon(Icons.play_circle_fill, size: 40, color: Colors.white70),
-            ),
+          if (quoted.media.isNotEmpty) MediaGrid(media: quoted.media),
         ],
       ),
     );
