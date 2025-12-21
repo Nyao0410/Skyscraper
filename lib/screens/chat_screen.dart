@@ -144,6 +144,16 @@ class _ChatScreenState extends State<ChatScreen> {
     _onTextChanged();
   }
 
+  void _insertTagToComposer(String tag) {
+    final normalized = tag.startsWith('#') ? tag : '#$tag';
+    final current = _textController.text;
+    final needsSpace = current.isNotEmpty && !current.endsWith(' ');
+    final newText = current + (needsSpace ? ' ' : '') + normalized;
+    _textController.text = newText;
+    _textController.selection = TextSelection.collapsed(offset: _textController.text.length);
+    _onTextChanged();
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -275,6 +285,7 @@ class _ChatScreenState extends State<ChatScreen> {
                 onReply: widget.onReply,
                 onQuote: widget.onQuote,
                 onDelete: widget.onDelete,
+                onInsertText: _insertTagToComposer,
               ),
             ],
           );
@@ -290,6 +301,7 @@ class _ChatScreenState extends State<ChatScreen> {
           onReply: widget.onReply,
           onQuote: widget.onQuote,
           onDelete: widget.onDelete,
+          onInsertText: _insertTagToComposer,
         );
       },
     );

@@ -18,6 +18,7 @@ class MessageBubble extends StatelessWidget {
   final Function(PostItem)? onReply;
   final Function(PostItem)? onQuote;
   final Function(PostItem)? onDelete;
+  final void Function(String tag)? onInsertText;
 
   const MessageBubble({
     super.key,
@@ -30,6 +31,7 @@ class MessageBubble extends StatelessWidget {
     this.onReply,
     this.onQuote,
     this.onDelete,
+    this.onInsertText,
   });
 
   @override
@@ -248,6 +250,7 @@ class MessageBubble extends StatelessWidget {
                       : (isDark ? Colors.blue.shade300 : Colors.blue.shade700),
                   decoration: TextDecoration.underline,
                 ),
+                onHashtagLongPress: (tag) => onInsertText?.call(tag),
               ),
             ),
           if (message.quotedPost != null)
@@ -312,6 +315,7 @@ class MessageBubble extends StatelessWidget {
               fontSize: 12, 
               color: isDark ? Colors.white70 : Colors.black87,
             ),
+            onHashtagLongPress: (tag) => onInsertText?.call(tag),
           ),
           if (quoted.media.isNotEmpty)
             Padding(

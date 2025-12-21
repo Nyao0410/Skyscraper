@@ -3,6 +3,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:bluesky/app_bsky_embed_images.dart';
 import '../services/bluesky_service.dart';
 import '../models/post_item.dart';
+import '../utils/feed_utils.dart';
 import 'chat_screen.dart';
 import 'new_post_screen.dart';
 
@@ -48,7 +49,7 @@ class _ChatDetailWrapperState extends State<ChatDetailWrapper> {
       final response = await _service.getCustomFeed(widget.feedUri, forceRefresh: true);
       if (mounted) {
         setState(() {
-          _feed = response.posts;
+          _feed = mergePosts(_feed, response.posts, atTop: true);
           _cursor = response.cursor;
           _loading = false;
         });
@@ -78,7 +79,7 @@ class _ChatDetailWrapperState extends State<ChatDetailWrapper> {
     try {
       final response = await _service.getCustomFeed(widget.feedUri, forceRefresh: true);
       setState(() {
-        _feed = response.posts;
+        _feed = mergePosts(_feed, response.posts, atTop: true);
         _cursor = response.cursor;
         _refreshing = false;
       });
@@ -95,7 +96,7 @@ class _ChatDetailWrapperState extends State<ChatDetailWrapper> {
       final response = await _service.getCustomFeed(widget.feedUri, cursor: _cursor);
       if (mounted) {
         setState(() {
-          _feed.addAll(response.posts);
+          _feed = mergePosts(_feed, response.posts, atTop: false);
           _cursor = response.cursor;
           _loadingMore = false;
         });

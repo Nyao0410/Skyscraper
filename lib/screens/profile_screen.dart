@@ -4,6 +4,7 @@ import '../utils/avatar_provider.dart';
 import '../models/post_item.dart';
 import '../services/bluesky_service.dart';
 import '../widgets/linkified_text.dart';
+import '../utils/feed_utils.dart';
 import 'thread_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -59,32 +60,34 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
     }
   }
 
-  Future<void> _fetchFeedForTab(int index) async {
+  Future<void> _fetchFeedForTab(int index, {bool forceRefresh = false}) async {
     // 1. Load from cache first
-    try {
-      List<dynamic> cachedData = [];
-      switch (index) {
-        case 0:
-          cachedData = await _service.getCachedAuthorFeed(widget.actor, filter: 'posts_no_replies');
-          break;
-        case 1:
-          cachedData = await _service.getCachedAuthorFeed(widget.actor, filter: 'posts_with_replies');
-          break;
-        case 2:
-          cachedData = await _service.getCachedAuthorFeed(widget.actor, filter: 'posts_with_media');
-          break;
-        case 3:
-          cachedData = await _service.getCachedAuthorFeed(widget.actor, filter: 'posts_with_video');
-          break;
+    if (!forceRefresh) {
+      try {
+        List<dynamic> cachedData = [];
+        switch (index) {
+          case 0:
+            cachedData = await _service.getCachedAuthorFeed(widget.actor, filter: 'posts_no_replies');
+            break;
+          case 1:
+            cachedData = await _service.getCachedAuthorFeed(widget.actor, filter: 'posts_with_replies');
+            break;
+          case 2:
+            cachedData = await _service.getCachedAuthorFeed(widget.actor, filter: 'posts_with_media');
+            break;
+          case 3:
+            cachedData = await _service.getCachedAuthorFeed(widget.actor, filter: 'posts_with_video');
+            break;
+        }
+        if (cachedData.isNotEmpty && mounted) {
+          setState(() {
+            _currentData = cachedData;
+            _loading = false;
+          });
+        }
+      } catch (e) {
+        debugPrint('Error loading cached profile feed: $e');
       }
-      if (cachedData.isNotEmpty && mounted) {
-        setState(() {
-          _currentData = cachedData;
-          _loading = false;
-        });
-      }
-    } catch (e) {
-      debugPrint('Error loading cached profile feed: $e');
     }
 
     // 2. Fetch from network
@@ -112,7 +115,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
       }
       if (mounted) {
         setState(() {
-          _currentData = data;
+          _currentData = mergePosts(_currentData, data, atTop: true);
           _loading = false;
         });
       }
@@ -129,55 +132,60 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: _profile == null && _loading
-          ? const Center(child: CircularProgressIndicator())
-          : _profile == null
-              ? const Center(child: Text('プロフィールが見つかりませんでした'))
-              : CustomScrollView(
-                  slivers: [
-                    _buildAppBar(),
-                    SliverToBoxAdapter(child: _buildProfileHeader()),
-                    SliverPersistentHeader(
-                      pinned: true,
-                      delegate: _SliverAppBarDelegate(
-                        TabBar(
-                          controller: _tabController,
-                          isScrollable: true,
-                          tabs: const [
-                            Tab(text: '投稿'),
-                            Tab(text: '返信'),
-                            Tab(text: 'メディア'),
-                            Tab(text: 'ビデオ'),
-                            Tab(text: 'フィード'),
-                          ],
+      body: SelectionArea(
+        child: _profile == null && _loading
+            ? const Center(child: CircularProgressIndicator())
+            : _profile == null
+                ? const Center(child: Text('プロフィールが見つかりませんでした'))
+                : RefreshIndicator(
+                    onRefresh: () => _fetchFeedForTab(_tabController.index, forceRefresh: true),
+                    child: CustomScrollView(
+                      slivers: [
+                        _buildAppBar(),
+                      SliverToBoxAdapter(child: _buildProfileHeader()),
+                      SliverPersistentHeader(
+                        pinned: true,
+                        delegate: _SliverAppBarDelegate(
+                          TabBar(
+                            controller: _tabController,
+                            isScrollable: true,
+                            tabs: const [
+                              Tab(text: '投稿'),
+                              Tab(text: '返信'),
+                              Tab(text: 'メディア'),
+                              Tab(text: 'ビデオ'),
+                              Tab(text: 'フィード'),
+                            ],
+                          ),
                         ),
                       ),
-                    ),
-                    if (_loading)
-                      const SliverFillRemaining(
-                        child: Center(child: CircularProgressIndicator()),
-                      )
-                    else if (_currentData.isEmpty)
-                      const SliverFillRemaining(
-                        child: Center(child: Text('データがありません')),
-                      )
-                    else
-                      SliverList(
-                        delegate: SliverChildBuilderDelegate(
-                          (context, index) {
-                            final item = _currentData[index];
-                            if (item is PostItem) {
-                              return _buildPostItem(item);
-                            } else {
-                              // FeedGeneratorView or ListView
-                              return _buildGenericItem(item);
-                            }
-                          },
-                          childCount: _currentData.length,
+                      if (_loading)
+                        const SliverFillRemaining(
+                          child: Center(child: CircularProgressIndicator()),
+                        )
+                      else if (_currentData.isEmpty)
+                        const SliverFillRemaining(
+                          child: Center(child: Text('データがありません')),
+                        )
+                      else
+                        SliverList(
+                          delegate: SliverChildBuilderDelegate(
+                            (context, index) {
+                              final item = _currentData[index];
+                              if (item is PostItem) {
+                                return _buildPostItem(item);
+                              } else {
+                                // FeedGeneratorView or ListView
+                                return _buildGenericItem(item);
+                              }
+                            },
+                            childCount: _currentData.length,
+                          ),
                         ),
-                      ),
-                  ],
+                    ],
+                  ),
                 ),
+      ),
     );
   }
 
@@ -199,11 +207,12 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
         children: [
           if (creator != null) Text('by @$creator', style: const TextStyle(fontSize: 12, color: Colors.blue)),
           if (description != null)
-            Text(
-              description,
+            LinkifiedText(
+              text: description,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
               style: const TextStyle(fontSize: 13),
+              linkStyle: const TextStyle(color: Colors.blue),
             ),
         ],
       ),

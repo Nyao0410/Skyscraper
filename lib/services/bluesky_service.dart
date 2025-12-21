@@ -747,13 +747,6 @@ class BlueskyService {
     }
 
     try {
-      // Only fetch from network for the first page (cursor == null). Older pages are served from cache.
-      if (cursor != null) {
-        debugPrint('Cursor provided; returning cached timeline page instead of network fetch');
-        final cached = await getCachedTimeline(limit: limit);
-        return FeedResponse(posts: cached, cursor: null);
-      }
-
       debugPrint('Fetching timeline...');
       final response = await _bluesky!.feed.getTimeline(limit: limit, cursor: cursor);
       // try to extract rate-limit headers
@@ -828,12 +821,6 @@ class BlueskyService {
       
       final List<dynamic> feedItems;
       final String? nextCursor;
-      if (cursor != null) {
-        // For older pages, return cached posts instead of fetching from network
-        debugPrint('Cursor provided for custom feed; returning cached feed instead of network fetch');
-        final cached = await getCachedCustomFeed(feedUri, limit: limit);
-        return FeedResponse(posts: cached, cursor: null);
-      }
 
       if (feedUri == 'following') {
         final response = await _bluesky!.feed.getTimeline(limit: limit, cursor: cursor);

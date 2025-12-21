@@ -4,6 +4,7 @@ import '../utils/avatar_provider.dart';
 import '../models/post_item.dart';
 import '../services/bluesky_service.dart';
 import '../widgets/linkified_text.dart';
+import '../utils/feed_utils.dart';
 import 'thread_screen.dart';
 import 'profile_screen.dart';
 import 'search_screen.dart';
@@ -44,26 +45,28 @@ class _TimelineScreenState extends State<TimelineScreen> {
     }
   }
 
-  Future<void> _fetchTimeline() async {
+  Future<void> _fetchTimeline({bool forceRefresh = false}) async {
     // 1. Load from cache first for immediate display
-    try {
-      final cachedPosts = await _service.getCachedTimeline();
-      if (cachedPosts.isNotEmpty && mounted) {
-        setState(() {
-          _posts = cachedPosts;
-          _loading = false;
-        });
+    if (!forceRefresh) {
+      try {
+        final cachedPosts = await _service.getCachedTimeline();
+        if (cachedPosts.isNotEmpty && mounted) {
+          setState(() {
+            _posts = cachedPosts;
+            _loading = false;
+          });
+        }
+      } catch (e) {
+        debugPrint('Error loading cached timeline: $e');
       }
-    } catch (e) {
-      debugPrint('Error loading cached timeline: $e');
     }
 
     // 2. Fetch from network to update
     try {
-      final response = await _service.getTimeline();
+      final response = await _service.getTimeline(forceRefresh: forceRefresh);
       if (mounted) {
         setState(() {
-          _posts = response.posts;
+          _posts = mergePosts(_posts, response.posts, atTop: true);
           _cursor = response.cursor;
           _loading = false;
         });
@@ -83,7 +86,7 @@ class _TimelineScreenState extends State<TimelineScreen> {
       final response = await _service.getTimeline(cursor: _cursor);
       if (mounted) {
         setState(() {
-          _posts.addAll(response.posts);
+          _posts = mergePosts(_posts, response.posts, atTop: false);
           _cursor = response.cursor;
           _loadingMore = false;
         });
@@ -116,7 +119,7 @@ class _TimelineScreenState extends State<TimelineScreen> {
             )
           : null,
       body: RefreshIndicator(
-        onRefresh: _fetchTimeline,
+        onRefresh: () => _fetchTimeline(forceRefresh: true),
         child: _loading
             ? const Center(child: CircularProgressIndicator())
             : _posts.isEmpty
@@ -153,7 +156,7 @@ class _TimelineScreenState extends State<TimelineScreen> {
             MaterialPageRoute(builder: (context) => const NewPostScreen()),
           );
           if (result == true) {
-            _fetchTimeline();
+            _fetchTimeline(forceRefresh: true);
           }
         },
         backgroundColor: const Color(0xFF00C300),

@@ -57,16 +57,18 @@ class _ThreadScreenState extends State<ThreadScreen> {
         backgroundColor: Colors.white,
         foregroundColor: Colors.black,
       ),
-      body: _loading
-          ? const Center(child: CircularProgressIndicator())
-          : _thread == null
-              ? const Center(child: Text('スレッドが見つかりませんでした'))
-              : RefreshIndicator(
-                  onRefresh: _fetchThread,
-                  child: ListView(
-                    children: _buildThreadItems(_thread),
+      body: SelectionArea(
+        child: _loading
+            ? const Center(child: CircularProgressIndicator())
+            : _thread == null
+                ? const Center(child: Text('スレッドが見つかりませんでした'))
+                : RefreshIndicator(
+                    onRefresh: _fetchThread,
+                    child: ListView(
+                      children: _buildThreadItems(_thread),
+                    ),
                   ),
-                ),
+      ),
     );
   }
 
