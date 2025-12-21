@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:image_picker/image_picker.dart';
+import 'dart:io';
 
 import '../models/post_item.dart';
 import '../widgets/message_bubble.dart';
@@ -13,7 +15,7 @@ class ChatScreen extends StatefulWidget {
   final bool isLoadingMore;
   final Function() onRefresh;
   final Function() onLoadMore;
-  final Function(String text) onSendMessage;
+  final Function(String text, {List<XFile>? images}) onSendMessage;
   final Function(PostItem item)? onLike;
   final Function(PostItem item)? onUnlike;
   final Function(PostItem item)? onRepost;
@@ -47,6 +49,8 @@ class ChatScreen extends StatefulWidget {
 class _ChatScreenState extends State<ChatScreen> {
   final _scrollController = ScrollController();
   final _textController = TextEditingController();
+  final _picker = ImagePicker();
+  final List<XFile> _selectedImages = [];
   final int _maxChars = 300;
   bool _canSend = false;
   int _remaining = 300;
@@ -62,12 +66,31 @@ class _ChatScreenState extends State<ChatScreen> {
   void _onTextChanged() {
     final len = _textController.text.length;
     final remaining = (_maxChars - len).clamp(0, _maxChars);
-    final canSend = _textController.text.trim().isNotEmpty && len <= _maxChars;
+    final canSend = (_textController.text.trim().isNotEmpty || _selectedImages.isNotEmpty) && len <= _maxChars;
     if (remaining != _remaining || canSend != _canSend) {
       setState(() {
         _remaining = remaining;
         _canSend = canSend;
       });
+    }
+  }
+
+  Future<void> _pickImages() async {
+    if (_selectedImages.length >= 4) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('画像は最大4枚までです'))
+      );
+      return;
+    }
+    final images = await _picker.pickMultiImage();
+    if (images.isNotEmpty) {
+      setState(() {
+        _selectedImages.addAll(images);
+        if (_selectedImages.length > 4) {
+          _selectedImages.removeRange(4, _selectedImages.length);
+        }
+      });
+      _onTextChanged();
     }
   }
 
@@ -112,9 +135,13 @@ class _ChatScreenState extends State<ChatScreen> {
 
   void _handleSend() {
     final text = _textController.text.trim();
-    if (text.isEmpty) return;
-    widget.onSendMessage(text);
+    if (text.isEmpty && _selectedImages.isEmpty) return;
+    widget.onSendMessage(text, images: _selectedImages.isEmpty ? null : List.from(_selectedImages));
     _textController.clear();
+    setState(() {
+      _selectedImages.clear();
+    });
+    _onTextChanged();
   }
 
   @override
@@ -127,17 +154,20 @@ class _ChatScreenState extends State<ChatScreen> {
       body: Column(
         children: [
           Expanded(
-            child: Container(
-              padding: const EdgeInsets.symmetric(vertical: 12),
-              decoration: const BoxDecoration(
-                borderRadius: BorderRadius.only(
-                  topLeft: Radius.circular(12),
-                  topRight: Radius.circular(12),
+            child: RefreshIndicator(
+              onRefresh: () async => widget.onRefresh(),
+              child: Container(
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                decoration: const BoxDecoration(
+                  borderRadius: BorderRadius.only(
+                    topLeft: Radius.circular(12),
+                    topRight: Radius.circular(12),
+                  ),
                 ),
+                child: widget.messages.isEmpty && !widget.isRefreshing
+                    ? _buildEmptyState()
+                    : _buildMessageList(),
               ),
-              child: widget.messages.isEmpty && !widget.isRefreshing
-                  ? _buildEmptyState()
-                  : _buildMessageList(),
             ),
           ),
           _buildInputArea(),
@@ -276,65 +306,123 @@ class _ChatScreenState extends State<ChatScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       child: SafeArea(
         top: false,
-        child: Row(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Expanded(
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                decoration: BoxDecoration(
-                  color: inputBgColor,
-                  borderRadius: BorderRadius.circular(28),
-                ),
-                child: TextField(
-                  controller: _textController,
-                  // Limit input to 10 lines to avoid unlimited growth
-                  maxLines: 10,
-                  minLines: 1,
-                  // Slightly smaller font for input text
-                  style: TextStyle(color: textColor, fontSize: 14),
-                  keyboardType: TextInputType.multiline,
-                  // Restrict total characters to 300 (same as posting limit)
-                  maxLength: 300,
-                  maxLengthEnforcement: MaxLengthEnforcement.enforced,
-                  decoration: InputDecoration(
-                    border: InputBorder.none,
-                    hintText: 'メッセージを入力',
-                    hintStyle: TextStyle(color: textColor.withValues(alpha: 0.5)),
-                    counterText: '', // hide default counter to keep UI compact
+            if (_selectedImages.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8.0),
+                child: SizedBox(
+                  height: 80,
+                  child: ListView.builder(
+                    scrollDirection: Axis.horizontal,
+                    itemCount: _selectedImages.length,
+                    itemBuilder: (context, index) {
+                      return Stack(
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.all(4.0),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(8),
+                              child: Image.file(
+                                File(_selectedImages[index].path),
+                                width: 80,
+                                height: 80,
+                                fit: BoxFit.cover,
+                              ),
+                            ),
+                          ),
+                          Positioned(
+                            top: 0,
+                            right: 0,
+                            child: GestureDetector(
+                              onTap: () {
+                                setState(() => _selectedImages.removeAt(index));
+                                _onTextChanged();
+                              },
+                              child: Container(
+                                decoration: const BoxDecoration(
+                                  color: Colors.black54,
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(Icons.close, size: 16, color: Colors.white),
+                              ),
+                            ),
+                          ),
+                        ],
+                      );
+                    },
                   ),
-                  onSubmitted: (_) => _handleSend(),
                 ),
               ),
-            ),
-            const SizedBox(width: 8),
-            GestureDetector(
-              onTap: _canSend ? _handleSend : null,
-              onLongPress: () async {
-                // Open NewPostScreen with current input text and await result
-                final result = await Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => NewPostScreen(initialText: _textController.text),
+            Row(
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.image, color: Colors.blue),
+                  onPressed: _pickImages,
+                ),
+                Expanded(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    decoration: BoxDecoration(
+                      color: inputBgColor,
+                      borderRadius: BorderRadius.circular(28),
+                    ),
+                    child: TextField(
+                      controller: _textController,
+                      // Limit input to 10 lines to avoid unlimited growth
+                      maxLines: 10,
+                      minLines: 1,
+                      // Slightly smaller font for input text
+                      style: TextStyle(color: textColor, fontSize: 14),
+                      keyboardType: TextInputType.multiline,
+                      // Restrict total characters to 300 (same as posting limit)
+                      maxLength: 300,
+                      maxLengthEnforcement: MaxLengthEnforcement.enforced,
+                      decoration: InputDecoration(
+                        border: InputBorder.none,
+                        hintText: 'メッセージを入力',
+                        hintStyle: TextStyle(color: textColor.withValues(alpha: 0.5)),
+                        counterText: '', // hide default counter to keep UI compact
+                      ),
+                      onSubmitted: (_) => _handleSend(),
+                    ),
                   ),
-                );
+                ),
+                const SizedBox(width: 8),
+                GestureDetector(
+                  onTap: _canSend ? _handleSend : null,
+                  onLongPress: () async {
+                    // Open NewPostScreen with current input text and await result
+                    final result = await Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => NewPostScreen(initialText: _textController.text),
+                      ),
+                    );
 
-                // If NewPostScreen returned `true`, a post/draft/scheduled was created — clear input
-                if (result == true) {
-                  _textController.clear();
-                  _onTextChanged();
-                } else if (result is String) {
-                  // User returned with edited text — synchronize
-                  _textController.text = result;
-                  // place cursor at end
-                  _textController.selection = TextSelection.collapsed(offset: _textController.text.length);
-                  _onTextChanged();
-                }
-              },
-              child: Icon(
-                Icons.send,
-                color: _canSend ? Colors.blue : Colors.grey.shade400,
-                size: 28,
-              ),
+                    // If NewPostScreen returned `true`, a post/draft/scheduled was created — clear input
+                    if (result == true) {
+                      _textController.clear();
+                      setState(() {
+                        _selectedImages.clear();
+                      });
+                      _onTextChanged();
+                    } else if (result is String) {
+                      // User returned with edited text — synchronize
+                      _textController.text = result;
+                      // place cursor at end
+                      _textController.selection = TextSelection.collapsed(offset: _textController.text.length);
+                      _onTextChanged();
+                    }
+                  },
+                  child: Icon(
+                    Icons.send,
+                    color: _canSend ? Colors.blue : Colors.grey.shade400,
+                    size: 28,
+                  ),
+                ),
+              ],
             ),
           ],
         ),

@@ -5,9 +5,13 @@ import 'package:atproto_core/atproto_core.dart';
 import 'package:bluesky/com_atproto_repo_strongref.dart';
 import 'package:bluesky/app_bsky_feed_post.dart';
 import 'package:bluesky/app_bsky_embed_record.dart';
+import 'package:bluesky/app_bsky_embed_images.dart';
+import 'package:bluesky/app_bsky_embed_video.dart';
+import 'package:bluesky/app_bsky_embed_recordwithmedia.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 import 'package:image/image.dart' as img;
@@ -416,7 +420,7 @@ class BlueskyService {
             if (_lastRateLimitNotifiedAt == null || now.difference(_lastRateLimitNotifiedAt!) > _rateLimitNotifyCooldown) {
               _lastRateLimitNotifiedAt = now;
               // For now we only log; UI can observe `rateLimitNotifier` and show banner/notification.
-              debugPrint('Rate limit low: remaining=${rateLimitRemaining} limit=${rateLimitLimit} reset=${rateLimitReset}');
+              debugPrint('Rate limit low: remaining=$rateLimitRemaining limit=$rateLimitLimit reset=$rateLimitReset');
             }
           }
         }
@@ -716,7 +720,7 @@ class BlueskyService {
     }
   }
 
-  Future<FeedResponse> getTimeline({int limit = 40, String? cursor}) async {
+  Future<FeedResponse> getTimeline({int limit = 40, String? cursor, bool forceRefresh = false}) async {
     if (_bluesky == null || did == null) {
       throw Exception('ログインしていません');
     }
@@ -725,7 +729,7 @@ class BlueskyService {
       final now = DateTime.now().millisecondsSinceEpoch;
       final key = 'following';
       final last = await _db.getCacheFetched(did!, key);
-      if (cursor == null && last != null) {
+      if (cursor == null && last != null && !forceRefresh) {
         if ((now - last) < _ttlTimeline.inMilliseconds) {
           final cached = await getCachedTimeline(limit: limit);
           if (cached.isNotEmpty) {
@@ -799,7 +803,7 @@ class BlueskyService {
     return await _db.getCachedPosts(did!, 'following', limit: limit);
   }
 
-  Future<FeedResponse> getCustomFeed(String feedUri, {int limit = 40, String? cursor}) async {
+  Future<FeedResponse> getCustomFeed(String feedUri, {int limit = 40, String? cursor, bool forceRefresh = false}) async {
     if (_bluesky == null || did == null) {
       throw Exception('ログインしていません');
     }
@@ -809,7 +813,7 @@ class BlueskyService {
       debugPrint('Fetching custom feed: $feedUri');
       final now = DateTime.now().millisecondsSinceEpoch;
       final last = await _db.getCacheFetched(did!, feedUri);
-      if (cursor == null && last != null) {
+      if (cursor == null && last != null && !forceRefresh) {
         if ((now - last) < _ttlCustomFeed.inMilliseconds) {
           final cached = await getCachedCustomFeed(feedUri, limit: limit);
           if (cached.isNotEmpty) {
@@ -835,6 +839,15 @@ class BlueskyService {
         final response = await _bluesky!.feed.getTimeline(limit: limit, cursor: cursor);
         try { _recordRateLimitFromResponse(response); } catch (_) {}
         feedItems = response.data.feed;
+        nextCursor = response.data.cursor;
+      } else if (feedUri.contains('app.bsky.graph.list')) {
+        final response = await _bluesky!.graph.getList(
+          list: AtUri.parse(feedUri),
+          limit: limit,
+          cursor: cursor,
+        );
+        try { _recordRateLimitFromResponse(response); } catch (_) {}
+        feedItems = response.data.items;
         nextCursor = response.data.cursor;
       } else {
         final response = await _bluesky!.feed.getFeed(
@@ -952,8 +965,14 @@ class BlueskyService {
           .where((uri) => uri.contains('app.bsky.feed.generator'))
           .map((e) => AtUri.parse(e))
           .toList();
+      
+      final listUris = savedUris
+          .where((uri) => uri.contains('app.bsky.graph.list'))
+          .map((e) => AtUri.parse(e))
+          .toList();
 
       debugPrint('Feed Generator URIs: ${feedGenUris.length}');
+      debugPrint('List URIs: ${listUris.length}');
 
       final List<Map<String, String>> result = [];
       result.add({'name': 'Following', 'uri': 'following', 'desc': 'フォロー中の投稿'});
@@ -991,6 +1010,39 @@ class BlueskyService {
         }
       }
 
+      if (listUris.isNotEmpty) {
+        for (final uri in listUris) {
+          try {
+            final listResponse = await _bluesky!.graph.getList(
+              list: uri,
+              limit: 1, // We only need the list metadata
+            );
+            final list = listResponse.data.list;
+            result.add({
+              'name': list.name,
+              'uri': list.uri.toString(),
+              'desc': list.description ?? '',
+              'avatar': list.avatar ?? '',
+              'indexedAt': list.indexedAt.toIso8601String(),
+            });
+          } catch (e) {
+            debugPrint('Error calling getList for $uri: $e');
+          }
+        }
+      }
+
+      // Fallback for any URIs that couldn't be fetched
+      for (var uri in savedUris) {
+        if (uri != 'following' && !result.any((element) => element['uri'] == uri)) {
+          result.add({
+            'name': 'Unknown Item',
+            'uri': uri,
+            'desc': uri,
+            'indexedAt': DateTime.now().toIso8601String(),
+          });
+        }
+      }
+
       // Sort by indexedAt if available
       result.sort((a, b) {
         final timeA = DateTime.tryParse(a['indexedAt'] ?? '') ?? DateTime(0);
@@ -1008,10 +1060,16 @@ class BlueskyService {
     }
   }
 
-  Future<void> post(String text) async {
+  Future<Blob> uploadBlob(Uint8List bytes) async {
+    if (_bluesky == null) throw Exception('ログインしていません');
+    final response = await _bluesky!.atproto.repo.uploadBlob(bytes: bytes);
+    return response.data.blob;
+  }
+
+  Future<void> post(String text, {List<EmbedImagesImage>? images, EmbedVideo? video}) async {
     if (_bluesky == null) throw Exception('ログインしていません');
 
-    if (text.trim().isEmpty) {
+    if (text.trim().isEmpty && images == null && video == null) {
       throw Exception('投稿内容が空です');
     }
 
@@ -1020,7 +1078,17 @@ class BlueskyService {
     }
 
     try {
-      final response = await _bluesky!.feed.post.create(text: text);
+      UFeedPostEmbed? embed;
+      if (images != null && images.isNotEmpty) {
+        embed = UFeedPostEmbed.embedImages(data: EmbedImages(images: images));
+      } else if (video != null) {
+        embed = UFeedPostEmbed.embedVideo(data: video);
+      }
+
+      final response = await _bluesky!.feed.post.create(
+        text: text,
+        embed: embed,
+      );
       try { _recordRateLimitFromResponse(response); } catch (_) {}
     } on UnauthorizedException catch (e) {
       throw Exception('認証エラー: ${e.toString()}');
@@ -1112,9 +1180,16 @@ class BlueskyService {
     }
   }
 
-  Future<void> reply(PostItem item, String text) async {
+  Future<void> reply(PostItem item, String text, {List<EmbedImagesImage>? images, EmbedVideo? video}) async {
     if (_bluesky == null) throw Exception('ログインしていません');
     try {
+      UFeedPostEmbed? embed;
+      if (images != null && images.isNotEmpty) {
+        embed = UFeedPostEmbed.embedImages(data: EmbedImages(images: images));
+      } else if (video != null) {
+        embed = UFeedPostEmbed.embedVideo(data: video);
+      }
+
       final root = item.replyRoot ?? StrongRef(cid: item.id, uri: item.uri);
       final response = await _bluesky!.feed.post.create(
         text: text,
@@ -1122,6 +1197,7 @@ class BlueskyService {
           root: RepoStrongRef(cid: root.cid, uri: AtUri.parse(root.uri)),
           parent: RepoStrongRef(cid: item.id, uri: AtUri.parse(item.uri)),
         ),
+        embed: embed,
       );
       try { _recordRateLimitFromResponse(response); } catch (_) {}
     } catch (e) {
@@ -1134,16 +1210,39 @@ class BlueskyService {
     }
   }
 
-  Future<void> quote(PostItem item, String text) async {
+  Future<void> quote(PostItem item, String text, {List<EmbedImagesImage>? images, EmbedVideo? video}) async {
     if (_bluesky == null) throw Exception('ログインしていません');
     try {
+      UFeedPostEmbed? embed;
+      final recordEmbed = EmbedRecord(
+        record: RepoStrongRef(cid: item.id, uri: AtUri.parse(item.uri)),
+      );
+
+      if (images != null && images.isNotEmpty) {
+        embed = UFeedPostEmbed.embedRecordWithMedia(
+          data: EmbedRecordWithMedia(
+            record: recordEmbed,
+            media: UEmbedRecordWithMediaMedia.embedImages(
+              data: EmbedImages(images: images),
+            ),
+          ),
+        );
+      } else if (video != null) {
+        embed = UFeedPostEmbed.embedRecordWithMedia(
+          data: EmbedRecordWithMedia(
+            record: recordEmbed,
+            media: UEmbedRecordWithMediaMedia.embedVideo(
+              data: video,
+            ),
+          ),
+        );
+      } else {
+        embed = UFeedPostEmbed.embedRecord(data: recordEmbed);
+      }
+
       final response = await _bluesky!.feed.post.create(
         text: text,
-        embed: UFeedPostEmbed.embedRecord(
-          data: EmbedRecord(
-            record: RepoStrongRef(cid: item.id, uri: AtUri.parse(item.uri)),
-          ),
-        ),
+        embed: embed,
       );
       try { _recordRateLimitFromResponse(response); } catch (_) {}
     } catch (e) {
@@ -1536,65 +1635,79 @@ class BlueskyService {
     }
   }
 
-  Future<void> addSavedFeed(String uri) async {
+  Future<void> addSavedItem(String uri, String type) async {
     if (_bluesky == null) throw Exception('ログインしていません');
     try {
       final prefsResponse = await _bluesky!.actor.getPreferences();
       final prefs = prefsResponse.data.preferences;
 
-      // Find existing saved feeds preference
-      int prefIndex = -1;
-      for (int i = 0; i < prefs.length; i++) {
-        final json = prefs[i].toJson();
-        final type = json[r'$type'] ?? json['\$type'];
-        if (type == 'app.bsky.actor.defs#savedFeedsPrefV2') {
-          prefIndex = i;
-          break;
+      // Convert existing preferences to mutable maps
+      final List<Map<String, dynamic>> prefsJson = [];
+      for (final p in prefs) {
+        try {
+          prefsJson.add(Map<String, dynamic>.from(p.toJson()));
+        } catch (_) {
+          // ignore non-serializable entries
         }
       }
 
-      if (prefIndex != -1) {
-        // Update existing V2 preference
-        final json = prefs[prefIndex].toJson();
-        final items = List<Map<String, dynamic>>.from(json['items'] ?? []);
-        
-        // Check if already exists
-        if (items.any((item) => item['value'] == uri)) return;
+      // Find savedFeedsPrefV2 if present, otherwise find savedFeedsPref V1
+      int v2Index = -1;
+      int v1Index = -1;
+      for (int i = 0; i < prefsJson.length; i++) {
+        final json = prefsJson[i];
+        final t = json[r'$type'] ?? json['\$type'];
+        if (t == 'app.bsky.actor.defs#savedFeedsPrefV2') v2Index = i;
+        if (t == 'app.bsky.actor.defs#savedFeedsPref') v1Index = i;
+      }
 
+      if (v2Index != -1) {
+        // Update V2: items is a list of {id,type,value,pinned}
+        final items = List<Map<String, dynamic>>.from(prefsJson[v2Index]['items'] ?? []);
+        // Avoid duplicates
+        if (items.any((it) => it['value'] == uri)) return;
         items.add({
-          'type': 'feed',
+          'id': 'item-${DateTime.now().millisecondsSinceEpoch}',
+          'type': type == 'list' ? 'list' : 'feed',
           'value': uri,
           'pinned': false,
-          'id': 'feed-${DateTime.now().millisecondsSinceEpoch}',
         });
-
-        // Create new preference object
-        // Note: We need to use the correct class from the SDK
-        // Since we are using toJson/fromJson, we can try to reconstruct it
-        // or use the raw map if the SDK allows it.
-        // However, putPreferences takes a List<Preference>.
-        
-        // For simplicity and safety with the SDK types, we'll use the SDK's classes if possible.
-        // But since we don't have easy access to the constructors here, 
-        // let's try to use the existing pref and modify it if possible, 
-        // or just use the raw XRPC if we have to.
-        
-        // Actually, the SDK's Preference is a sealed class/union.
-        // Let's try to find a way to update it.
+        prefsJson[v2Index]['items'] = items;
+      } else if (v1Index != -1) {
+        // Update V1 structure: has 'pinned' and 'saved' lists
+        final json = prefsJson[v1Index];
+        final pinned = List<dynamic>.from(json['pinned'] ?? []);
+        final saved = List<dynamic>.from(json['saved'] ?? []);
+        if (pinned.contains(uri) || saved.contains(uri)) return;
+        saved.add(uri);
+        json['saved'] = saved;
+        prefsJson[v1Index] = json;
+      } else {
+        // No existing saved-feeds pref. Create V2 by default.
+        prefsJson.add({
+          r'$type': 'app.bsky.actor.defs#savedFeedsPrefV2',
+          'items': [
+            {
+              'id': 'item-${DateTime.now().millisecondsSinceEpoch}',
+              'type': type == 'list' ? 'list' : 'feed',
+              'value': uri,
+              'pinned': false,
+            }
+          ],
+        });
       }
-      
-      // If we can't easily update it via the SDK's high-level API due to type complexity,
-      // we might need to skip this for now or use a more direct approach.
-      // But the user asked for it, so I'll try my best.
-      
-      // Actually, I'll implement a simpler version that just throws a more helpful error 
-      // if I can't find a clean way to do it without knowing the exact SDK class names.
-      // Wait, I can see the types in the previous `getSavedFeeds` implementation.
-      
-      throw Exception('フィードの追加機能は現在調整中です。');
+
+      // Call putPreferences with raw JSON using dynamic dispatch to avoid
+      // static SDK type mismatches across SDK versions.
+      await (_bluesky!.actor as dynamic).putPreferences(preferences: prefsJson);
     } catch (e) {
-      throw Exception('フィード保存失敗: $e');
+      debugPrint('Error adding saved item: $e');
+      throw Exception('保存失敗: $e');
     }
+  }
+
+  Future<void> addSavedFeed(String uri) async {
+    await addSavedItem(uri, 'feed');
   }
 
   // Read Management

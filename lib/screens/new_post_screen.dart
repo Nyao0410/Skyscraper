@@ -1,6 +1,9 @@
 // ignore_for_file: use_build_context_synchronously
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:image_picker/image_picker.dart';
+import 'dart:io';
+import 'package:bluesky/app_bsky_embed_images.dart';
 import '../services/bluesky_service.dart';
 import '../services/database_service.dart';
 
@@ -32,6 +35,8 @@ class _NewPostScreenState extends State<NewPostScreen> {
   final _controller = TextEditingController();
   final _service = BlueskyService();
   final _db = DatabaseService();
+  final _picker = ImagePicker();
+  final List<XFile> _selectedImages = [];
   DateTime? _scheduledDate;
   bool _isPosting = false;
 
@@ -43,6 +48,24 @@ class _NewPostScreenState extends State<NewPostScreen> {
     }
     if (widget.scheduledAt != null) {
       _scheduledDate = widget.scheduledAt;
+    }
+  }
+
+  Future<void> _pickImages() async {
+    if (_selectedImages.length >= 4) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('画像は最大4枚までです'))
+      );
+      return;
+    }
+    final images = await _picker.pickMultiImage();
+    if (images.isNotEmpty) {
+      setState(() {
+        _selectedImages.addAll(images);
+        if (_selectedImages.length > 4) {
+          _selectedImages.removeRange(4, _selectedImages.length);
+        }
+      });
     }
   }
 
@@ -95,10 +118,20 @@ class _NewPostScreenState extends State<NewPostScreen> {
 
   Future<void> _post() async {
     final text = _controller.text.trim();
-    if (text.isEmpty) return;
+    if (text.isEmpty && _selectedImages.isEmpty) return;
 
     setState(() => _isPosting = true);
     try {
+      List<EmbedImagesImage>? uploadedImages;
+      if (_selectedImages.isNotEmpty) {
+        uploadedImages = [];
+        for (final image in _selectedImages) {
+          final bytes = await image.readAsBytes();
+          final blob = await _service.uploadBlob(bytes);
+          uploadedImages.add(EmbedImagesImage(image: blob, alt: ''));
+        }
+      }
+
       if (_scheduledDate != null) {
         if (widget.draftId != null) {
           await _db.updateDraft(widget.draftId!, text, scheduledAt: _scheduledDate);
@@ -106,23 +139,23 @@ class _NewPostScreenState extends State<NewPostScreen> {
           await _db.saveDraft(_service.did!, text, scheduledAt: _scheduledDate);
         }
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('投稿を予約しました')));
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('投稿を予約しました（画像は現在サポートされていません）')));
           Navigator.pop(context, true);
         }
       } else if (widget.replyTo != null) {
-        await _service.reply(widget.replyTo!, text);
+        await _service.reply(widget.replyTo!, text, images: uploadedImages);
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('返信しました')));
           Navigator.pop(context, true);
         }
       } else if (widget.quoteOf != null) {
-        await _service.quote(widget.quoteOf!, text);
+        await _service.quote(widget.quoteOf!, text, images: uploadedImages);
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('引用投稿しました')));
           Navigator.pop(context, true);
         }
       } else {
-        await _service.post(text);
+        await _service.post(text, images: uploadedImages);
         if (widget.draftId != null) {
           // mark existing draft as sent
           await _db.markAsSent(widget.draftId!);
@@ -198,15 +231,61 @@ class _NewPostScreenState extends State<NewPostScreen> {
           Expanded(
             child: Padding(
               padding: const EdgeInsets.all(16.0),
-              child: TextField(
-                controller: _controller,
-                maxLines: null,
-                autofocus: true,
-                decoration: InputDecoration(
-                  hintText: widget.replyTo != null ? '返信を入力...' : 'いまどうしてる？',
-                  border: InputBorder.none,
-                ),
-                style: const TextStyle(fontSize: 18),
+              child: Column(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _controller,
+                      maxLines: null,
+                      autofocus: true,
+                      decoration: InputDecoration(
+                        hintText: widget.replyTo != null ? '返信を入力...' : 'いまどうしてる？',
+                        border: InputBorder.none,
+                      ),
+                      style: const TextStyle(fontSize: 18),
+                    ),
+                  ),
+                  if (_selectedImages.isNotEmpty)
+                    SizedBox(
+                      height: 100,
+                      child: ListView.builder(
+                        scrollDirection: Axis.horizontal,
+                        itemCount: _selectedImages.length,
+                        itemBuilder: (context, index) {
+                          return Stack(
+                            children: [
+                              Padding(
+                                padding: const EdgeInsets.all(4.0),
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(8),
+                                  child: Image.file(
+                                    File(_selectedImages[index].path),
+                                    width: 100,
+                                    height: 100,
+                                    fit: BoxFit.cover,
+                                  ),
+                                ),
+                              ),
+                              Positioned(
+                                top: 0,
+                                right: 0,
+                                child: GestureDetector(
+                                  onTap: () => setState(() => _selectedImages.removeAt(index)),
+                                  child: Container(
+                                    decoration: const BoxDecoration(
+                                      color: Colors.black54,
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: const Icon(Icons.close, size: 16, color: Colors.white),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          );
+                        },
+                      ),
+                    ),
+                ],
               ),
             ),
           ),
@@ -216,6 +295,10 @@ class _NewPostScreenState extends State<NewPostScreen> {
             color: Colors.grey.shade50,
             child: Row(
               children: [
+                IconButton(
+                  icon: const Icon(Icons.image, color: Colors.blue),
+                  onPressed: _pickImages,
+                ),
                 if (widget.replyTo == null && widget.quoteOf == null)
                   IconButton(
                     icon: Icon(Icons.schedule, color: _scheduledDate != null ? Colors.blue : Colors.grey),

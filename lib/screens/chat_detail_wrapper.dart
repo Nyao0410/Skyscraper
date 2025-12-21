@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:bluesky/app_bsky_embed_images.dart';
 import '../services/bluesky_service.dart';
 import '../models/post_item.dart';
 import 'chat_screen.dart';
@@ -43,7 +45,7 @@ class _ChatDetailWrapperState extends State<ChatDetailWrapper> {
     }
 
     try {
-      final response = await _service.getCustomFeed(widget.feedUri);
+      final response = await _service.getCustomFeed(widget.feedUri, forceRefresh: true);
       if (mounted) {
         setState(() {
           _feed = response.posts;
@@ -74,7 +76,7 @@ class _ChatDetailWrapperState extends State<ChatDetailWrapper> {
   Future<void> _handleRefresh() async {
     setState(() => _refreshing = true);
     try {
-      final response = await _service.getCustomFeed(widget.feedUri);
+      final response = await _service.getCustomFeed(widget.feedUri, forceRefresh: true);
       setState(() {
         _feed = response.posts;
         _cursor = response.cursor;
@@ -104,9 +106,18 @@ class _ChatDetailWrapperState extends State<ChatDetailWrapper> {
     }
   }
 
-  Future<void> _handleSendMessage(String text) async {
+  Future<void> _handleSendMessage(String text, {List<XFile>? images}) async {
     try {
-      await _service.post(text);
+      List<EmbedImagesImage>? uploadedImages;
+      if (images != null && images.isNotEmpty) {
+        uploadedImages = [];
+        for (final image in images) {
+          final bytes = await image.readAsBytes();
+          final blob = await _service.uploadBlob(bytes);
+          uploadedImages.add(EmbedImagesImage(image: blob, alt: ''));
+        }
+      }
+      await _service.post(text, images: uploadedImages);
       _handleRefresh();
     } catch (e) {
       if (mounted) {
