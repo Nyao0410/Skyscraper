@@ -26,7 +26,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 8, vsync: this);
+    _tabController = TabController(length: 5, vsync: this);
     _tabController.addListener(_handleTabChange);
     _fetchData();
   }
@@ -78,9 +78,6 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
         case 3:
           cachedData = await _service.getCachedAuthorFeed(widget.actor, filter: 'posts_with_video');
           break;
-        case 4:
-          cachedData = await _service.getCachedActorLikes(widget.actor);
-          break;
       }
       if (cachedData.isNotEmpty && mounted) {
         setState(() {
@@ -109,17 +106,8 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
         case 3: // ビデオ
           data = await _service.getAuthorFeedWithFilter(widget.actor, filter: 'posts_with_video');
           break;
-        case 4: // いいね
-          data = await _service.getActorLikes(widget.actor);
-          break;
-        case 5: // フィード
+        case 4: // フィード
           data = await _service.getActorFeeds(widget.actor);
-          break;
-        case 6: // リスト
-          data = await _service.getLists(widget.actor);
-          break;
-        case 7: // 被リスト
-          data = await _service.getListMemberships(widget.actor);
           break;
         default:
           data = [];
@@ -162,10 +150,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                             Tab(text: '返信'),
                             Tab(text: 'メディア'),
                             Tab(text: 'ビデオ'),
-                            Tab(text: 'いいね'),
                             Tab(text: 'フィード'),
-                            Tab(text: 'リスト'),
-                            Tab(text: '被リスト'),
                           ],
                         ),
                       ),
@@ -239,7 +224,106 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
             ? CachedNetworkImage(imageUrl: _profile.banner!, fit: BoxFit.cover)
             : Container(color: Colors.blue.shade200),
       ),
+      actions: [
+        IconButton(
+          icon: const Icon(Icons.search),
+          onPressed: _showPostSearch,
+        ),
+        PopupMenuButton<String>(
+          onSelected: _handleMenuAction,
+          itemBuilder: (context) => [
+            const PopupMenuItem(value: 'share', child: Text('共有')),
+            if (_profile.viewer?.muted == true)
+              const PopupMenuItem(value: 'unmute', child: Text('ミュート解除'))
+            else
+              const PopupMenuItem(value: 'mute', child: Text('ミュート')),
+            if (_profile.viewer?.blocking == null)
+              const PopupMenuItem(value: 'block', child: Text('ブロック', style: TextStyle(color: Colors.red)))
+            else
+              const PopupMenuItem(value: 'unblock', child: Text('ブロック解除')),
+          ],
+        ),
+      ],
     );
+  }
+
+  void _showPostSearch() {
+    final controller = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('@${_profile.handle} の投稿を検索'),
+        content: TextField(
+          controller: controller,
+          decoration: const InputDecoration(hintText: 'キーワードを入力'),
+          autofocus: true,
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('キャンセル')),
+          TextButton(
+            onPressed: () {
+              final query = controller.text.trim();
+              if (query.isNotEmpty) {
+                Navigator.pop(context);
+                _performPostSearch(query);
+              }
+            },
+            child: const Text('検索'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _performPostSearch(String query) async {
+    setState(() => _loading = true);
+    try {
+      // Search inside this user's posts for the given query.
+      final results = await _service.searchAuthorPosts(query, _profile.handle);
+      if (mounted) {
+        setState(() {
+          _currentData = results;
+          _loading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _loading = false);
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('検索エラー: $e')));
+      }
+    }
+  }
+
+  Future<void> _handleMenuAction(String action) async {
+    try {
+      switch (action) {
+        case 'share':
+          // Simple share (copy to clipboard or similar)
+          final url = 'https://bsky.app/profile/${_profile.handle}';
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('プロフィールURL: $url')));
+          break;
+        case 'mute':
+          await _service.mute(_profile.did);
+          _fetchData();
+          break;
+        case 'unmute':
+          await _service.unmute(_profile.did);
+          _fetchData();
+          break;
+        case 'block':
+          await _service.block(_profile.did);
+          _fetchData();
+          break;
+        case 'unblock':
+          await _service.unblock(_profile.viewer!.blocking!.toString());
+          _fetchData();
+          break;
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('エラー: $e')));
+      }
+    }
   }
 
   Widget _buildProfileHeader() {
@@ -264,15 +348,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                   child: _profile.avatar == null ? const Icon(Icons.person, size: 40) : null,
                 ),
               ),
-              ElevatedButton(
-                onPressed: () {},
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: isDark ? Colors.white : Colors.black,
-                  foregroundColor: isDark ? Colors.black : Colors.white,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                ),
-                child: const Text('フォロー'),
-              ),
+              _buildFollowButton(),
             ],
           ),
           const SizedBox(height: 12),
@@ -307,6 +383,49 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildFollowButton() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isMe = _profile.did == _service.did;
+    if (isMe) {
+      return OutlinedButton(
+        onPressed: () {},
+        style: OutlinedButton.styleFrom(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        ),
+        child: const Text('プロフィールを編集'),
+      );
+    }
+
+    final isFollowing = _profile.viewer?.following != null;
+
+    return ElevatedButton(
+      onPressed: () async {
+        try {
+          if (isFollowing) {
+            await _service.unfollow(_profile.viewer!.following!.toString());
+          } else {
+            await _service.follow(_profile.did);
+          }
+          _fetchData(); // Refresh profile
+        } catch (e) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('エラー: $e')));
+          }
+        }
+      },
+      style: ElevatedButton.styleFrom(
+        backgroundColor: isFollowing 
+            ? (isDark ? Colors.grey.shade800 : Colors.grey.shade200)
+            : (isDark ? Colors.white : Colors.black),
+        foregroundColor: isFollowing
+            ? (isDark ? Colors.white : Colors.black)
+            : (isDark ? Colors.black : Colors.white),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      ),
+      child: Text(isFollowing ? 'フォロー中' : 'フォロー'),
     );
   }
 

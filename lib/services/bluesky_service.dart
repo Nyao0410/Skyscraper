@@ -543,6 +543,88 @@ class BlueskyService {
     }
   }
 
+  Future<void> follow(String did) async {
+    if (_bluesky == null) throw Exception('ログインしていません');
+    try {
+      await _bluesky!.atproto.repo.createRecord(
+        repo: _bluesky!.session!.did,
+        collection: 'app.bsky.graph.follow',
+        record: {
+          'subject': did,
+          'createdAt': DateTime.now().toIso8601String(),
+        },
+      );
+    } catch (e) {
+      throw Exception('フォロー失敗: $e');
+    }
+  }
+
+  Future<void> unfollow(String followUri) async {
+    if (_bluesky == null) throw Exception('ログインしていません');
+    try {
+      final uri = AtUri.parse(followUri);
+      await _bluesky!.atproto.repo.deleteRecord(
+        repo: uri.hostname,
+        collection: uri.collection.toString(),
+        rkey: uri.rkey,
+      );
+    } catch (e) {
+      throw Exception('フォロー解除失敗: $e');
+    }
+  }
+
+  Future<void> mute(String did) async {
+    if (_bluesky == null) throw Exception('ログインしていません');
+    try {
+      await _bluesky!.graph.muteActor(actor: did);
+    } catch (e) {
+      throw Exception('ミュート失敗: $e');
+    }
+  }
+
+  Future<void> unmute(String did) async {
+    if (_bluesky == null) throw Exception('ログインしていません');
+    try {
+      await _bluesky!.graph.unmuteActor(actor: did);
+    } catch (e) {
+      throw Exception('ミュート解除失敗: $e');
+    }
+  }
+
+  Future<void> block(String did) async {
+    if (_bluesky == null) throw Exception('ログインしていません');
+    try {
+      await _bluesky!.atproto.repo.createRecord(
+        repo: _bluesky!.session!.did,
+        collection: 'app.bsky.graph.block',
+        record: {
+          'subject': did,
+          'createdAt': DateTime.now().toIso8601String(),
+        },
+      );
+    } catch (e) {
+      throw Exception('ブロック失敗: $e');
+    }
+  }
+
+  Future<void> unblock(String blockUri) async {
+    if (_bluesky == null) throw Exception('ログインしていません');
+    try {
+      final uri = AtUri.parse(blockUri);
+      await _bluesky!.atproto.repo.deleteRecord(
+        repo: uri.hostname,
+        collection: uri.collection.toString(),
+        rkey: uri.rkey,
+      );
+    } catch (e) {
+      throw Exception('ブロック解除失敗: $e');
+    }
+  }
+
+  Future<List<PostItem>> searchAuthorPosts(String query, String author, {int limit = 40}) async {
+    return searchPosts('$query from:$author', limit: limit);
+  }
+
   Future<List<dynamic>> getFollows(String actor, {int limit = 50}) async {
     if (_bluesky == null) throw Exception('ログインしていません');
     try {

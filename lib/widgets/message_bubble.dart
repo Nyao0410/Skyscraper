@@ -61,6 +61,10 @@ class MessageBubble extends StatelessWidget {
                     _buildAuthorName(),
                     const SizedBox(height: 4),
                   ],
+                  if (message.repostedBy != null) ...[
+                    _buildRepostIndicator(),
+                    const SizedBox(height: 4),
+                  ],
                   if (message.replyParentPost != null) ...[
                     _buildReplyPost(maxBubbleWidth, context),
                     const SizedBox(height: 1),
@@ -125,6 +129,31 @@ class MessageBubble extends StatelessWidget {
           Text(
             '$displayHandle に返信',
             style: const TextStyle(fontSize: 10, color: Colors.white70),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRepostIndicator() {
+    final rep = message.repostedBy ?? '';
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+      decoration: BoxDecoration(
+        color: Colors.black.withOpacity(0.12),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.repeat, size: 14, color: Colors.greenAccent),
+          const SizedBox(width: 6),
+          Flexible(
+            child: Text(
+              rep.isNotEmpty ? '$rep がリポストしました' : 'リポスト',
+              style: const TextStyle(fontSize: 12, color: Colors.white70),
+              overflow: TextOverflow.ellipsis,
+            ),
           ),
         ],
       ),
@@ -392,7 +421,7 @@ class MessageBubble extends StatelessWidget {
               ),
               ListTile(
                 leading: const Icon(Icons.repeat, color: Colors.green),
-                title: const Text('RP'),
+                title: const Text('リポスト'),
                 onTap: () {
                   Navigator.pop(context);
                   onRepost?.call(message);
