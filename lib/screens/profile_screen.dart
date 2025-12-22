@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../utils/avatar_provider.dart';
 import '../models/post_item.dart';
@@ -44,6 +45,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
   }
 
   Future<void> _fetchData() async {
+    final l10n = AppLocalizations.of(context);
     setState(() => _loading = true);
     try {
       final profile = await _service.getProfile(widget.actor);
@@ -56,12 +58,13 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
     } catch (e) {
       if (mounted) {
         setState(() => _loading = false);
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('エラー: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.error_with_message(e.toString()))));
       }
     }
   }
 
   Future<void> _fetchFeedForTab(int index, {bool forceRefresh = false}) async {
+    final l10n = AppLocalizations.of(context);
     // 1. Load from cache first
     if (!forceRefresh) {
       try {
@@ -124,7 +127,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
       if (mounted) {
         setState(() => _loading = false);
         if (_currentData.isEmpty) {
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('エラー: $e')));
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.error_with_message(e.toString()))));
         }
       }
     }
@@ -132,12 +135,13 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Scaffold(
       body: SelectionArea(
         child: _profile == null && _loading
             ? const Center(child: CircularProgressIndicator())
             : _profile == null
-                ? const Center(child: Text('プロフィールが見つかりませんでした'))
+                ? Center(child: Text(l10n.profile_not_found))
                 : RefreshIndicator(
                     onRefresh: () => _fetchFeedForTab(_tabController.index, forceRefresh: true),
                     child: CustomScrollView(
@@ -150,12 +154,12 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                           TabBar(
                             controller: _tabController,
                             isScrollable: true,
-                            tabs: const [
-                              Tab(text: '投稿'),
-                              Tab(text: '返信'),
-                              Tab(text: 'メディア'),
-                              Tab(text: 'ビデオ'),
-                              Tab(text: 'フィード'),
+                            tabs: [
+                              Tab(text: l10n.profile_tab_posts),
+                              Tab(text: l10n.profile_tab_replies),
+                              Tab(text: l10n.profile_tab_media),
+                              Tab(text: l10n.profile_tab_video),
+                              Tab(text: l10n.profile_tab_feeds),
                             ],
                           ),
                         ),
@@ -165,8 +169,8 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                           child: Center(child: CircularProgressIndicator()),
                         )
                       else if (_currentData.isEmpty)
-                        const SliverFillRemaining(
-                          child: Center(child: Text('データがありません')),
+                        SliverFillRemaining(
+                          child: Center(child: Text(l10n.profile_no_data)),
                         )
                       else
                         SliverList(
@@ -191,8 +195,9 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
   }
 
   Widget _buildGenericItem(dynamic item) {
+    final l10n = AppLocalizations.of(context);
     // item could be FeedGeneratorView or ListView
-    final String title = item.displayName ?? 'Unknown';
+    final String title = item.displayName ?? l10n.unknown;
     final String? description = item.description;
     final String? avatar = item.avatar;
     final String? creator = item.creator?.handle;
@@ -224,6 +229,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
   }
 
   Widget _buildAppBar() {
+    final l10n = AppLocalizations.of(context);
     return SliverAppBar(
       expandedHeight: 150,
       pinned: true,
@@ -240,15 +246,15 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
         PopupMenuButton<String>(
           onSelected: _handleMenuAction,
           itemBuilder: (context) => [
-            const PopupMenuItem(value: 'share', child: Text('共有')),
+            PopupMenuItem(value: 'share', child: Text(l10n.share)),
             if (_profile.viewer?.muted == true)
-              const PopupMenuItem(value: 'unmute', child: Text('ミュート解除'))
+              PopupMenuItem(value: 'unmute', child: Text(l10n.profile_unmute))
             else
-              const PopupMenuItem(value: 'mute', child: Text('ミュート')),
+              PopupMenuItem(value: 'mute', child: Text(l10n.profile_mute)),
             if (_profile.viewer?.blocking == null)
-              const PopupMenuItem(value: 'block', child: Text('ブロック', style: TextStyle(color: Colors.red)))
+              PopupMenuItem(value: 'block', child: Text(l10n.profile_block, style: const TextStyle(color: Colors.red)))
             else
-              const PopupMenuItem(value: 'unblock', child: Text('ブロック解除')),
+              PopupMenuItem(value: 'unblock', child: Text(l10n.profile_unblock)),
           ],
         ),
       ],
@@ -256,18 +262,19 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
   }
 
   void _showPostSearch() {
+    final l10n = AppLocalizations.of(context);
     final controller = TextEditingController();
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('@${_profile.handle} の投稿を検索'),
+        title: Text(l10n.profile_search_posts_title(_profile.handle)),
         content: TextField(
           controller: controller,
-          decoration: const InputDecoration(hintText: 'キーワードを入力'),
+          decoration: InputDecoration(hintText: l10n.profile_search_posts_hint),
           autofocus: true,
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('キャンセル')),
+          TextButton(onPressed: () => Navigator.pop(context), child: Text(l10n.cancel)),
           TextButton(
             onPressed: () {
               final query = controller.text.trim();
@@ -276,7 +283,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                 _performPostSearch(query);
               }
             },
-            child: const Text('検索'),
+            child: Text(l10n.search),
           ),
         ],
       ),
@@ -284,6 +291,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
   }
 
   Future<void> _performPostSearch(String query) async {
+    final l10n = AppLocalizations.of(context);
     setState(() => _loading = true);
     try {
       // Search inside this user's posts for the given query.
@@ -297,18 +305,19 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
     } catch (e) {
       if (mounted) {
         setState(() => _loading = false);
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('検索エラー: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.error_with_message(e.toString()))));
       }
     }
   }
 
   Future<void> _handleMenuAction(String action) async {
+    final l10n = AppLocalizations.of(context);
     try {
       switch (action) {
         case 'share':
           // Simple share (copy to clipboard or similar)
           final url = 'https://bsky.app/profile/${_profile.handle}';
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('プロフィールURL: $url')));
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.profile_url_label(url))));
           break;
         case 'mute':
           await _service.mute(_profile.did);
@@ -329,12 +338,13 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('エラー: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.error_with_message(e.toString()))));
       }
     }
   }
 
   Widget _buildProfileHeader() {
+    final l10n = AppLocalizations.of(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return Padding(
       padding: const EdgeInsets.all(16.0),
@@ -376,15 +386,15 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
           const SizedBox(height: 16),
           Row(
             children: [
-              _buildStat('${_profile.followsCount}', 'フォロー', () {
-                _showUserList('フォロー', () => _service.getFollows(widget.actor));
+              _buildStat('${_profile.followsCount}', l10n.profile_follows, () {
+                _showUserList(l10n.profile_follows, () => _service.getFollows(widget.actor));
               }),
               const SizedBox(width: 20),
-              _buildStat('${_profile.followersCount}', 'フォロワー', () {
-                _showUserList('フォロワー', () => _service.getFollowers(widget.actor));
+              _buildStat('${_profile.followersCount}', l10n.profile_followers, () {
+                _showUserList(l10n.profile_followers, () => _service.getFollowers(widget.actor));
               }),
               const SizedBox(width: 20),
-              _buildStat('${_profile.postsCount}', '投稿', null),
+              _buildStat('${_profile.postsCount}', l10n.profile_tab_posts, null),
             ],
           ),
         ],
@@ -393,6 +403,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
   }
 
   Widget _buildFollowButton() {
+    final l10n = AppLocalizations.of(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final isMe = _profile.did == _service.did;
     if (isMe) {
@@ -401,7 +412,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
         style: OutlinedButton.styleFrom(
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         ),
-        child: const Text('プロフィールを編集'),
+        child: Text(l10n.profile_edit),
       );
     }
 
@@ -418,7 +429,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
           _fetchData(); // Refresh profile
         } catch (e) {
           if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('エラー: $e')));
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.error_with_message(e.toString()))));
           }
         }
       },
@@ -431,7 +442,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
             : (isDark ? Colors.black : Colors.white),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       ),
-      child: Text(isFollowing ? 'フォロー中' : 'フォロー'),
+      child: Text(isFollowing ? l10n.profile_unfollow : l10n.profile_follow),
     );
   }
 
@@ -449,6 +460,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
   }
 
   void _showUserList(String title, Future<List<dynamic>> Function() fetcher) {
+    final l10n = AppLocalizations.of(context);
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -473,11 +485,11 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                     return const Center(child: CircularProgressIndicator());
                   }
                   if (snapshot.hasError) {
-                    return Center(child: Text('エラー: ${snapshot.error}'));
+                    return Center(child: Text(l10n.error_with_message(snapshot.error.toString())));
                   }
                   final users = snapshot.data ?? [];
                   if (users.isEmpty) {
-                    return const Center(child: Text('ユーザーがいません'));
+                    return Center(child: Text(l10n.no_results));
                   }
                   return ListView.builder(
                     controller: scrollController,
@@ -489,11 +501,14 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                           backgroundImage: avatarImageProvider(user.avatar),
                           child: user.avatar == null ? const Icon(Icons.person) : null,
                         ),
-                        title: Text(user.displayName ?? user.handle, style: const TextStyle(fontWeight: FontWeight.bold)),
+                        title: Text(user.displayName ?? user.handle),
                         subtitle: Text('@${user.handle}'),
                         onTap: () {
                           Navigator.pop(context);
-                          Navigator.push(context, MaterialPageRoute(builder: (context) => ProfileScreen(actor: user.did)));
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (context) => ProfileScreen(actor: user.did)),
+                          );
                         },
                       );
                     },

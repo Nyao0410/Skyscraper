@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/bluesky_service.dart';
+import '../flutter_gen/gen_l10n/app_localizations.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -39,29 +40,46 @@ class _SettingsScreenState extends State<SettingsScreen> {
     });
     await _service.setRateLimitNotifyThreshold(v);
   }
-
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Scaffold(
-      appBar: AppBar(title: const Text('設定')),
+      appBar: AppBar(title: Text(l10n.settings_title)),
       body: ListView(
         children: [
+          ValueListenableBuilder<Map<String, dynamic>?>(
+            valueListenable: _service.rateLimitNotifier,
+            builder: (context, snapshot, _) {
+              final remaining = snapshot != null && snapshot['remaining'] is int
+                  ? snapshot['remaining'] as int
+                  : null;
+              return ListTile(
+                title: Text(l10n.settings_current_remaining),
+                subtitle:
+                    Text(remaining != null ? '$remaining' : l10n.settings_fetching),
+                trailing: remaining != null && remaining < _threshold
+                    ? const Icon(Icons.warning, color: Colors.orange)
+                    : null,
+              );
+            },
+          ),
+          const Divider(),
           SwitchListTile(
-            title: const Text('レート制限アラートを有効にする'),
-            subtitle: const Text('残りリクエスト数が少なくなったときにアプリ内で通知します'),
+            title: Text(l10n.settings_enable_alert),
+            subtitle: Text(l10n.settings_alert_desc),
             value: _notifyEnabled,
             onChanged: (v) async {
               setState(() => _notifyEnabled = v);
               await _service.setRateLimitNotifyEnabled(v);
             },
           ),
-          const Divider(),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('残りリクエストしきい値', style: Theme.of(context).textTheme.titleSmall),
+                Text(l10n.settings_threshold,
+                    style: Theme.of(context).textTheme.titleSmall),
                 const SizedBox(height: 6),
                 Row(
                   children: [
@@ -70,7 +88,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         min: _minThreshold.toDouble(),
                         max: _maxThreshold.toDouble(),
                         divisions: _maxThreshold - _minThreshold,
-                        value: (_threshold.clamp(_minThreshold, _maxThreshold)).toDouble(),
+                        value: (_threshold.clamp(_minThreshold, _maxThreshold))
+                            .toDouble(),
                         label: '$_threshold',
                         onChanged: (v) {
                           setState(() {
@@ -89,10 +108,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       child: TextFormField(
                         controller: _thresholdController,
                         keyboardType: TextInputType.number,
-                        decoration: const InputDecoration(border: OutlineInputBorder(), isDense: true),
+                        decoration: const InputDecoration(
+                            border: OutlineInputBorder(), isDense: true),
                         onFieldSubmitted: (s) async {
                           final parsed = int.tryParse(s) ?? _threshold;
-                          final clamped = parsed.clamp(_minThreshold, _maxThreshold);
+                          final clamped =
+                              parsed.clamp(_minThreshold, _maxThreshold);
                           await _applyThreshold(clamped);
                         },
                       ),
@@ -100,22 +121,24 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ],
                 ),
                 const SizedBox(height: 4),
-                Text('しきい値以下になるとバナーが表示されます（現在: $_threshold）', style: Theme.of(context).textTheme.bodySmall),
+                Text(l10n.settings_threshold_desc(_threshold),
+                    style: Theme.of(context).textTheme.bodySmall),
               ],
             ),
           ),
           const Divider(),
           Padding(
             padding: const EdgeInsets.all(16.0),
-            child: Text('現在の使用量（近似）', style: Theme.of(context).textTheme.titleMedium),
+            child: Text(l10n.settings_usage_approx,
+                style: Theme.of(context).textTheme.titleMedium),
           ),
           ValueListenableBuilder<Map<String, dynamic>?>(
             valueListenable: _service.rateLimitNotifier,
             builder: (context, snapshot, _) {
               if (snapshot == null) {
-                return const ListTile(
-                  title: Text('データ未取得'),
-                  subtitle: Text('APIヘッダ情報がまだ取得されていません。操作を実行すると取得されます。'),
+                return ListTile(
+                  title: Text(l10n.settings_no_data),
+                  subtitle: Text(l10n.settings_no_data_desc),
                 );
               }
 
@@ -127,13 +150,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 children: [
                   ListTile(
                     leading: const Icon(Icons.speed),
-                    title: Text('残りリクエスト数: ${remaining ?? "不明"}'),
-                    subtitle: Text('上限: ${limit ?? "不明"} / リセット予定: ${reset ?? "不明"}'),
+                    title: Text(l10n.settings_remaining_label(
+                        remaining?.toString() ?? l10n.unknown)),
+                    subtitle: Text(l10n.settings_limit_reset_label(
+                        limit?.toString() ?? l10n.unknown,
+                        reset?.toString() ?? l10n.unknown)),
                   ),
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 16.0),
                     child: LinearProgressIndicator(
-                      value: (remaining is int && limit is int && limit > 0) ? (remaining / limit) : null,
+                      value: (remaining is int && limit is int && limit > 0)
+                          ? (remaining / limit)
+                          : null,
                     ),
                   ),
                 ],
@@ -143,8 +171,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
           const Divider(),
           ListTile(
             leading: const Icon(Icons.info_outline),
-            title: const Text('注意'),
-            subtitle: const Text('表示はサーバーが返すヘッダ情報からの推定値です。実際の残りはサーバー側で変化します。'),
+            title: Text(l10n.settings_note_title),
+            subtitle: Text(l10n.settings_note_desc),
           ),
         ],
       ),

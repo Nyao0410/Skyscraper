@@ -3,6 +3,7 @@ import '../utils/avatar_provider.dart';
 import '../services/bluesky_service.dart';
 import 'search_screen.dart';
 import 'feed_search_screen.dart';
+import '../flutter_gen/gen_l10n/app_localizations.dart';
 
 class TalkListScreen extends StatefulWidget {
   final Function(String name, String uri) onFeedSelected;
@@ -47,8 +48,9 @@ class _TalkListScreenState extends State<TalkListScreen> {
     } catch (e) {
       if (mounted) {
         setState(() => _loading = false);
+        final l10n = AppLocalizations.of(context);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('フィードの取得に失敗しました: $e')),
+          SnackBar(content: Text('${l10n.talk_list_fetch_error}: $e')),
         );
       }
     }
@@ -56,9 +58,11 @@ class _TalkListScreenState extends State<TalkListScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Scaffold(
       appBar: AppBar(
-        title: const Text('トーク', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: Text(l10n.talk_list_title,
+            style: const TextStyle(fontWeight: FontWeight.bold)),
         actions: [
           IconButton(
             icon: const Icon(Icons.add_circle_outline),
@@ -104,8 +108,15 @@ class _TalkListScreenState extends State<TalkListScreen> {
                           ? Text(feed['name']![0], style: const TextStyle(color: Colors.blue))
                           : null,
                     ),
-                    title: Text(feed['name']!, style: const TextStyle(fontWeight: FontWeight.bold)),
-                    subtitle: Text(feed['desc']!, maxLines: 1, overflow: TextOverflow.ellipsis),
+                    title: Text(feed['name'] ?? 'Unknown',
+                        style: const TextStyle(fontWeight: FontWeight.bold)),
+                    subtitle: Text(
+                      feed['uri'] == 'following'
+                          ? l10n.following_feed_desc
+                          : (feed['desc'] ?? ''),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
                     trailing: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       crossAxisAlignment: CrossAxisAlignment.end,

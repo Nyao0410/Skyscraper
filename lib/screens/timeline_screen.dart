@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../flutter_gen/gen_l10n/app_localizations.dart';
 import '../utils/avatar_provider.dart';
 import '../models/post_item.dart';
 import '../services/bluesky_service.dart';
@@ -101,10 +102,11 @@ class _TimelineScreenState extends State<TimelineScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Scaffold(
       appBar: widget.showAppBar
           ? AppBar(
-              title: const Text('タイムライン', style: TextStyle(fontWeight: FontWeight.bold)),
+              title: Text(l10n.timeline_title, style: const TextStyle(fontWeight: FontWeight.bold)),
               actions: [
                 IconButton(
                   icon: const Icon(Icons.search),
@@ -123,13 +125,13 @@ class _TimelineScreenState extends State<TimelineScreen> {
         child: _loading
             ? const Center(child: CircularProgressIndicator())
             : _posts.isEmpty
-                ? const Center(
+                ? Center(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.feed_outlined, size: 64, color: Colors.grey),
-                        SizedBox(height: 16),
-                        Text('投稿がありません', style: TextStyle(color: Colors.grey)),
+                        const Icon(Icons.feed_outlined, size: 64, color: Colors.grey),
+                        const SizedBox(height: 16),
+                        Text(l10n.timeline_no_posts, style: const TextStyle(color: Colors.grey)),
                       ],
                     ),
                   )
@@ -166,6 +168,7 @@ class _TimelineScreenState extends State<TimelineScreen> {
   }
 
   Widget _buildPostItem(PostItem post) {
+    final l10n = AppLocalizations.of(context);
     return InkWell(
       onTap: () {
         Navigator.push(
@@ -186,7 +189,7 @@ class _TimelineScreenState extends State<TimelineScreen> {
                     const Icon(Icons.repeat, size: 14, color: Colors.grey),
                     const SizedBox(width: 4),
                     Text(
-                      '${post.repostedBy} さんがリポスト',
+                      l10n.timeline_reposted_by(post.repostedBy!),
                       style: const TextStyle(color: Colors.grey, fontSize: 12, fontWeight: FontWeight.bold),
                     ),
                   ],
@@ -371,15 +374,17 @@ class _TimelineScreenState extends State<TimelineScreen> {
   }
 
   String _formatTime(DateTime time) {
+    final l10n = AppLocalizations.of(context);
     final now = DateTime.now();
     final diff = now.difference(time.toLocal());
-    if (diff.inMinutes < 1) return '今';
-    if (diff.inHours < 1) return '${diff.inMinutes}分';
-    if (diff.inDays < 1) return '${diff.inHours}時間';
+    if (diff.inMinutes < 1) return l10n.now;
+    if (diff.inHours < 1) return '${diff.inMinutes}${l10n.minutes}';
+    if (diff.inDays < 1) return '${diff.inHours}${l10n.hours}';
     return '${time.month}/${time.day}';
   }
 
   void _handleLike(PostItem post) async {
+    final l10n = AppLocalizations.of(context);
     try {
       if (post.viewerLike != null) {
         await _service.delete(post.viewerLike!);
@@ -389,12 +394,13 @@ class _TimelineScreenState extends State<TimelineScreen> {
       _fetchTimeline();
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('エラー: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.error_with_message(e.toString()))));
       }
     }
   }
 
   void _handleRepost(PostItem post) async {
+    final l10n = AppLocalizations.of(context);
     try {
       if (post.viewerRepost != null) {
         await _service.delete(post.viewerRepost!);
@@ -404,12 +410,13 @@ class _TimelineScreenState extends State<TimelineScreen> {
       _fetchTimeline();
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('エラー: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.error_with_message(e.toString()))));
       }
     }
   }
 
   void _showPostMenu(PostItem post) {
+    final l10n = AppLocalizations.of(context);
     showModalBottomSheet(
       context: context,
       builder: (context) => SafeArea(
@@ -418,7 +425,7 @@ class _TimelineScreenState extends State<TimelineScreen> {
           children: [
             ListTile(
               leading: const Icon(Icons.format_quote),
-              title: const Text('引用して投稿'),
+              title: Text(l10n.timeline_quote_post),
               onTap: () {
                 Navigator.pop(context);
                 _showQuoteDialog(post);
@@ -427,7 +434,7 @@ class _TimelineScreenState extends State<TimelineScreen> {
             if (post.isMe)
               ListTile(
                 leading: const Icon(Icons.delete, color: Colors.red),
-                title: const Text('削除', style: TextStyle(color: Colors.red)),
+                title: Text(l10n.delete, style: const TextStyle(color: Colors.red)),
                 onTap: () async {
                   Navigator.pop(context);
                   await _service.delete(post.uri, cid: post.id);
@@ -436,7 +443,7 @@ class _TimelineScreenState extends State<TimelineScreen> {
               ),
             ListTile(
               leading: const Icon(Icons.copy),
-              title: const Text('テキストをコピー'),
+              title: Text(l10n.copyText),
               onTap: () => Navigator.pop(context),
             ),
           ],

@@ -1,0 +1,304 @@
+{
+  "@@locale": "en",
+  "appTitle": "Bluesky LINE Client",
+  "login_title": "Bluesky LINE Client",
+  "login_subtitle": "Enjoy Bluesky in Talk Format",
+  "login_info": "How to login: Create an App Password on Bluesky and enter your handle (example.bsky.social).",
+  "login_handle_label": "HANDLE",
+  "login_handle_hint": "example.bsky.social",
+  "login_password_label": "APP PASSWORD",
+  "login_password_hint": "abcd-1234-efgh-5678",
+  "login_button": "Login",
+  "login_loading": "Logging in...",
+  "login_status_checking": "Checking SDK...",
+  "login_status_ready": "Bluesky SDK Ready",
+  "home_welcome": "Welcome to Bluesky",
+  "home_post_button": "Post",
+  "home_menu_title": "Menu",
+  "home_timeline": "Timeline",
+  "home_my_profile": "My Profile",
+  "home_saved_feeds": "Saved Feeds",
+  "home_unknown_feed": "Unknown Feed",
+  "home_talk": "Talk",
+  "post_new_title": "New Post",
+  "post_edit_draft_title": "Edit Draft",
+  "post_reply_title": "Reply",
+  "post_quote_title": "Quote",
+  "post_image_limit": "Maximum 4 images allowed",
+  "post_reply_schedule_not_supported": "Scheduled replies are not supported yet",
+  "post_draft_saved": "Draft saved",
+  "post_scheduled_success": "Post scheduled (Images not supported for scheduled posts yet)",
+  "post_reply_success": "Replied",
+  "post_quote_success": "Quoted",
+  "post_success": "Posted",
+  "post_draft_button": "Draft",
+  "post_save_draft_button": "Save Draft",
+  "post_schedule_button": "Schedule",
+  "post_button": "Post",
+  "post_hint_reply": "Write a reply...",
+  "post_hint_default": "What's happening?",
+  "timeline_title": "Timeline",
+  "timeline_no_posts": "No posts found",
+  "timeline_reposted_by": "Reposted by {user}",
+  "@timeline_reposted_by": {
+    "placeholders": {
+      "user": {
+        "type": "String"
+      }
+    }
+  },
+  "timeline_quote_post": "Quote Post",
+  "search_hint": "Search words, #tags, @users...",
+  "search_clear_filter": "Clear Filter",
+  "search_specify_period": "Specify Period",
+  "search_tab_posts": "Posts",
+  "search_tab_users": "Users",
+  "search_period_label": "Period: {start} - {end}",
+  "@search_period_label": {
+    "placeholders": {
+      "start": {
+        "type": "String"
+      },
+      "end": {
+        "type": "String"
+      }
+    }
+  },
+  "search_no_posts": "No posts found",
+  "search_no_users": "No users found",
+  "profile_not_found": "Profile not found",
+  "profile_tab_posts": "Posts",
+  "profile_tab_replies": "Replies",
+  "profile_tab_media": "Media",
+  "profile_tab_video": "Video",
+  "profile_tab_feeds": "Feeds",
+  "profile_no_data": "No data",
+  "profile_unmute": "Unmute",
+  "profile_mute": "Mute",
+  "profile_block": "Block",
+  "profile_unblock": "Unblock",
+  "profile_search_posts_title": "Search posts from @{handle}",
+  "@profile_search_posts_title": {
+    "placeholders": {
+      "handle": {
+        "type": "String"
+      }
+    }
+  },
+  "profile_search_posts_hint": "Enter keywords",
+  "profile_url_label": "Profile URL: {url}",
+  "@profile_url_label": {
+    "placeholders": {
+      "url": {
+        "type": "String"
+      }
+    }
+  },
+  "profile_follows": "Follows",
+  "profile_followers": "Followers",
+  "profile_edit_button": "Edit Profile",
+  "profile_following_status": "Following",
+  "profile_no_users": "No users found",
+  "error_with_message": "Error: {message}",
+  "@error_with_message": {
+    "placeholders": {
+      "message": {
+        "type": "String"
+      }
+    }
+  },
+  "cancel": "Cancel",
+  "search": "Search",
+  "delete": "Delete",
+  "share": "Share",
+  "copyText": "Copy Text",
+  "now": "now",
+  "minutes": "m",
+  "hours": "h",
+  "user": "User",
+  "unknown": "Unknown",
+  "others_title": "Others",
+  "others_account": "Account",
+  "others_switch_account": "Switch Account",
+  "others_logout": "Logout",
+  "others_general": "General",
+  "others_language": "Language",
+  "others_font_size": "Font Size",
+  "others_theme": "Theme",
+  "others_storage": "Storage",
+  "others_app_settings": "App Settings",
+  "others_drafts": "Drafts",
+  "drafts_no_drafts": "No drafts",
+  "drafts_created_at": "Created: {date}",
+  "@drafts_created_at": {
+    "placeholders": {
+      "date": { "type": "String" }
+    }
+  },
+  "drafts_scheduled_at": "Scheduled: {date}",
+  "@drafts_scheduled_at": {
+    "placeholders": {
+      "date": { "type": "String" }
+    }
+  },
+  "post_success": "Posted successfully",
+  "thread_title": "Thread",
+  "thread_not_found": "Thread not found",
+  "thread_parse_error": "Could not parse thread data",
+  "post_not_viewable": "This post is not viewable",
+  "feed_search_title": "Find Feeds & Lists",
+  "feed_search_hint": "Search feeds",
+  "feed_search_tab_feeds": "Feeds",
+  "feed_search_tab_lists": "My Lists",
+  "feed_search_added": "Added {name}",
+  "@feed_search_added": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+  "others_advanced_settings": "Advanced Settings",
+  "others_support": "Support",
+  "others_help": "Help",
+  "others_terms": "Terms of Service",
+  "others_privacy": "Privacy Policy",
+  "others_version": "Version",
+  "storage_title": "Storage",
+  "storage_cache_title": "Cache Data",
+  "storage_cache_desc": "Delete temporary data to free up space. Posts and images will not be deleted.",
+  "storage_clear_cache": "Clear Cache",
+  "storage_clearing": "Clearing...",
+  "storage_calculating": "Calculating...",
+  "storage_clear_confirm_title": "Clear Cache?",
+  "storage_clear_confirm_msg": "Are you sure you want to delete temporary data?",
+  "storage_clear_success": "Cache cleared",
+  "storage_clear_error": "Failed to clear cache",
+  "theme_title": "Theme",
+  "theme_system": "System Default",
+  "theme_light": "Light Mode",
+  "theme_dark": "Dark Mode",
+  "chat_hint": "Enter message",
+  "nav_home": "Home",
+  "nav_talk": "Talk",
+  "nav_search": "Search",
+  "nav_notifications": "Notifications",
+  "nav_others": "Others",
+  "notifications_title": "Notifications",
+  "notifications_empty": "No notifications",
+  "notifications_liked": " liked your post",
+  "notifications_reposted": " reposted your post",
+  "notifications_followed": " followed you",
+  "notifications_replied": " replied to you",
+  "notifications_quoted": " quoted your post",
+  "notifications_mentioned": " mentioned you",
+  "font_size_title": "Font Size",
+  "font_size_small": "Small",
+  "font_size_medium": "Medium",
+  "font_size_large": "Large",
+  "font_size_extra_large": "Extra Large",
+  "font_size_preview": "Preview",
+  "font_size_preview_msg": "This is a font size preview. Move the slider to adjust.",
+  "language_title": "Language",
+  "language_japanese": "Japanese",
+  "language_english": "English",
+  "close": "Close",
+  "rate_limit_banner": "API Remaining: {remaining} / {limit} (Reset: {reset})",
+  "@rate_limit_banner": {
+    "placeholders": {
+      "remaining": { "type": "int" },
+      "limit": { "type": "int" },
+      "reset": { "type": "String" }
+    }
+  },
+  "talk_list_title": "Talks",
+  "talk_list_fetch_error": "Failed to fetch feeds",
+  "post_error": "Post failed",
+  "following_feed_desc": "Posts from people you follow",
+  "profile_handle": "Handle",
+  "profile_did": "DID",
+  "version_label": "Version {version}",
+  "@version_label": {
+    "placeholders": {
+      "version": { "type": "String" }
+    }
+  },
+  "repost_undo": "Undo Repost",
+  "repost": "Repost",
+  "loading": "Loading...",
+  "settings_title": "Advanced Settings",
+  "settings_current_remaining": "Current remaining requests",
+  "settings_fetching": "Fetching...",
+  "settings_enable_alert": "Enable rate limit alerts",
+  "settings_alert_desc": "Notify in-app when remaining requests are low",
+  "settings_threshold": "Remaining requests threshold",
+  "settings_threshold_desc": "Banner will be shown when below threshold (Current: {threshold})",
+  "@settings_threshold_desc": {
+    "placeholders": {
+      "threshold": { "type": "int" }
+    }
+  },
+  "settings_usage_approx": "Current usage (approximate)",
+  "settings_no_data": "No data fetched",
+  "settings_no_data_desc": "API header info not yet fetched. It will be fetched when you perform an action.",
+  "settings_remaining_label": "Remaining requests: {remaining}",
+  "@settings_remaining_label": {
+    "placeholders": {
+      "remaining": { "type": "String" }
+    }
+  },
+  "settings_limit_reset_label": "Limit: {limit} / Reset: {reset}",
+  "@settings_limit_reset_label": {
+    "placeholders": {
+      "limit": { "type": "String" },
+      "reset": { "type": "String" }
+    }
+  },
+  "settings_note_title": "Note",
+  "settings_note_desc": "The display is an estimate from the header info returned by the server. The actual remaining amount changes on the server side.",
+  "parse_error": "Parse Error",
+  "login_failed": "Login failed: {error}",
+  "@login_failed": {
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
+  "api_error": "API Error: {error}",
+  "@api_error": {
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
+  "network_error": "Network Error: {error}",
+  "@network_error": {
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
+  "not_logged_in": "Not logged in",
+  "auth_error": "Auth Error: {error}",
+  "@auth_error": {
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
+  "timeline_fetch_failed": "Failed to fetch timeline: {error}",
+  "@timeline_fetch_failed": {
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
+  "feed_fetch_failed": "Failed to fetch feed: {error}",
+  "@feed_fetch_failed": {
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
+  "post_content_empty": "Post content is empty",
+  "post_too_long": "Post must be within 300 characters",
+  "post_failed": "Post failed: {error}",
+  "@post_failed": {
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
+  "language_not_implemented": "Language switching not implemented yet"
+}

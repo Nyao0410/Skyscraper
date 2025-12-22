@@ -6,6 +6,7 @@ import '../models/post_item.dart';
 import '../utils/feed_utils.dart';
 import 'chat_screen.dart';
 import 'new_post_screen.dart';
+import '../flutter_gen/gen_l10n/app_localizations.dart';
 
 class ChatDetailWrapper extends StatefulWidget {
   final String feedName;
@@ -59,8 +60,9 @@ class _ChatDetailWrapperState extends State<ChatDetailWrapper> {
       if (mounted) {
         setState(() => _loading = false);
         if (_feed.isEmpty) {
+          final l10n = AppLocalizations.of(context);
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('フィードの取得に失敗しました: $e')),
+            SnackBar(content: Text('${l10n.talk_list_fetch_error}: $e')),
           );
         }
       }
@@ -122,8 +124,9 @@ class _ChatDetailWrapperState extends State<ChatDetailWrapper> {
       _handleRefresh();
     } catch (e) {
       if (mounted) {
+        final l10n = AppLocalizations.of(context);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('投稿失敗: $e')),
+          SnackBar(content: Text('${l10n.post_error}: $e')),
         );
       }
     }

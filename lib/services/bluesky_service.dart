@@ -100,11 +100,11 @@ class BlueskyService {
 
       debugPrint('Login successful. Handle: ${handle ?? "null"}, DID: ${did ?? "null"}');
     } on UnauthorizedException catch (e) {
-      throw Exception('ログイン失敗: ${e.toString()}');
+      throw Exception('Login failed: ${e.toString()}');
     } on XRPCException catch (e) {
-      throw Exception('API エラー: ${e.toString()}');
+      throw Exception('API Error: ${e.toString()}');
     } catch (e) {
-      throw Exception('ネットワークエラー: ${e.toString()}');
+      throw Exception('Network Error: ${e.toString()}');
     }
   }
 
@@ -169,7 +169,7 @@ class BlueskyService {
             _rateLimitLastReset!.day,
           );
           final today = DateTime(now.year, now.month, now.day);
-          if (!last.isAtSameMomentAs(today)) {
+          if (today.isAfter(last)) {
             needsReset = true;
           }
         }
@@ -379,9 +379,9 @@ class BlueskyService {
     }
 
     // Common header keys
-    final rem = parseInt(lower['x-ratelimit-remaining'] ?? lower['ratelimit-remaining'] ?? lower['x-ratelimit-remaining']);
-    final limit = parseInt(lower['x-ratelimit-limit'] ?? lower['ratelimit-limit'] ?? lower['x-ratelimit-limit']);
-    int? reset = parseInt(lower['x-ratelimit-reset'] ?? lower['ratelimit-reset'] ?? lower['x-ratelimit-reset']);
+    final rem = parseInt(lower['x-ratelimit-remaining'] ?? lower['ratelimit-remaining']);
+    final limit = parseInt(lower['x-ratelimit-limit'] ?? lower['ratelimit-limit']);
+    int? reset = parseInt(lower['x-ratelimit-reset'] ?? lower['ratelimit-reset']);
 
     // reset may be epoch seconds
     DateTime? resetDt;
@@ -396,7 +396,26 @@ class BlueskyService {
     }
 
     var changed = false;
-    if (rem != null && rem != rateLimitRemaining) { rateLimitRemaining = rem; changed = true; }
+    
+    // Logic fix: Bluesky has multiple rate limits (e.g., for different endpoints).
+    // If we just take whatever comes last, it might jump from a low limit (e.g. 3000)
+    // to a high limit (e.g. 5000) depending on which API was called.
+    // To provide a "worst-case" or "most restrictive" view, we should track the lowest remaining.
+    // However, the user wants "decreases as used" and "resets at midnight".
+    // Since we can't easily distinguish which limit is which from headers alone without more context,
+    // we will at least prevent it from "increasing" within the same reset window.
+    
+    if (rem != null) {
+      if (rateLimitRemaining == null || rem < rateLimitRemaining!) {
+        rateLimitRemaining = rem;
+        changed = true;
+      } else if (rateLimitReset != null && resetDt != null && resetDt.isAfter(rateLimitReset!)) {
+        // If the reset time has moved forward significantly, it's likely a new window
+        rateLimitRemaining = rem;
+        changed = true;
+      }
+    }
+    
     if (limit != null && limit != rateLimitLimit) { rateLimitLimit = limit; changed = true; }
     if (resetDt != null && resetDt != rateLimitReset) { rateLimitReset = resetDt; changed = true; }
 
@@ -576,19 +595,26 @@ class BlueskyService {
   }
 
   Future<bool> refreshSession() async {
-    if (_bluesky == null) return false;
+    if (_bluesky == null) {
+      final sessionJson = await _storage.read(key: _sessionKey);
+      if (sessionJson == null) return false;
+      try {
+        final session = Session.fromJson(jsonDecode(sessionJson));
+        return await _manualRefresh(session);
+      } catch (_) {
+        return false;
+      }
+    }
+
     try {
       final response = await _bluesky!.atproto.server.refreshSession();
       final dynamic respData = response.data;
 
-      // response.data may be a Session or a ServerRefreshSessionOutput (SDK differences).
-      // Try to normalize into a Session instance.
       Session newSession;
       if (respData is Session) {
         newSession = respData;
       } else {
         try {
-          // Try to convert via toJson() if available on the SDK type
           final dynamicMap = (respData as dynamic).toJson();
           newSession = Session.fromJson(Map<String, dynamic>.from(dynamicMap));
         } catch (e) {
@@ -602,8 +628,16 @@ class BlueskyService {
       await _addAccount(newSession);
       return true;
     } catch (e) {
-      debugPrint('Failed to refresh session: $e');
-      return false;
+      debugPrint('Failed to refresh session via client: $e');
+      // Try manual refresh as fallback
+      try {
+        final sessionJson = await _storage.read(key: _sessionKey);
+        if (sessionJson == null) return false;
+        final session = Session.fromJson(jsonDecode(sessionJson));
+        return await _manualRefresh(session);
+      } catch (_) {
+        return false;
+      }
     }
   }
 
@@ -670,16 +704,74 @@ class BlueskyService {
       final sessionData = jsonDecode(sessionJson) as Map<String, dynamic>;
       final session = Session.fromJson(sessionData);
 
-      await activateSession(session);
+      try {
+        await activateSession(session);
+        // Ensure the current account is in the accounts list (for migration/consistency)
+        await _addAccount(session);
+        debugPrint('Session restored. Handle: $handle');
+        return true;
+      } catch (e) {
+        debugPrint('Failed to activate session: $e');
+        
+        // Check if it's an authentication error
+        final errorStr = e.toString().toLowerCase();
+        if (errorStr.contains('unauthorized') || 
+            errorStr.contains('expired') || 
+            errorStr.contains('invalid token') ||
+            errorStr.contains('auth')) {
+          
+          debugPrint('Authentication error detected, trying manual refresh...');
+          final refreshed = await _manualRefresh(session);
+          if (refreshed) {
+            debugPrint('Manual refresh successful.');
+            return true;
+          } else {
+            debugPrint('Manual refresh failed, logging out.');
+            await logout();
+            return false;
+          }
+        } else {
+          // Likely a network error. Don't logout, but we can't proceed.
+          debugPrint('Non-auth error during session restore. Keeping session but returning false.');
+          return false;
+        }
+      }
+    } catch (e) {
+      debugPrint('Critical failure in restoreSession: $e');
+      // Only logout on data corruption
+      if (e is FormatException) {
+        await logout();
+      }
+      return false;
+    }
+  }
 
-      // Ensure the current account is in the accounts list (for migration/consistency)
-      await _addAccount(session);
+  Future<bool> _manualRefresh(Session oldSession) async {
+    try {
+      // Create a temporary client to perform the refresh
+      final tempClient = Bluesky.fromSession(oldSession);
+      final response = await tempClient.atproto.server.refreshSession();
+      final dynamic respData = response.data;
 
-      debugPrint('Session restored. Handle: $handle');
+      Session newSession;
+      if (respData is Session) {
+        newSession = respData;
+      } else {
+        try {
+          final dynamicMap = (respData as dynamic).toJson();
+          newSession = Session.fromJson(Map<String, dynamic>.from(dynamicMap));
+        } catch (e) {
+          debugPrint('Unable to extract Session from refresh response: $e');
+          return false;
+        }
+      }
+
+      await activateSession(newSession);
+      await _storage.write(key: _sessionKey, value: jsonEncode(newSession.toJson()));
+      await _addAccount(newSession);
       return true;
     } catch (e) {
-      debugPrint('Failed to restore session: $e');
-      await logout();
+      debugPrint('Manual refresh failed: $e');
       return false;
     }
   }
@@ -722,7 +814,7 @@ class BlueskyService {
 
   Future<FeedResponse> getTimeline({int limit = 40, String? cursor, bool forceRefresh = false}) async {
     if (_bluesky == null || did == null) {
-      throw Exception('ログインしていません');
+      throw Exception('Not logged in');
     }
     // Check persistent cache meta for TTL. If expired, clear cache; if within TTL, return cached.
     try {
@@ -783,11 +875,11 @@ class BlueskyService {
       
       return FeedResponse(posts: posts, cursor: nextCursor);
     } on UnauthorizedException catch (e) {
-      throw Exception('認証エラー: ${e.toString()}');
+      throw Exception('Auth Error: ${e.toString()}');
     } on XRPCException catch (e) {
-      throw Exception('タイムライン取得失敗: ${e.toString()}');
+      throw Exception('Failed to fetch timeline: ${e.toString()}');
     } catch (e) {
-      throw Exception('ネットワークエラー: ${e.toString()}');
+      throw Exception('Network Error: ${e.toString()}');
     }
   }
 
@@ -798,7 +890,7 @@ class BlueskyService {
 
   Future<FeedResponse> getCustomFeed(String feedUri, {int limit = 40, String? cursor, bool forceRefresh = false}) async {
     if (_bluesky == null || did == null) {
-      throw Exception('ログインしていません');
+      throw Exception('Not logged in');
     }
 
     // TTL guard: check DB-stored last_fetched; return cached if within TTL, clear if expired
@@ -873,7 +965,7 @@ class BlueskyService {
       
       return FeedResponse(posts: posts, cursor: nextCursor);
     } catch (e) {
-      throw Exception('フィード取得失敗: ${e.toString()}');
+      throw Exception('Failed to fetch feed: ${e.toString()}');
     }
   }
 
@@ -890,7 +982,7 @@ class BlueskyService {
   }
 
   Future<List<Map<String, String>>> getSavedFeeds() async {
-    if (_bluesky == null) throw Exception('ログインしていません');
+    if (_bluesky == null) throw Exception('Not logged in');
     try {
       debugPrint('Fetching preferences...');
       final prefsResponse = await _bluesky!.actor.getPreferences();
@@ -943,7 +1035,7 @@ class BlueskyService {
 
       if (savedUris.isEmpty) {
         return [
-          {'name': 'Following', 'uri': 'following', 'desc': 'フォロー中の投稿'},
+          {'name': 'Following', 'uri': 'following', 'desc': 'Following Posts'},
         ];
       }
 
@@ -962,7 +1054,7 @@ class BlueskyService {
       debugPrint('List URIs: ${listUris.length}');
 
       final List<Map<String, String>> result = [];
-      result.add({'name': 'Following', 'uri': 'following', 'desc': 'フォロー中の投稿'});
+      result.add({'name': 'Following', 'uri': 'following', 'desc': 'Following Posts'});
 
       if (feedGenUris.isNotEmpty) {
         try {
@@ -1042,26 +1134,26 @@ class BlueskyService {
     } catch (e) {
       debugPrint('Error fetching saved feeds: $e');
       return [
-        {'name': 'Following', 'uri': 'following', 'desc': 'フォロー中の投稿', 'indexedAt': DateTime.now().toIso8601String()},
+        {'name': 'Following', 'uri': 'following', 'desc': 'Following Posts', 'indexedAt': DateTime.now().toIso8601String()},
       ];
     }
   }
 
   Future<Blob> uploadBlob(Uint8List bytes) async {
-    if (_bluesky == null) throw Exception('ログインしていません');
+    if (_bluesky == null) throw Exception('Not logged in');
     final response = await _bluesky!.atproto.repo.uploadBlob(bytes: bytes);
     return response.data.blob;
   }
 
   Future<void> post(String text, {List<EmbedImagesImage>? images, EmbedVideo? video}) async {
-    if (_bluesky == null) throw Exception('ログインしていません');
+    if (_bluesky == null) throw Exception('Not logged in');
 
     if (text.trim().isEmpty && images == null && video == null) {
-      throw Exception('投稿内容が空です');
+      throw Exception('Post content is empty');
     }
 
     if (text.length > 300) {
-      throw Exception('投稿は300文字以内にしてください');
+      throw Exception('Post must be within 300 characters');
     }
 
     try {
@@ -1078,16 +1170,16 @@ class BlueskyService {
       );
       try { _recordRateLimitFromResponse(response); } catch (_) {}
     } on UnauthorizedException catch (e) {
-      throw Exception('認証エラー: ${e.toString()}');
+      throw Exception('Auth Error: ${e.toString()}');
     } on XRPCException catch (e) {
-      throw Exception('投稿失敗: ${e.toString()}');
+      throw Exception('Post failed: ${e.toString()}');
     } catch (e) {
-      throw Exception('ネットワークエラー: ${e.toString()}');
+      throw Exception('Network Error: ${e.toString()}');
     }
   }
 
   Future<void> like(String cid, String uri) async {
-    if (_bluesky == null) throw Exception('ログインしていません');
+    if (_bluesky == null) throw Exception('Not logged in');
     try {
       debugPrint('Attempting like: uri=$uri, cid=$cid');
       final response = await _bluesky!.feed.like.create(
@@ -1098,7 +1190,7 @@ class BlueskyService {
       debugPrint('Like error detail: $e');
       final errorStr = e.toString();
       if (errorStr.contains('Null') && errorStr.contains('subtype') && errorStr.contains('String')) {
-        // パースエラーの場合でも、リクエスト自体は成功していることが多いため続行
+        // Parse errorの場合でも、リクエスト自体は成功していることが多いため続行
         debugPrint('Caught potential SDK parsing error in like, assuming success');
         return;
       }
@@ -1111,7 +1203,7 @@ class BlueskyService {
   }
 
   Future<void> repost(String cid, String uri) async {
-    if (_bluesky == null) throw Exception('ログインしていません');
+    if (_bluesky == null) throw Exception('Not logged in');
     try {
       debugPrint('Attempting repost: uri=$uri, cid=$cid');
       final response = await _bluesky!.feed.repost.create(
@@ -1134,7 +1226,7 @@ class BlueskyService {
   }
 
   Future<void> delete(String uri, {String? cid}) async {
-    if (_bluesky == null || did == null) throw Exception('ログインしていません');
+    if (_bluesky == null || did == null) throw Exception('Not logged in');
     try {
       final atUri = AtUri.parse(uri);
       final collection = atUri.collection.toString();
@@ -1155,7 +1247,7 @@ class BlueskyService {
       debugPrint('Delete error detail: $e');
       final errorStr = e.toString();
       if (errorStr.contains('Null') && errorStr.contains('subtype') && errorStr.contains('String')) {
-        // 削除の場合、パースエラーが出ても実際には消えていることが多い
+        // 削除の場合、Parse errorが出ても実際には消えていることが多い
         debugPrint('Caught potential SDK parsing error in delete, assuming success');
         return;
       }
@@ -1168,7 +1260,7 @@ class BlueskyService {
   }
 
   Future<void> reply(PostItem item, String text, {List<EmbedImagesImage>? images, EmbedVideo? video}) async {
-    if (_bluesky == null) throw Exception('ログインしていません');
+    if (_bluesky == null) throw Exception('Not logged in');
     try {
       UFeedPostEmbed? embed;
       if (images != null && images.isNotEmpty) {
@@ -1198,7 +1290,7 @@ class BlueskyService {
   }
 
   Future<void> quote(PostItem item, String text, {List<EmbedImagesImage>? images, EmbedVideo? video}) async {
-    if (_bluesky == null) throw Exception('ログインしていません');
+    if (_bluesky == null) throw Exception('Not logged in');
     try {
       UFeedPostEmbed? embed;
       final recordEmbed = EmbedRecord(
@@ -1243,7 +1335,7 @@ class BlueskyService {
   }
 
   Future<dynamic> getPostThread(String uri) async {
-    if (_bluesky == null) throw Exception('ログインしていません');
+    if (_bluesky == null) throw Exception('Not logged in');
     try {
       final response = await _bluesky!.feed.getPostThread(uri: AtUri.parse(uri));
       try { _recordRateLimitFromResponse(response); } catch (_) {}
@@ -1255,7 +1347,7 @@ class BlueskyService {
   }
 
   Future<dynamic> getProfile(String actor) async {
-    if (_bluesky == null) throw Exception('ログインしていません');
+    if (_bluesky == null) throw Exception('Not logged in');
     // TTL guard for profile: persist last_fetched in DB under key 'profile:<actor>'
     try {
       final key = 'profile:$actor';
@@ -1299,7 +1391,7 @@ class BlueskyService {
   }
 
   Future<List<PostItem>> getAuthorFeed(String actor, {int limit = 40}) async {
-    if (_bluesky == null) throw Exception('ログインしていません');
+    if (_bluesky == null) throw Exception('Not logged in');
     try {
       final response = await _bluesky!.feed.getAuthorFeed(actor: actor, limit: limit);
       final feedItems = response.data.feed;
@@ -1321,7 +1413,7 @@ class BlueskyService {
   }
 
   Future<List<PostItem>> searchPosts(String query, {int limit = 40, String? since, String? until}) async {
-    if (_bluesky == null) throw Exception('ログインしていません');
+    if (_bluesky == null) throw Exception('Not logged in');
     try {
       final response = await _bluesky!.feed.searchPosts(
         q: query,
@@ -1343,7 +1435,7 @@ class BlueskyService {
   }
 
   Future<List<dynamic>> searchActors(String term, {int limit = 40}) async {
-    if (_bluesky == null) throw Exception('ログインしていません');
+    if (_bluesky == null) throw Exception('Not logged in');
     try {
       final response = await _bluesky!.actor.searchActors(
         term: term,
@@ -1358,7 +1450,7 @@ class BlueskyService {
   }
 
   Future<void> follow(String did) async {
-    if (_bluesky == null) throw Exception('ログインしていません');
+    if (_bluesky == null) throw Exception('Not logged in');
     try {
       final response = await _bluesky!.atproto.repo.createRecord(
         repo: _bluesky!.session!.did,
@@ -1375,7 +1467,7 @@ class BlueskyService {
   }
 
   Future<void> unfollow(String followUri) async {
-    if (_bluesky == null) throw Exception('ログインしていません');
+    if (_bluesky == null) throw Exception('Not logged in');
     try {
       final uri = AtUri.parse(followUri);
       final response = await _bluesky!.atproto.repo.deleteRecord(
@@ -1390,7 +1482,7 @@ class BlueskyService {
   }
 
   Future<void> mute(String did) async {
-    if (_bluesky == null) throw Exception('ログインしていません');
+    if (_bluesky == null) throw Exception('Not logged in');
     try {
       final response = await _bluesky!.graph.muteActor(actor: did);
       try { _recordRateLimitFromResponse(response); } catch (_) {}
@@ -1400,7 +1492,7 @@ class BlueskyService {
   }
 
   Future<void> unmute(String did) async {
-    if (_bluesky == null) throw Exception('ログインしていません');
+    if (_bluesky == null) throw Exception('Not logged in');
     try {
       final response = await _bluesky!.graph.unmuteActor(actor: did);
       try { _recordRateLimitFromResponse(response); } catch (_) {}
@@ -1410,7 +1502,7 @@ class BlueskyService {
   }
 
   Future<void> block(String did) async {
-    if (_bluesky == null) throw Exception('ログインしていません');
+    if (_bluesky == null) throw Exception('Not logged in');
     try {
       await _bluesky!.atproto.repo.createRecord(
         repo: _bluesky!.session!.did,
@@ -1426,7 +1518,7 @@ class BlueskyService {
   }
 
   Future<void> unblock(String blockUri) async {
-    if (_bluesky == null) throw Exception('ログインしていません');
+    if (_bluesky == null) throw Exception('Not logged in');
     try {
       final uri = AtUri.parse(blockUri);
       await _bluesky!.atproto.repo.deleteRecord(
@@ -1444,7 +1536,7 @@ class BlueskyService {
   }
 
   Future<List<dynamic>> getFollows(String actor, {int limit = 50}) async {
-    if (_bluesky == null) throw Exception('ログインしていません');
+    if (_bluesky == null) throw Exception('Not logged in');
     try {
       final response = await _bluesky!.graph.getFollows(actor: actor, limit: limit);
       return response.data.follows;
@@ -1454,7 +1546,7 @@ class BlueskyService {
   }
 
   Future<List<dynamic>> getFollowers(String actor, {int limit = 50}) async {
-    if (_bluesky == null) throw Exception('ログインしていません');
+    if (_bluesky == null) throw Exception('Not logged in');
     try {
       final response = await _bluesky!.graph.getFollowers(actor: actor, limit: limit);
       return response.data.followers;
@@ -1464,7 +1556,7 @@ class BlueskyService {
   }
 
   Future<List<PostItem>> getAuthorFeedWithFilter(String actor, {String? filter, int limit = 40}) async {
-    if (_bluesky == null) throw Exception('ログインしていません');
+    if (_bluesky == null) throw Exception('Not logged in');
     try {
       // The SDK expects a specific filter type; apply filtering client-side
       final response = await _bluesky!.feed.getAuthorFeed(
@@ -1518,7 +1610,7 @@ class BlueskyService {
   }
 
   Future<List<PostItem>> getActorLikes(String actor, {int limit = 40}) async {
-    if (_bluesky == null || did == null) throw Exception('ログインしていません');
+    if (_bluesky == null || did == null) throw Exception('Not logged in');
     try {
       final response = await _bluesky!.feed.getActorLikes(actor: actor, limit: limit);
       try { _recordRateLimitFromResponse(response); } catch (_) {}
@@ -1552,7 +1644,7 @@ class BlueskyService {
   }
 
   Future<List<dynamic>> getActorFeeds(String actor, {int limit = 50}) async {
-    if (_bluesky == null) throw Exception('ログインしていません');
+    if (_bluesky == null) throw Exception('Not logged in');
     try {
       final response = await _bluesky!.feed.getActorFeeds(actor: actor, limit: limit);
       return response.data.feeds;
@@ -1562,7 +1654,7 @@ class BlueskyService {
   }
 
   Future<List<dynamic>> getLists(String actor, {int limit = 50}) async {
-    if (_bluesky == null) throw Exception('ログインしていません');
+    if (_bluesky == null) throw Exception('Not logged in');
     try {
       final response = await _bluesky!.graph.getLists(actor: actor, limit: limit);
       return response.data.lists;
@@ -1573,7 +1665,7 @@ class BlueskyService {
 
   // Note: getListsWithMembership is used to see which lists a user is in
   Future<List<dynamic>> getListMemberships(String actor, {int limit = 50}) async {
-    if (_bluesky == null) throw Exception('ログインしていません');
+    if (_bluesky == null) throw Exception('Not logged in');
     try {
       final response = await _bluesky!.graph.getListsWithMembership(actor: actor, limit: limit);
       return response.data.listsWithMembership;
@@ -1583,7 +1675,7 @@ class BlueskyService {
   }
 
   Future<List<dynamic>> getNotifications({int limit = 40, String? cursor}) async {
-    if (_bluesky == null) throw Exception('ログインしていません');
+    if (_bluesky == null) throw Exception('Not logged in');
     try {
       final response = await _bluesky!.notification.listNotifications(
         limit: limit,
@@ -1608,7 +1700,7 @@ class BlueskyService {
   }
 
   Future<List<dynamic>> searchFeeds(String query, {int limit = 20}) async {
-    if (_bluesky == null) throw Exception('ログインしていません');
+    if (_bluesky == null) throw Exception('Not logged in');
     try {
       final response = await _bluesky!.unspecced.getPopularFeedGenerators(
         limit: limit,
@@ -1623,7 +1715,7 @@ class BlueskyService {
   }
 
   Future<void> addSavedItem(String uri, String type) async {
-    if (_bluesky == null) throw Exception('ログインしていません');
+    if (_bluesky == null) throw Exception('Not logged in');
     try {
       final prefsResponse = await _bluesky!.actor.getPreferences();
       final prefs = prefsResponse.data.preferences;

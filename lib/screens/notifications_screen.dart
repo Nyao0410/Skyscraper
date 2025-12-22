@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart' hide Notification;
+import '../flutter_gen/gen_l10n/app_localizations.dart';
 import '../utils/avatar_provider.dart';
 import 'package:intl/intl.dart';
 import '../services/bluesky_service.dart';
@@ -44,42 +45,47 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Scaffold(
       appBar: AppBar(
-        title: const Text('通知', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: Text(l10n.notifications_title,
+            style: const TextStyle(fontWeight: FontWeight.bold)),
       ),
       body: RefreshIndicator(
         onRefresh: _fetchNotifications,
         child: _loading
             ? const Center(child: CircularProgressIndicator())
             : _notifications.isEmpty
-            ? const Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.notifications_none,
-                      size: 64,
-                      color: Colors.grey,
+                ? Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(
+                          Icons.notifications_none,
+                          size: 64,
+                          color: Colors.grey,
+                        ),
+                        const SizedBox(height: 16),
+                        Text(l10n.notifications_empty,
+                            style: const TextStyle(color: Colors.grey)),
+                      ],
                     ),
-                    SizedBox(height: 16),
-                    Text('通知はありません', style: TextStyle(color: Colors.grey)),
-                  ],
-                ),
-              )
-            : ListView.separated(
-                itemCount: _notifications.length,
-                separatorBuilder: (context, index) => const Divider(height: 1),
-                itemBuilder: (context, index) {
-                  final notification = _notifications[index];
-                  return _buildNotificationItem(notification);
-                },
-              ),
+                  )
+                : ListView.separated(
+                    itemCount: _notifications.length,
+                    separatorBuilder: (context, index) =>
+                        const Divider(height: 1),
+                    itemBuilder: (context, index) {
+                      final notification = _notifications[index];
+                      return _buildNotificationItem(notification);
+                    },
+                  ),
       ),
     );
   }
 
   Widget _buildNotificationItem(dynamic notification) {
+    final l10n = AppLocalizations.of(context);
     IconData icon;
     Color color;
     String text;
@@ -89,31 +95,31 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     if (reason.contains('like')) {
       icon = Icons.favorite;
       color = Colors.pink;
-      text = 'があなたの投稿を「いいね」しました';
+      text = l10n.notifications_liked;
     } else if (reason.contains('repost')) {
       icon = Icons.repeat;
       color = Colors.green;
-      text = 'があなたの投稿をリポストしました';
+      text = l10n.notifications_reposted;
     } else if (reason.contains('follow')) {
       icon = Icons.person_add;
       color = Colors.blue;
-      text = 'があなたをフォローしました';
+      text = l10n.notifications_followed;
     } else if (reason.contains('mention')) {
       icon = Icons.alternate_email;
       color = Colors.orange;
-      text = 'があなたをメンションしました';
+      text = l10n.notifications_mentioned;
     } else if (reason.contains('reply')) {
       icon = Icons.reply;
       color = Colors.blue;
-      text = 'があなたに返信しました';
+      text = l10n.notifications_replied;
     } else if (reason.contains('quote')) {
       icon = Icons.format_quote;
       color = Colors.blue;
-      text = 'があなたの投稿を引用しました';
+      text = l10n.notifications_quoted;
     } else {
       icon = Icons.notifications;
       color = Colors.grey;
-      text = '通知がありました ($reason)';
+      text = '${l10n.notifications_title} ($reason)';
     }
 
     return ListTile(

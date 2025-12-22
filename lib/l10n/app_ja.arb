@@ -1,0 +1,304 @@
+{
+  "@@locale": "ja",
+  "appTitle": "Bluesky LINE Client",
+  "login_title": "Bluesky LINE Client",
+  "login_subtitle": "トーク形式で楽しむBluesky",
+  "login_info": "ログイン方法: Blueskyでアプリパスワードを作成し、ハンドル名（example.bsky.social）と入力してください。",
+  "login_handle_label": "HANDLE",
+  "login_handle_hint": "example.bsky.social",
+  "login_password_label": "APP PASSWORD",
+  "login_password_hint": "abcd-1234-efgh-5678",
+  "login_button": "ログイン",
+  "login_loading": "ログイン中...",
+  "login_status_checking": "SDK動作確認中...",
+  "login_status_ready": "Bluesky SDK準備完了",
+  "home_welcome": "Blueskyへようこそ",
+  "home_post_button": "投稿する",
+  "home_menu_title": "メニュー",
+  "home_timeline": "タイムライン",
+  "home_my_profile": "自分のプロフィール",
+  "home_saved_feeds": "保存済みフィード",
+  "home_unknown_feed": "不明なフィード",
+  "home_talk": "トーク",
+  "post_new_title": "新規投稿",
+  "post_edit_draft_title": "下書き編集",
+  "post_reply_title": "返信",
+  "post_quote_title": "引用",
+  "post_image_limit": "画像は最大4枚までです",
+  "post_reply_schedule_not_supported": "返信の予約投稿は現在サポートされていません",
+  "post_draft_saved": "下書きを保存しました",
+  "post_scheduled_success": "投稿を予約しました（画像は現在サポートされていません）",
+  "post_reply_success": "返信しました",
+  "post_quote_success": "引用投稿しました",
+  "post_success": "投稿しました",
+  "post_draft_button": "下書き",
+  "post_save_draft_button": "下書き保存",
+  "post_schedule_button": "予約",
+  "post_button": "投稿",
+  "post_hint_reply": "返信を入力...",
+  "post_hint_default": "いまどうしてる？",
+  "timeline_title": "タイムライン",
+  "timeline_no_posts": "投稿がありません",
+  "timeline_reposted_by": "{user} さんがリポスト",
+  "@timeline_reposted_by": {
+    "placeholders": {
+      "user": {
+        "type": "String"
+      }
+    }
+  },
+  "timeline_quote_post": "引用して投稿",
+  "search_hint": "検索ワード、#タグ、@ユーザー...",
+  "search_clear_filter": "フィルターをクリア",
+  "search_specify_period": "期間指定",
+  "search_tab_posts": "投稿",
+  "search_tab_users": "ユーザー",
+  "search_period_label": "期間: {start} 〜 {end}",
+  "@search_period_label": {
+    "placeholders": {
+      "start": {
+        "type": "String"
+      },
+      "end": {
+        "type": "String"
+      }
+    }
+  },
+  "search_no_posts": "投稿が見つかりませんでした",
+  "search_no_users": "ユーザーが見つかりませんでした",
+  "profile_not_found": "プロフィールが見つかりませんでした",
+  "profile_tab_posts": "投稿",
+  "profile_tab_replies": "返信",
+  "profile_tab_media": "メディア",
+  "profile_tab_video": "ビデオ",
+  "profile_tab_feeds": "フィード",
+  "profile_no_data": "データがありません",
+  "profile_unmute": "ミュート解除",
+  "profile_mute": "ミュート",
+  "profile_block": "ブロック",
+  "profile_unblock": "ブロック解除",
+  "profile_search_posts_title": "@{handle} の投稿を検索",
+  "@profile_search_posts_title": {
+    "placeholders": {
+      "handle": {
+        "type": "String"
+      }
+    }
+  },
+  "profile_search_posts_hint": "キーワードを入力",
+  "profile_url_label": "プロフィールURL: {url}",
+  "@profile_url_label": {
+    "placeholders": {
+      "url": {
+        "type": "String"
+      }
+    }
+  },
+  "profile_follows": "フォロー",
+  "profile_followers": "フォロワー",
+  "profile_edit_button": "プロフィールを編集",
+  "profile_following_status": "フォロー中",
+  "profile_no_users": "ユーザーがいません",
+  "error_with_message": "エラー: {message}",
+  "@error_with_message": {
+    "placeholders": {
+      "message": {
+        "type": "String"
+      }
+    }
+  },
+  "cancel": "キャンセル",
+  "search": "検索",
+  "delete": "削除",
+  "share": "共有",
+  "copyText": "テキストをコピー",
+  "now": "今",
+  "minutes": "分",
+  "hours": "時間",
+  "user": "ユーザー",
+  "unknown": "不明",
+  "others_title": "その他",
+  "others_account": "アカウント",
+  "others_switch_account": "アカウントを切り替える",
+  "others_logout": "ログアウト",
+  "others_general": "一般",
+  "others_language": "言語",
+  "others_font_size": "フォントサイズ",
+  "others_theme": "テーマ",
+  "others_storage": "ストレージ",
+  "others_app_settings": "アプリ設定",
+  "others_drafts": "下書き",
+  "drafts_no_drafts": "下書きはありません",
+  "drafts_created_at": "作成: {date}",
+  "@drafts_created_at": {
+    "placeholders": {
+      "date": { "type": "String" }
+    }
+  },
+  "drafts_scheduled_at": "予約: {date}",
+  "@drafts_scheduled_at": {
+    "placeholders": {
+      "date": { "type": "String" }
+    }
+  },
+  "post_success": "投稿しました",
+  "thread_title": "スレッド",
+  "thread_not_found": "スレッドが見つかりませんでした",
+  "thread_parse_error": "スレッドデータを解析できませんでした",
+  "post_not_viewable": "この投稿は表示できません",
+  "feed_search_title": "フィード・リストを探す",
+  "feed_search_hint": "フィードを検索",
+  "feed_search_tab_feeds": "フィード",
+  "feed_search_tab_lists": "マイリスト",
+  "feed_search_added": "{name} を追加しました",
+  "@feed_search_added": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
+  "others_advanced_settings": "詳細設定",
+  "others_support": "サポート",
+  "others_help": "ヘルプ",
+  "others_terms": "利用規約",
+  "others_privacy": "プライバシーポリシー",
+  "others_version": "バージョン",
+  "storage_title": "ストレージ",
+  "storage_cache_title": "キャッシュデータ",
+  "storage_cache_desc": "一時的なデータを削除して空き容量を増やします。投稿や画像は削除されません。",
+  "storage_clear_cache": "キャッシュを削除",
+  "storage_clearing": "削除中...",
+  "storage_calculating": "計算中...",
+  "storage_clear_confirm_title": "キャッシュを削除しますか？",
+  "storage_clear_confirm_msg": "一時的なデータを削除します。よろしいですか？",
+  "storage_clear_success": "キャッシュを削除しました",
+  "storage_clear_error": "キャッシュの削除に失敗しました",
+  "theme_title": "テーマ",
+  "theme_system": "システム設定に従う",
+  "theme_light": "ライトモード",
+  "theme_dark": "ダークモード",
+  "chat_hint": "メッセージを入力",
+  "nav_home": "ホーム",
+  "nav_talk": "トーク",
+  "nav_search": "検索",
+  "nav_notifications": "通知",
+  "nav_others": "その他",
+  "notifications_title": "通知",
+  "notifications_empty": "通知はありません",
+  "notifications_liked": "があなたの投稿を「いいね」しました",
+  "notifications_reposted": "があなたの投稿をリポストしました",
+  "notifications_followed": "があなたをフォローしました",
+  "notifications_replied": "があなたに返信しました",
+  "notifications_quoted": "があなたの投稿を引用しました",
+  "notifications_mentioned": "があなたをメンションしました",
+  "font_size_title": "フォントサイズ",
+  "close": "閉じる",
+  "rate_limit_banner": "API残り: {remaining} / {limit} (リセット: {reset})",
+  "@rate_limit_banner": {
+    "placeholders": {
+      "remaining": { "type": "int" },
+      "limit": { "type": "int" },
+      "reset": { "type": "String" }
+    }
+  },
+  "font_size_small": "小",
+  "font_size_medium": "中",
+  "font_size_large": "大",
+  "font_size_extra_large": "特大",
+  "font_size_preview": "プレビュー",
+  "font_size_preview_msg": "これはフォントサイズのプレビューです。スライダーを動かして調整してください。",
+  "language_title": "言語",
+  "language_japanese": "日本語",
+  "language_english": "English",
+  "talk_list_title": "トーク",
+  "talk_list_fetch_error": "フィードの取得に失敗しました",
+  "post_error": "投稿失敗",
+  "following_feed_desc": "フォロー中の投稿",
+  "profile_handle": "ハンドル",
+  "profile_did": "DID",
+  "version_label": "バージョン {version}",
+  "@version_label": {
+    "placeholders": {
+      "version": { "type": "String" }
+    }
+  },
+  "repost_undo": "リポストを取り消す",
+  "repost": "リポスト",
+  "loading": "読み込み中...",
+  "settings_title": "詳細設定",
+  "settings_current_remaining": "現在の残りリクエスト数",
+  "settings_fetching": "取得中...",
+  "settings_enable_alert": "レート制限アラートを有効にする",
+  "settings_alert_desc": "残りリクエスト数が少なくなったときにアプリ内で通知します",
+  "settings_threshold": "残りリクエストしきい値",
+  "settings_threshold_desc": "しきい値以下になるとバナーが表示されます（現在: {threshold}）",
+  "@settings_threshold_desc": {
+    "placeholders": {
+      "threshold": { "type": "int" }
+    }
+  },
+  "settings_usage_approx": "現在の使用量（近似）",
+  "settings_no_data": "データ未取得",
+  "settings_no_data_desc": "APIヘッダ情報がまだ取得されていません。操作を実行すると取得されます。",
+  "settings_remaining_label": "残りリクエスト数: {remaining}",
+  "@settings_remaining_label": {
+    "placeholders": {
+      "remaining": { "type": "String" }
+    }
+  },
+  "settings_limit_reset_label": "上限: {limit} / リセット予定: {reset}",
+  "@settings_limit_reset_label": {
+    "placeholders": {
+      "limit": { "type": "String" },
+      "reset": { "type": "String" }
+    }
+  },
+  "settings_note_title": "注意",
+  "settings_note_desc": "表示はサーバーが返すヘッダ情報からの推定値です。実際の残りはサーバー側で変化します。",
+  "parse_error": "解析エラー",
+  "login_failed": "ログイン失敗: {error}",
+  "@login_failed": {
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
+  "api_error": "API エラー: {error}",
+  "@api_error": {
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
+  "network_error": "ネットワークエラー: {error}",
+  "@network_error": {
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
+  "not_logged_in": "ログインしていません",
+  "auth_error": "認証エラー: {error}",
+  "@auth_error": {
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
+  "timeline_fetch_failed": "タイムライン取得失敗: {error}",
+  "@timeline_fetch_failed": {
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
+  "feed_fetch_failed": "フィード取得失敗: {error}",
+  "@feed_fetch_failed": {
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
+  "post_content_empty": "投稿内容が空です",
+  "post_too_long": "投稿は300文字以内にしてください",
+  "post_failed": "投稿失敗: {error}",
+  "@post_failed": {
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
+  "language_not_implemented": "言語切り替えはまだ実装されていません"
+}

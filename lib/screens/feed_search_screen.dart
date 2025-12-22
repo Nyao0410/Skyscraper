@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../flutter_gen/gen_l10n/app_localizations.dart';
 import '../utils/avatar_provider.dart';
 import '../services/bluesky_service.dart';
 
@@ -37,6 +38,7 @@ class _FeedSearchScreenState extends State<FeedSearchScreen> with SingleTickerPr
   }
 
   Future<void> _loadMyLists() async {
+    final l10n = AppLocalizations.of(context);
     setState(() => _loading = true);
     try {
       final lists = await _service.getLists(_service.did!);
@@ -49,12 +51,13 @@ class _FeedSearchScreenState extends State<FeedSearchScreen> with SingleTickerPr
       if (!mounted) return;
       setState(() => _loading = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('リスト取得エラー: $e')),
+        SnackBar(content: Text(l10n.error_with_message(e.toString()))),
       );
     }
   }
 
   Future<void> _search() async {
+    final l10n = AppLocalizations.of(context);
     final query = _controller.text.trim();
     if (query.isEmpty) return;
 
@@ -70,25 +73,26 @@ class _FeedSearchScreenState extends State<FeedSearchScreen> with SingleTickerPr
       if (!mounted) return;
       setState(() => _loading = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('検索エラー: $e')),
+        SnackBar(content: Text(l10n.error_with_message(e.toString()))),
       );
     }
   }
 
   Future<void> _addItem(dynamic item, String type) async {
+    final l10n = AppLocalizations.of(context);
     try {
       final uri = item.uri.toString();
       final name = type == 'feed' ? item.displayName : item.name;
       await _service.addSavedItem(uri, type);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('$name を追加しました')),
+          SnackBar(content: Text(l10n.feed_search_added(name))),
         );
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('追加エラー: $e')),
+          SnackBar(content: Text(l10n.error_with_message(e.toString()))),
         );
       }
     }
@@ -96,14 +100,15 @@ class _FeedSearchScreenState extends State<FeedSearchScreen> with SingleTickerPr
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Scaffold(
       appBar: AppBar(
-        title: const Text('追加'),
+        title: Text(l10n.feed_search_title),
         bottom: TabBar(
           controller: _tabController,
-          tabs: const [
-            Tab(text: 'Feed検索'),
-            Tab(text: '自分のリスト'),
+          tabs: [
+            Tab(text: l10n.feed_search_tab_feeds),
+            Tab(text: l10n.feed_search_tab_lists),
           ],
         ),
       ),
@@ -118,7 +123,7 @@ class _FeedSearchScreenState extends State<FeedSearchScreen> with SingleTickerPr
                 child: TextField(
                   controller: _controller,
                   decoration: InputDecoration(
-                    hintText: 'Feedを検索...',
+                    hintText: l10n.feed_search_hint,
                     prefixIcon: const Icon(Icons.search),
                     suffixIcon: IconButton(
                       icon: const Icon(Icons.send),

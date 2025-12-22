@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../utils/avatar_provider.dart';
 import '../models/post_item.dart';
@@ -49,6 +50,7 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
   }
 
   Future<void> _performSearch() async {
+    final l10n = AppLocalizations.of(context);
     final query = _searchController.text.trim();
     if (query.isEmpty) return;
 
@@ -69,7 +71,7 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('検索エラー: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.error_with_message(e.toString()))));
       }
     } finally {
       if (mounted) setState(() => _loading = false);
@@ -96,14 +98,15 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Scaffold(
       appBar: AppBar(
         title: TextField(
           controller: _searchController,
-          decoration: const InputDecoration(
-            hintText: '検索ワード、#タグ、@ユーザー...',
+          decoration: InputDecoration(
+            hintText: l10n.search_hint,
             border: InputBorder.none,
-            hintStyle: TextStyle(color: Colors.grey),
+            hintStyle: const TextStyle(color: Colors.grey),
           ),
           onSubmitted: (_) => _performSearch(),
         ),
@@ -118,12 +121,12 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
                 });
                 if (_searchController.text.isNotEmpty) _performSearch();
               },
-              tooltip: 'フィルターをクリア',
+              tooltip: l10n.search_clear_filter,
             ),
           IconButton(
             icon: Icon(Icons.calendar_today, color: (_since != null) ? Colors.blue : Colors.grey),
             onPressed: _selectDateRange,
-            tooltip: '期間指定',
+            tooltip: l10n.search_specify_period,
           ),
           IconButton(
             icon: const Icon(Icons.search),
@@ -132,9 +135,9 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
         ],
         bottom: TabBar(
           controller: _tabController,
-          tabs: const [
-            Tab(text: '投稿'),
-            Tab(text: 'ユーザー'),
+          tabs: [
+            Tab(text: l10n.search_tab_posts),
+            Tab(text: l10n.search_tab_users),
           ],
           onTap: (_) {
             if (_searchController.text.isNotEmpty) _performSearch();
@@ -152,7 +155,10 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
                   const Icon(Icons.date_range, size: 16, color: Colors.blue),
                   const SizedBox(width: 8),
                   Text(
-                    '期間: ${_since!.year}/${_since!.month}/${_since!.day} 〜 ${_until!.year}/${_until!.month}/${_until!.day}',
+                    l10n.search_period_label(
+                      '${_since!.year}/${_since!.month}/${_since!.day}',
+                      '${_until!.year}/${_until!.month}/${_until!.day}',
+                    ),
                     style: const TextStyle(fontSize: 12, color: Colors.blue),
                   ),
                 ],
@@ -175,8 +181,9 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
   }
 
   Widget _buildPostResults() {
+    final l10n = AppLocalizations.of(context);
     if (_postResults.isEmpty) {
-      return const Center(child: Text('投稿が見つかりませんでした'));
+      return Center(child: Text(l10n.search_no_posts));
     }
     return ListView.separated(
       itemCount: _postResults.length,
@@ -189,8 +196,9 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
   }
 
   Widget _buildUserResults() {
+    final l10n = AppLocalizations.of(context);
     if (_userResults.isEmpty) {
-      return const Center(child: Text('ユーザーが見つかりませんでした'));
+      return Center(child: Text(l10n.search_no_users));
     }
     return ListView.separated(
       itemCount: _userResults.length,

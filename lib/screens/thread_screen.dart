@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../flutter_gen/gen_l10n/app_localizations.dart';
 import '../utils/avatar_provider.dart';
 // url_launcher not used in this file; remove unused import
 import '../models/post_item.dart';
@@ -28,6 +29,7 @@ class _ThreadScreenState extends State<ThreadScreen> {
   }
 
   Future<void> _fetchThread() async {
+    final l10n = AppLocalizations.of(context);
     setState(() => _loading = true);
     try {
       debugPrint('Fetching thread for: ${widget.postUri}');
@@ -44,15 +46,16 @@ class _ThreadScreenState extends State<ThreadScreen> {
       if (!mounted) return;
       setState(() => _loading = false);
       final messenger = ScaffoldMessenger.of(context);
-      messenger.showSnackBar(SnackBar(content: Text('エラー: $e')));
+      messenger.showSnackBar(SnackBar(content: Text(l10n.error_with_message(e.toString()))));
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Scaffold(
       appBar: AppBar(
-        title: const Text('スレッド', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: Text(l10n.thread_title, style: const TextStyle(fontWeight: FontWeight.bold)),
         elevation: 0,
         backgroundColor: Colors.white,
         foregroundColor: Colors.black,
@@ -61,7 +64,7 @@ class _ThreadScreenState extends State<ThreadScreen> {
         child: _loading
             ? const Center(child: CircularProgressIndicator())
             : _thread == null
-                ? const Center(child: Text('スレッドが見つかりませんでした'))
+                ? Center(child: Text(l10n.thread_not_found))
                 : RefreshIndicator(
                     onRefresh: _fetchThread,
                     child: ListView(
@@ -73,15 +76,16 @@ class _ThreadScreenState extends State<ThreadScreen> {
   }
 
   List<Widget> _buildThreadItems(dynamic thread) {
+    final l10n = AppLocalizations.of(context);
     try {
       List<Widget> items = [];
       
       // threadがUnion型の場合、中身を取り出す
       dynamic threadView = _unwrapUnion(thread);
       if (threadView == null) {
-        return [const Center(child: Padding(
-          padding: EdgeInsets.all(20.0),
-          child: Text('スレッドデータを解析できませんでした'),
+        return [Center(child: Padding(
+          padding: const EdgeInsets.all(20.0),
+          child: Text(l10n.thread_parse_error),
         ))];
       }
 
@@ -94,7 +98,7 @@ class _ThreadScreenState extends State<ThreadScreen> {
         items.add(_buildMainPost(mainPost));
         items.add(const Divider(height: 1, thickness: 1));
       } else {
-        items.add(const ListTile(title: Text('この投稿は表示できません')));
+        items.add(ListTile(title: Text(l10n.post_not_viewable)));
       }
 
       // 3. Replies
@@ -109,8 +113,10 @@ class _ThreadScreenState extends State<ThreadScreen> {
 
       return items;
     } catch (e) {
-      debugPrint('Error building thread items: $e');
-      return [Center(child: Text('表示エラーが発生しました: $e'))];
+      debugPrint('Error in _buildThreadItems: $e');
+      return [
+        Center(child: Text(l10n.error_with_message(e.toString())))
+      ];
     }
   }
 
@@ -531,6 +537,7 @@ class _ThreadScreenState extends State<ThreadScreen> {
   }
 
   void _handleLike(PostItem post) async {
+    final l10n = AppLocalizations.of(context);
     try {
       if (post.viewerLike != null) {
         await _service.delete(post.viewerLike!);
@@ -539,13 +546,17 @@ class _ThreadScreenState extends State<ThreadScreen> {
       }
       _fetchThread();
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('エラー: $e')));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(l10n.error_with_message(e.toString()))));
+      }
     }
   }
 
   void _showRepostMenu(PostItem post) {
+    final l10n = AppLocalizations.of(context);
     final isReposted = post.viewerRepost != null;
-    
+
     showModalBottomSheet(
       context: context,
       builder: (context) => SafeArea(
@@ -557,7 +568,7 @@ class _ThreadScreenState extends State<ThreadScreen> {
                 isReposted ? Icons.repeat_on : Icons.repeat,
                 color: isReposted ? Colors.green : null,
               ),
-              title: Text(isReposted ? 'リポストを取り消す' : 'リポスト'),
+              title: Text(isReposted ? l10n.repost_undo : l10n.repost),
               onTap: () async {
                 final messenger = ScaffoldMessenger.of(context);
                 Navigator.pop(context);
@@ -570,14 +581,15 @@ class _ThreadScreenState extends State<ThreadScreen> {
                   _fetchThread();
                 } catch (e) {
                   if (mounted) {
-                    messenger.showSnackBar(SnackBar(content: Text('エラー: $e')));
+                    messenger.showSnackBar(
+                        SnackBar(content: Text(l10n.error_with_message(e.toString()))));
                   }
                 }
               },
             ),
             ListTile(
               leading: const Icon(Icons.format_quote),
-              title: const Text('引用して投稿'),
+              title: Text(l10n.timeline_quote_post),
               onTap: () {
                 Navigator.pop(context);
                 _showQuoteDialog(post);

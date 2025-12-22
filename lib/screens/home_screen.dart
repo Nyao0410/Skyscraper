@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../flutter_gen/gen_l10n/app_localizations.dart';
 import '../utils/avatar_provider.dart';
 import '../services/bluesky_service.dart';
 import 'timeline_screen.dart';
@@ -89,9 +90,10 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildSliverAppBar(BuildContext context, bool isDark, Color lineGreen) {
+    final l10n = AppLocalizations.of(context);
     final avatarUrl = _profile?.avatar;
-    final displayName = _profile?.displayName ?? _service.handle ?? 'ユーザー';
-    final description = _profile?.description ?? 'Blueskyへようこそ';
+    final displayName = _profile?.displayName ?? _service.handle ?? l10n.user;
+    final description = _profile?.description ?? l10n.home_welcome;
 
     return SliverAppBar(
       expandedHeight: 280,
@@ -157,6 +159,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildProfileInfo(BuildContext context, bool isDark) {
+    final l10n = AppLocalizations.of(context);
     return Container(
       margin: const EdgeInsets.all(16),
       padding: const EdgeInsets.all(16),
@@ -166,9 +169,9 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
       child: Column(
         children: [
-          _buildInfoRow('Handle', '@${_service.handle}', isDark),
+          _buildInfoRow(l10n.profile_handle, '@${_service.handle}', isDark),
           const Divider(height: 16),
-          _buildInfoRow('DID', _service.did ?? '', isDark),
+          _buildInfoRow(l10n.profile_did, _service.did ?? '', isDark),
         ],
       ),
     );
@@ -200,6 +203,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildActionButtons(BuildContext context, Color lineGreen) {
+    final l10n = AppLocalizations.of(context);
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
       child: Row(
@@ -220,7 +224,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
               ),
               icon: const Icon(Icons.edit_note),
-              label: const Text('投稿する', style: TextStyle(fontWeight: FontWeight.bold)),
+              label: Text(l10n.home_post_button, style: const TextStyle(fontWeight: FontWeight.bold)),
             ),
           ),
           const SizedBox(width: 12),
@@ -259,19 +263,20 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildMenuItems(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Padding(
-          padding: EdgeInsets.only(left: 16, top: 16, bottom: 8),
+        Padding(
+          padding: const EdgeInsets.only(left: 16, top: 16, bottom: 8),
           child: Text(
-            'メニュー',
-            style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey),
+            l10n.home_menu_title,
+            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey),
           ),
         ),
         _buildMenuItem(
           icon: Icons.timeline,
-          title: 'タイムライン',
+          title: l10n.home_timeline,
           onTap: () {
             Navigator.push(
               context,
@@ -281,7 +286,7 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
         _buildMenuItem(
           icon: Icons.person_outline,
-          title: '自分のプロフィール',
+          title: l10n.home_my_profile,
           onTap: () {
             Navigator.push(
               context,
@@ -290,23 +295,23 @@ class _HomeScreenState extends State<HomeScreen> {
           },
         ),
         if (_customFeeds.isNotEmpty) ...[
-          const Padding(
-            padding: EdgeInsets.only(left: 16, top: 16, bottom: 8),
+          Padding(
+            padding: const EdgeInsets.only(left: 16, top: 16, bottom: 8),
             child: Text(
-              '保存済みフィード',
-              style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey),
+              l10n.home_saved_feeds,
+              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey),
             ),
           ),
           ..._customFeeds.where((f) => f['uri'] != 'following').map((feed) => _buildMenuItem(
             icon: Icons.rss_feed,
-            title: feed['name'] ?? '不明なフィード',
+            title: feed['name'] ?? l10n.home_unknown_feed,
             badge: feed['unreadCount'],
             onTap: () async {
               // Navigate directly to the talk room for this feed
               await Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => ChatDetailWrapper(feedName: feed['name'] ?? 'トーク', feedUri: feed['uri']!),
+                  builder: (context) => ChatDetailWrapper(feedName: feed['name'] ?? l10n.home_talk, feedUri: feed['uri']!),
                 ),
               );
               _fetchData(); // Refresh unread counts when returning

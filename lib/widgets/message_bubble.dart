@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import '../flutter_gen/gen_l10n/app_localizations.dart';
 import '../utils/avatar_provider.dart';
 // url_launcher not used here; remove unused import
 
@@ -71,14 +72,14 @@ class MessageBubble extends StatelessWidget {
                     const SizedBox(height: 4),
                   ],
                   if (message.repostedBy != null) ...[
-                    _buildRepostIndicator(),
+                    _buildRepostIndicator(context),
                     const SizedBox(height: 4),
                   ],
                   if (message.replyParentPost != null) ...[
                     _buildReplyPost(maxBubbleWidth, context),
                     const SizedBox(height: 1),
                   ] else if (message.replyParentHandle != null) ...[
-                    _buildReplyIndicator(),
+                    _buildReplyIndicator(context),
                     const SizedBox(height: 2),
                   ],
                   if (message.text.isNotEmpty || message.quotedPost != null)
@@ -124,7 +125,8 @@ class MessageBubble extends StatelessWidget {
     );
   }
 
-  Widget _buildReplyIndicator() {
+  Widget _buildReplyIndicator(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final handle = message.replyParentHandle;
     final displayHandle = (handle != null && !handle.startsWith('@')) ? '@$handle' : handle;
     
@@ -136,7 +138,7 @@ class MessageBubble extends StatelessWidget {
           const Icon(Icons.reply, size: 12, color: Colors.white70),
           const SizedBox(width: 2),
           Text(
-            '$displayHandle に返信',
+            l10n.reply_to(displayHandle ?? ''),
             style: const TextStyle(fontSize: 10, color: Colors.white70),
           ),
         ],
@@ -144,7 +146,8 @@ class MessageBubble extends StatelessWidget {
     );
   }
 
-  Widget _buildRepostIndicator() {
+  Widget _buildRepostIndicator(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final rep = message.repostedBy ?? '';
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
@@ -159,7 +162,7 @@ class MessageBubble extends StatelessWidget {
           const SizedBox(width: 6),
           Flexible(
             child: Text(
-              rep.isNotEmpty ? '$rep がリポストしました' : 'リポスト',
+              rep.isNotEmpty ? l10n.reposted_by(rep) : l10n.repost,
               style: const TextStyle(fontSize: 12, color: Colors.white70),
               overflow: TextOverflow.ellipsis,
             ),
@@ -266,6 +269,7 @@ class MessageBubble extends StatelessWidget {
   }
 
   Widget _buildQuotedPostInside(double maxWidth, BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final quoted = message.quotedPost!;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     
@@ -297,7 +301,7 @@ class MessageBubble extends StatelessWidget {
               const SizedBox(width: 4),
               Expanded(
                 child: Text(
-                  quoted.isMe ? '自分' : quoted.author,
+                  quoted.isMe ? l10n.me : quoted.author,
                   style: TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.bold,
@@ -379,7 +383,7 @@ class MessageBubble extends StatelessWidget {
             ? Transform.scale(
                 scale: 1.2, // 内部の画像を20%拡大
                 child: Image(
-                  image: provider!,
+                  image: provider,
                   fit: BoxFit.cover,
                 ),
               )
@@ -400,6 +404,7 @@ class MessageBubble extends StatelessWidget {
   }
 
   void _showMenu(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final isLiked = message.viewerLike != null;
     final isReposted = message.viewerRepost != null;
 
@@ -419,7 +424,7 @@ class MessageBubble extends StatelessWidget {
                   isLiked ? Icons.favorite : Icons.favorite_border,
                   color: Colors.pink,
                 ),
-                title: Text(isLiked ? 'いいねを取り消す' : 'いいね'),
+                title: Text(isLiked ? l10n.unlike : l10n.like),
                 onTap: () {
                   Navigator.pop(context);
                   if (isLiked) {
@@ -434,7 +439,7 @@ class MessageBubble extends StatelessWidget {
                   isReposted ? Icons.repeat_on : Icons.repeat,
                   color: Colors.green,
                 ),
-                title: Text(isReposted ? 'リポストを取り消す' : 'リポスト'),
+                title: Text(isReposted ? l10n.unrepost : l10n.repost),
                 onTap: () {
                   Navigator.pop(context);
                   if (isReposted) {
@@ -446,7 +451,7 @@ class MessageBubble extends StatelessWidget {
               ),
               ListTile(
                 leading: const Icon(Icons.format_quote, color: Colors.blue),
-                title: const Text('引用'),
+                title: Text(l10n.quote),
                 onTap: () {
                   Navigator.pop(context);
                   onQuote?.call(message);
@@ -454,7 +459,7 @@ class MessageBubble extends StatelessWidget {
               ),
               ListTile(
                 leading: const Icon(Icons.reply, color: Colors.grey),
-                title: const Text('返信'),
+                title: Text(l10n.reply),
                 onTap: () {
                   Navigator.pop(context);
                   onReply?.call(message);
@@ -463,7 +468,7 @@ class MessageBubble extends StatelessWidget {
               if (isMe)
                 ListTile(
                   leading: const Icon(Icons.delete_outline, color: Colors.red),
-                  title: const Text('削除(自分のみ)', style: TextStyle(color: Colors.red)),
+                  title: Text(l10n.delete_local, style: const TextStyle(color: Colors.red)),
                   onTap: () {
                     Navigator.pop(context);
                     onDelete?.call(message);

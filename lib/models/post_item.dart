@@ -173,7 +173,7 @@ class PostItem {
             uri: '',
             author: 'Unknown',
             handle: 'unknown',
-            text: '解析エラー',
+            text: 'Parse Error',
             createdAt: DateTime.now(),
             isMe: false,
           );

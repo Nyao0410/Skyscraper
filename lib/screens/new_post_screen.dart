@@ -1,5 +1,6 @@
-// ignore_for_file: use_build_context_synchronously
+// ignore_for_file: use_build_context_synchronously, deprecated_member_use
 import 'package:flutter/material.dart';
+import '../flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:intl/intl.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
@@ -52,9 +53,10 @@ class _NewPostScreenState extends State<NewPostScreen> {
   }
 
   Future<void> _pickImages() async {
+    final l10n = AppLocalizations.of(context);
     if (_selectedImages.length >= 4) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('画像は最大4枚までです'))
+        SnackBar(content: Text(l10n.post_image_limit))
       );
       return;
     }
@@ -70,11 +72,12 @@ class _NewPostScreenState extends State<NewPostScreen> {
   }
 
   Future<void> _selectSchedule() async {
+    final l10n = AppLocalizations.of(context);
     if (widget.replyTo != null) {
       // Capture messenger synchronously to avoid using BuildContext across async gaps
       final messenger = ScaffoldMessenger.of(context);
       messenger.showSnackBar(
-        const SnackBar(content: Text('返信の予約投稿は現在サポートされていません'))
+        SnackBar(content: Text(l10n.post_reply_schedule_not_supported))
       );
       return;
     }
@@ -101,6 +104,7 @@ class _NewPostScreenState extends State<NewPostScreen> {
   }
 
   Future<void> _saveDraft() async {
+    final l10n = AppLocalizations.of(context);
     final text = _controller.text.trim();
     if (text.isEmpty) return;
 
@@ -111,12 +115,13 @@ class _NewPostScreenState extends State<NewPostScreen> {
       await _db.saveDraft(_service.did!, text, scheduledAt: _scheduledDate);
     }
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('下書きを保存しました')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.post_draft_saved)));
       Navigator.pop(context, true);
     }
   }
 
   Future<void> _post() async {
+    final l10n = AppLocalizations.of(context);
     final text = _controller.text.trim();
     if (text.isEmpty && _selectedImages.isEmpty) return;
 
@@ -139,19 +144,19 @@ class _NewPostScreenState extends State<NewPostScreen> {
           await _db.saveDraft(_service.did!, text, scheduledAt: _scheduledDate);
         }
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('投稿を予約しました（画像は現在サポートされていません）')));
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.post_scheduled_success)));
           Navigator.pop(context, true);
         }
       } else if (widget.replyTo != null) {
         await _service.reply(widget.replyTo!, text, images: uploadedImages);
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('返信しました')));
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.post_reply_success)));
           Navigator.pop(context, true);
         }
       } else if (widget.quoteOf != null) {
         await _service.quote(widget.quoteOf!, text, images: uploadedImages);
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('引用投稿しました')));
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.post_quote_success)));
           Navigator.pop(context, true);
         }
       } else {
@@ -161,13 +166,13 @@ class _NewPostScreenState extends State<NewPostScreen> {
           await _db.markAsSent(widget.draftId!);
         }
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('投稿しました')));
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.post_success)));
           Navigator.pop(context, true);
         }
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('エラー: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.error_with_message(e.toString()))));
       }
     } finally {
       if (mounted) setState(() => _isPosting = false);
@@ -176,11 +181,12 @@ class _NewPostScreenState extends State<NewPostScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final bool isDraftMode = widget.preferDraft || widget.draftId != null;
-    String title = '新規投稿';
-    if (widget.draftId != null) title = '下書き編集';
-    if (widget.replyTo != null) title = '返信';
-    if (widget.quoteOf != null) title = '引用';
+    String title = l10n.post_new_title;
+    if (widget.draftId != null) title = l10n.post_edit_draft_title;
+    if (widget.replyTo != null) title = l10n.post_reply_title;
+    if (widget.quoteOf != null) title = l10n.post_quote_title;
 
     return WillPopScope(
       onWillPop: () async {
@@ -199,7 +205,7 @@ class _NewPostScreenState extends State<NewPostScreen> {
           if (!isDraftMode && widget.replyTo == null && widget.quoteOf == null)
             TextButton(
               onPressed: _isPosting ? null : _saveDraft,
-              child: const Text('下書き'),
+              child: Text(l10n.post_draft_button),
             ),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 8.0),
@@ -217,8 +223,8 @@ class _NewPostScreenState extends State<NewPostScreen> {
                 : Text(
                     // If in draft mode, primary action is to save draft
                     isDraftMode
-                        ? '下書き保存'
-                        : (_scheduledDate != null ? '予約' : '投稿'),
+                        ? l10n.post_save_draft_button
+                        : (_scheduledDate != null ? l10n.post_schedule_button : l10n.post_button),
                   ),
             ),
           ),
@@ -239,7 +245,7 @@ class _NewPostScreenState extends State<NewPostScreen> {
                       maxLines: null,
                       autofocus: true,
                       decoration: InputDecoration(
-                        hintText: widget.replyTo != null ? '返信を入力...' : 'いまどうしてる？',
+                        hintText: widget.replyTo != null ? l10n.post_hint_reply : l10n.post_hint_default,
                         border: InputBorder.none,
                       ),
                       style: const TextStyle(fontSize: 18),

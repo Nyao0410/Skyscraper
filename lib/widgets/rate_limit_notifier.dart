@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/bluesky_service.dart';
+import '../flutter_gen/gen_l10n/app_localizations.dart';
 
 /// Listens to `BlueskyService.rateLimitNotifier` and shows a MaterialBanner
 /// at the top when remaining requests are below the configured threshold.
@@ -59,11 +60,14 @@ class _RateLimitNotifierState extends State<RateLimitNotifier> {
     if (!mounted) return;
     if (_bannerVisible) return; // already visible
 
+    final l10n = AppLocalizations.of(context);
     final messenger = ScaffoldMessenger.maybeOf(context);
     if (messenger == null) return;
 
+    final resetStr = reset?.toString() ?? l10n.unknown;
+
     final banner = MaterialBanner(
-      content: Text('API残り: $remaining / $limit（リセット: ${reset ?? "不明"}）'),
+      content: Text(l10n.rate_limit_banner(remaining, limit, resetStr)),
       leading: const Icon(Icons.warning, color: Colors.orange),
       backgroundColor: Colors.yellow[100],
       actions: [
@@ -72,7 +76,7 @@ class _RateLimitNotifierState extends State<RateLimitNotifier> {
             messenger.clearMaterialBanners();
             setState(() => _bannerVisible = false);
           },
-          child: const Text('閉じる'),
+          child: Text(l10n.close),
         ),
       ],
     );

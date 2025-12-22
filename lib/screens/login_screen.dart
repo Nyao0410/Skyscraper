@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../flutter_gen/gen_l10n/app_localizations.dart';
 
 class LoginScreen extends StatefulWidget {
   final Function(String handle, String password) onLogin;
@@ -63,6 +64,7 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Widget _buildHeader() {
+    final l10n = AppLocalizations.of(context);
     return Column(
       children: [
         Container(
@@ -91,20 +93,21 @@ class _LoginScreenState extends State<LoginScreen> {
           ),
         ),
         const SizedBox(height: 12),
-        const Text(
-          'Bluesky LINE Client',
-          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+        Text(
+          l10n.login_title,
+          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 6),
-        const Text(
-          'トーク形式で楽しむBluesky',
-          style: TextStyle(fontSize: 12, color: Colors.grey),
+        Text(
+          l10n.login_subtitle,
+          style: const TextStyle(fontSize: 12, color: Colors.grey),
         ),
       ],
     );
   }
 
   Widget _buildInfoCard() {
+    final l10n = AppLocalizations.of(context);
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -118,8 +121,7 @@ class _LoginScreenState extends State<LoginScreen> {
           const SizedBox(width: 8),
           Expanded(
             child: Text(
-              'ログイン方法: Blueskyでアプリパスワードを作成し、'
-              'ハンドル名（example.bsky.social）と入力してください。',
+              l10n.login_info,
               style: const TextStyle(fontSize: 12, color: Colors.blueAccent),
             ),
           ),
@@ -129,10 +131,11 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Widget _buildHandleField() {
+    final l10n = AppLocalizations.of(context);
     return TextField(
-      decoration: const InputDecoration(
-        labelText: 'HANDLE',
-        hintText: 'example.bsky.social',
+      decoration: InputDecoration(
+        labelText: l10n.login_handle_label,
+        hintText: l10n.login_handle_hint,
       ),
       onChanged: (v) => setState(() => _handle = v),
       onSubmitted: (_) => _handleLogin(),
@@ -140,11 +143,12 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Widget _buildPasswordField() {
+    final l10n = AppLocalizations.of(context);
     return TextField(
       obscureText: true,
-      decoration: const InputDecoration(
-        labelText: 'APP PASSWORD',
-        hintText: 'abcd-1234-efgh-5678',
+      decoration: InputDecoration(
+        labelText: l10n.login_password_label,
+        hintText: l10n.login_password_hint,
       ),
       onChanged: (v) => setState(() => _password = v),
       onSubmitted: (_) => _handleLogin(),
@@ -169,6 +173,7 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Widget _buildLoginButton() {
+    final l10n = AppLocalizations.of(context);
     return SizedBox(
       width: double.infinity,
       child: ElevatedButton(
@@ -181,22 +186,23 @@ class _LoginScreenState extends State<LoginScreen> {
           ),
         ),
         child: widget.isLoading
-            ? const Row(
+            ? Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  CircularProgressIndicator(color: Colors.white),
-                  SizedBox(width: 8),
-                  Text('ログイン中...'),
+                  const CircularProgressIndicator(color: Colors.white),
+                  const SizedBox(width: 8),
+                  Text(l10n.login_loading),
                 ],
               )
-            : const Text('ログイン', style: TextStyle(fontWeight: FontWeight.bold)),
+            : Text(l10n.login_button, style: const TextStyle(fontWeight: FontWeight.bold)),
       ),
     );
   }
 
   Widget _buildStatusText() {
+    final l10n = AppLocalizations.of(context);
     return Text(
-      widget.isLoading ? 'SDK動作確認中...' : 'Bluesky SDK準備完了',
+      widget.isLoading ? l10n.login_status_checking : l10n.login_status_ready,
       style: const TextStyle(fontSize: 12, color: Colors.grey),
     );
   }

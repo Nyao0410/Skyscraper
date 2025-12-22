@@ -96,7 +96,6 @@ class BackgroundService {
   Future<void> init() async {
     await Workmanager().initialize(
       callbackDispatcher,
-      isInDebugMode: kDebugMode,
     );
     
     // Register periodic task

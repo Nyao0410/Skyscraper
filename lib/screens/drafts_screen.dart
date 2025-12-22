@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import '../flutter_gen/gen_l10n/app_localizations.dart';
 import '../services/database_service.dart';
 import '../services/bluesky_service.dart';
 import 'new_post_screen.dart';
@@ -35,25 +36,27 @@ class _DraftsScreenState extends State<DraftsScreen> {
   }
 
   Future<void> _sendDraft(Map<String, dynamic> draft) async {
+    final l10n = AppLocalizations.of(context);
     try {
       await _service.post(draft['text']);
       await _db.markAsSent(draft['id']);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('投稿しました')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.post_success)));
         _loadDrafts();
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('エラー: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.error_with_message(e.toString()))));
       }
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Scaffold(
       appBar: AppBar(
-        title: const Text('下書き・予約投稿'),
+        title: Text(l10n.others_drafts),
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () async {
@@ -72,7 +75,7 @@ class _DraftsScreenState extends State<DraftsScreen> {
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : _drafts.isEmpty
-              ? const Center(child: Text('下書きはありません'))
+              ? Center(child: Text(l10n.drafts_no_drafts))
               : ListView.separated(
                   itemCount: _drafts.length,
                   separatorBuilder: (context, index) => const Divider(),
@@ -87,10 +90,10 @@ class _DraftsScreenState extends State<DraftsScreen> {
                       subtitle: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text('作成: ${DateFormat('MM/dd HH:mm').format(DateTime.parse(draft['created_at']))}'),
+                          Text(l10n.drafts_created_at(DateFormat('MM/dd HH:mm').format(DateTime.parse(draft['created_at'])))),
                           if (scheduledAt != null)
                             Text(
-                              '予約: ${DateFormat('MM/dd HH:mm').format(scheduledAt)}',
+                              l10n.drafts_scheduled_at(DateFormat('MM/dd HH:mm').format(scheduledAt)),
                               style: const TextStyle(color: Colors.blue, fontWeight: FontWeight.bold),
                             ),
                         ],

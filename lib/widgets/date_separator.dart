@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import '../flutter_gen/gen_l10n/app_localizations.dart';
 
 class DateSeparator extends StatelessWidget {
   final DateTime date;
@@ -8,6 +9,7 @@ class DateSeparator extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final now = DateTime.now();
     final isToday = date.year == now.year && date.month == now.month && date.day == now.day;
     
@@ -16,11 +18,11 @@ class DateSeparator extends StatelessWidget {
 
     String dateText;
     if (isToday) {
-      dateText = '今日';
+      dateText = l10n.today;
     } else if (isYesterday) {
-      dateText = '昨日';
+      dateText = l10n.yesterday;
     } else {
-      dateText = DateFormat('MM/dd (E)', 'ja_JP').format(date);
+      dateText = DateFormat('MM/dd (E)', Localizations.localeOf(context).toString()).format(date);
     }
 
     return Center(

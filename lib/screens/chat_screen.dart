@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
+import '../flutter_gen/gen_l10n/app_localizations.dart';
 
 import '../models/post_item.dart';
 import '../widgets/message_bubble.dart';
@@ -76,9 +77,10 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   Future<void> _pickImages() async {
+    final l10n = AppLocalizations.of(context);
     if (_selectedImages.length >= 4) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('画像は最大4枚までです'))
+        SnackBar(content: Text(l10n.new_post_max_images))
       );
       return;
     }
@@ -223,6 +225,7 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   Widget _buildEmptyState() {
+    final l10n = AppLocalizations.of(context);
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -234,7 +237,7 @@ class _ChatScreenState extends State<ChatScreen> {
           ),
           const SizedBox(height: 16),
           Text(
-            widget.isRefreshing ? '読み込み中...' : '投稿がありません',
+            widget.isRefreshing ? l10n.loading : l10n.timeline_no_posts,
             style: const TextStyle(color: Colors.white, fontSize: 16),
           ),
         ],
@@ -308,6 +311,7 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   Widget _buildInputArea() {
+    final l10n = AppLocalizations.of(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final bgColor = isDark ? const Color(0xFF1A1A1A) : Colors.white;
     final inputBgColor = isDark ? const Color(0xFF2C2C2E) : const Color(0xFFF5F5F5);
@@ -393,7 +397,7 @@ class _ChatScreenState extends State<ChatScreen> {
                       maxLengthEnforcement: MaxLengthEnforcement.enforced,
                       decoration: InputDecoration(
                         border: InputBorder.none,
-                        hintText: 'メッセージを入力',
+                        hintText: l10n.chat_hint,
                         hintStyle: TextStyle(color: textColor.withValues(alpha: 0.5)),
                         counterText: '', // hide default counter to keep UI compact
                       ),
