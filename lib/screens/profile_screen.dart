@@ -5,9 +5,8 @@ import '../utils/avatar_provider.dart';
 import '../models/post_item.dart';
 import '../services/bluesky_service.dart';
 import '../widgets/linkified_text.dart';
-import '../widgets/media_grid.dart';
+import '../widgets/post_widget.dart';
 import '../utils/feed_utils.dart';
-import 'thread_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   final String actor; // handle or DID
@@ -23,13 +22,25 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
   List<dynamic> _currentData = [];
   bool _loading = true;
   late TabController _tabController;
+  bool _didInit = false;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 5, vsync: this);
     _tabController.addListener(_handleTabChange);
-    _fetchData();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_didInit) {
+      _didInit = true;
+      // Defer fetching data until after the first dependency resolution so
+      // that `AppLocalizations.of(context)` and other inherited widgets
+      // are available.
+      _fetchData();
+    }
   }
 
   @override
@@ -154,6 +165,10 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                           TabBar(
                             controller: _tabController,
                             isScrollable: true,
+                            indicatorColor: const Color(0xFF00C300),
+                            labelColor: const Color(0xFF00C300),
+                            unselectedLabelColor: Colors.grey,
+                            labelStyle: const TextStyle(fontWeight: FontWeight.bold),
                             tabs: [
                               Tab(text: l10n.profile_tab_posts),
                               Tab(text: l10n.profile_tab_replies),
@@ -178,7 +193,10 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                             (context, index) {
                               final item = _currentData[index];
                               if (item is PostItem) {
-                                return _buildPostItem(item);
+                                return PostWidget(
+                                  post: item,
+                                  onPostUpdated: _fetchData,
+                                );
                               } else {
                                 // FeedGeneratorView or ListView
                                 return _buildGenericItem(item);
@@ -230,13 +248,69 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
 
   Widget _buildAppBar() {
     final l10n = AppLocalizations.of(context);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final lineGreen = const Color(0xFF00C300);
+
     return SliverAppBar(
-      expandedHeight: 150,
+      expandedHeight: 220,
       pinned: true,
+      stretch: true,
+      backgroundColor: isDark ? const Color(0xFF1A1A1A) : Colors.white,
+      elevation: 0,
       flexibleSpace: FlexibleSpaceBar(
-        background: _profile.banner != null
-            ? CachedNetworkImage(imageUrl: _profile.banner!, fit: BoxFit.cover)
-            : Container(color: Colors.blue.shade200),
+        background: Stack(
+          fit: StackFit.expand,
+          children: [
+            if (_profile.banner != null)
+              CachedNetworkImage(imageUrl: _profile.banner!, fit: BoxFit.cover)
+            else
+              Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      lineGreen.withValues(alpha: 0.2),
+                      isDark ? const Color(0xFF121212) : Colors.white,
+                    ],
+                  ),
+                ),
+              ),
+            // Gradient overlay for readability
+            Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Colors.transparent,
+                    (isDark ? const Color(0xFF121212) : Colors.white).withValues(alpha: 0.8),
+                  ],
+                ),
+              ),
+            ),
+            Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const SizedBox(height: 40),
+                  Container(
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(color: lineGreen, width: 3),
+                    ),
+                    child: CircleAvatar(
+                      radius: 50,
+                      backgroundColor: isDark ? Colors.grey[900] : Colors.grey[200],
+                      backgroundImage: avatarImageProvider(_profile.avatar),
+                      child: _profile.avatar == null ? const Icon(Icons.person, size: 50, color: Colors.white) : null,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
       actions: [
         IconButton(
@@ -346,114 +420,137 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
   Widget _buildProfileHeader() {
     final l10n = AppLocalizations.of(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    return Padding(
-      padding: const EdgeInsets.all(16.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              CircleAvatar(
-                radius: 40,
-                backgroundColor: isDark ? Colors.black : Colors.white,
-                child: CircleAvatar(
-                  radius: 38,
-                  backgroundImage: avatarImageProvider(_profile.avatar),
-                  child: _profile.avatar == null ? const Icon(Icons.person, size: 40) : null,
-                ),
-              ),
-              _buildFollowButton(),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Text(
-            _profile.displayName ?? _profile.handle,
-            style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-          ),
-          Text(
-            '@${_profile.handle}',
-            style: const TextStyle(color: Colors.grey, fontSize: 16),
-          ),
-          if (_profile.description != null && _profile.description!.isNotEmpty) ...[
-            const SizedBox(height: 12),
-            LinkifiedText(
-              text: _profile.description!,
-              style: const TextStyle(fontSize: 15),
-            ),
-          ],
+    
+    return Column(
+      children: [
+        const SizedBox(height: 8),
+        Text(
+          _profile.displayName ?? _profile.handle,
+          style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: 4),
+        Text(
+          '@${_profile.handle}',
+          style: const TextStyle(color: Colors.grey, fontSize: 16),
+          textAlign: TextAlign.center,
+        ),
+        if (_profile.description != null && _profile.description!.isNotEmpty) ...[
           const SizedBox(height: 16),
-          Row(
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 32),
+            child: LinkifiedText(
+              text: _profile.description!,
+              style: TextStyle(
+                fontSize: 15,
+                color: isDark ? Colors.grey[300] : Colors.grey[700],
+                height: 1.4,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ),
+        ],
+        const SizedBox(height: 20),
+        _buildFollowButton(),
+        const SizedBox(height: 24),
+        Container(
+          margin: const EdgeInsets.symmetric(horizontal: 16),
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          decoration: BoxDecoration(
+            color: isDark ? Colors.grey[900] : Colors.grey[100],
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
               _buildStat('${_profile.followsCount}', l10n.profile_follows, () {
                 _showUserList(l10n.profile_follows, () => _service.getFollows(widget.actor));
               }),
-              const SizedBox(width: 20),
               _buildStat('${_profile.followersCount}', l10n.profile_followers, () {
                 _showUserList(l10n.profile_followers, () => _service.getFollowers(widget.actor));
               }),
-              const SizedBox(width: 20),
               _buildStat('${_profile.postsCount}', l10n.profile_tab_posts, null),
             ],
           ),
-        ],
-      ),
+        ),
+        const SizedBox(height: 16),
+      ],
     );
   }
 
   Widget _buildFollowButton() {
     final l10n = AppLocalizations.of(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final lineGreen = const Color(0xFF00C300);
     final isMe = _profile.did == _service.did;
+    
     if (isMe) {
-      return OutlinedButton(
-        onPressed: () {},
-        style: OutlinedButton.styleFrom(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 32),
+        child: SizedBox(
+          width: double.infinity,
+          child: OutlinedButton.icon(
+            onPressed: () {},
+            style: OutlinedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+            icon: const Icon(Icons.edit),
+            label: Text(l10n.profile_edit, style: const TextStyle(fontWeight: FontWeight.bold)),
+          ),
         ),
-        child: Text(l10n.profile_edit),
       );
     }
 
     final isFollowing = _profile.viewer?.following != null;
 
-    return ElevatedButton(
-      onPressed: () async {
-        try {
-          if (isFollowing) {
-            await _service.unfollow(_profile.viewer!.following!.toString());
-          } else {
-            await _service.follow(_profile.did);
-          }
-          _fetchData(); // Refresh profile
-        } catch (e) {
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.error_with_message(e.toString()))));
-          }
-        }
-      },
-      style: ElevatedButton.styleFrom(
-        backgroundColor: isFollowing 
-            ? (isDark ? Colors.grey.shade800 : Colors.grey.shade200)
-            : (isDark ? Colors.white : Colors.black),
-        foregroundColor: isFollowing
-            ? (isDark ? Colors.white : Colors.black)
-            : (isDark ? Colors.black : Colors.white),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 32),
+      child: SizedBox(
+        width: double.infinity,
+        child: ElevatedButton(
+          onPressed: () async {
+            try {
+              if (isFollowing) {
+                await _service.unfollow(_profile.viewer!.following!.toString());
+              } else {
+                await _service.follow(_profile.did);
+              }
+              _fetchData(); // Refresh profile
+            } catch (e) {
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.error_with_message(e.toString()))));
+              }
+            }
+          },
+          style: ElevatedButton.styleFrom(
+            backgroundColor: isFollowing 
+                ? (isDark ? Colors.grey[800] : Colors.grey[200])
+                : lineGreen,
+            foregroundColor: isFollowing
+                ? (isDark ? Colors.white : Colors.black)
+                : Colors.white,
+            padding: const EdgeInsets.symmetric(vertical: 12),
+            elevation: 0,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          ),
+          child: Text(
+            isFollowing ? l10n.profile_unfollow : l10n.profile_follow,
+            style: const TextStyle(fontWeight: FontWeight.bold),
+          ),
+        ),
       ),
-      child: Text(isFollowing ? l10n.profile_unfollow : l10n.profile_follow),
     );
   }
 
   Widget _buildStat(String count, String label, VoidCallback? onTap) {
     return InkWell(
       onTap: onTap,
-      child: Row(
+      child: Column(
         children: [
-          Text(count, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-          const SizedBox(width: 4),
-          Text(label, style: const TextStyle(color: Colors.grey, fontSize: 14)),
+          Text(count, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+          const SizedBox(height: 4),
+          Text(label, style: const TextStyle(color: Colors.grey, fontSize: 12)),
         ],
       ),
     );
@@ -521,110 +618,6 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
       ),
     );
   }
-
-  // TimelineScreenからコピー（共通化が望ましい）
-  Widget _buildPostItem(PostItem post) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    return InkWell(
-      onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => ThreadScreen(postUri: post.uri)),
-        );
-      },
-      child: Padding(
-        padding: const EdgeInsets.all(12.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (post.repostedBy != null)
-              Padding(
-                padding: const EdgeInsets.only(left: 36, bottom: 4),
-                child: Row(
-                  children: [
-                    const Icon(Icons.repeat, size: 14, color: Colors.grey),
-                    const SizedBox(width: 4),
-                    Text(
-                      '${post.repostedBy} さんがリポスト',
-                      style: const TextStyle(color: Colors.grey, fontSize: 12, fontWeight: FontWeight.bold),
-                    ),
-                  ],
-                ),
-              ),
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                CircleAvatar(
-                  radius: 24,
-                  backgroundImage: avatarImageProvider(post.avatar),
-                  child: post.avatar == null ? const Icon(Icons.person) : null,
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              post.author,
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 15,
-                                color: isDark ? Colors.white : Colors.black,
-                              ),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                          Text(
-                            _formatTime(post.createdAt),
-                            style: const TextStyle(color: Colors.grey, fontSize: 12),
-                          ),
-                        ],
-                      ),
-                      Text(
-                        '@${post.handle}',
-                        style: const TextStyle(color: Colors.grey, fontSize: 13),
-                      ),
-                      const SizedBox(height: 4),
-                      LinkifiedText(
-                        text: post.text,
-                        style: TextStyle(
-                          fontSize: 15,
-                          color: isDark ? Colors.white.withValues(alpha: 0.9) : Colors.black87,
-                        ),
-                      ),
-                      if (post.media.isNotEmpty) MediaGrid(media: post.media),
-                      const SizedBox(height: 12),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Icon(Icons.chat_bubble_outline, size: 18, color: Colors.grey.shade600),
-                          Icon(Icons.repeat, size: 18, color: Colors.grey.shade600),
-                          Icon(Icons.favorite_border, size: 18, color: Colors.grey.shade600),
-                          Icon(Icons.more_horiz, size: 18, color: Colors.grey.shade600),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  String _formatTime(DateTime time) {
-    final now = DateTime.now();
-    final diff = now.difference(time.toLocal());
-    if (diff.inMinutes < 1) return '今';
-    if (diff.inHours < 1) return '${diff.inMinutes}分';
-    if (diff.inDays < 1) return '${diff.inHours}時間';
-    return '${time.month}/${time.day}';
-  }
 }
 
 class _SliverAppBarDelegate extends SliverPersistentHeaderDelegate {
@@ -639,9 +632,15 @@ class _SliverAppBarDelegate extends SliverPersistentHeaderDelegate {
 
   @override
   Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
-      color: Theme.of(context).scaffoldBackgroundColor,
-      child: _tabBar,
+      color: isDark ? const Color(0xFF121212) : Colors.white,
+      child: Column(
+        children: [
+          _tabBar,
+          Divider(height: 1, color: isDark ? Colors.grey[800] : Colors.grey[200]),
+        ],
+      ),
     );
   }
 

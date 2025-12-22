@@ -45,6 +45,7 @@ class LinkifiedText extends StatefulWidget {
   final void Function(String tag)? onHashtagLongPress;
   final int? maxLines;
   final TextOverflow overflow;
+  final TextAlign textAlign;
 
   const LinkifiedText({
     super.key,
@@ -54,6 +55,7 @@ class LinkifiedText extends StatefulWidget {
     this.onHashtagLongPress,
     this.maxLines,
     this.overflow = TextOverflow.clip,
+    this.textAlign = TextAlign.start,
   });
 
   @override
@@ -94,7 +96,10 @@ class _LinkifiedTextState extends State<LinkifiedText> {
     final spans = _buildTextSpans(context, defaultStyle, defaultLinkStyle);
 
     return RichText(
-      text: TextSpan(children: spans, style: defaultStyle),
+      textAlign: widget.textAlign,
+      text: TextSpan(
+        children: spans,
+      ),
       maxLines: widget.maxLines,
       overflow: widget.overflow,
     );

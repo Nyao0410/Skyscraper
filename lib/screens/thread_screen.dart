@@ -6,6 +6,7 @@ import '../models/post_item.dart';
 import '../services/bluesky_service.dart';
 import '../widgets/linkified_text.dart';
 import '../widgets/media_grid.dart';
+import '../widgets/post_widget.dart';
 import 'profile_screen.dart';
 import 'new_post_screen.dart';
 
@@ -21,11 +22,20 @@ class _ThreadScreenState extends State<ThreadScreen> {
   final _service = BlueskyService();
   dynamic _thread;
   bool _loading = true;
+  bool _didInit = false;
 
   @override
   void initState() {
     super.initState();
-    _fetchThread();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_didInit) {
+      _didInit = true;
+      _fetchThread();
+    }
   }
 
   Future<void> _fetchThread() async {
@@ -56,9 +66,6 @@ class _ThreadScreenState extends State<ThreadScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(l10n.thread_title, style: const TextStyle(fontWeight: FontWeight.bold)),
-        elevation: 0,
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black,
       ),
       body: SelectionArea(
         child: _loading
@@ -193,7 +200,10 @@ class _ThreadScreenState extends State<ThreadScreen> {
     for (final p in parents.reversed) {
       try {
         final parentPost = PostItem.fromFeedView(p, _service.handle);
-        items.add(_buildThreadPost(parentPost, isReply: false));
+        items.add(PostWidget(
+          post: parentPost,
+          onPostUpdated: _fetchThread,
+        ));
         items.add(const Divider(height: 1, indent: 50));
       } catch (e) {
         debugPrint('Error parsing parent: $e');
@@ -207,7 +217,11 @@ class _ThreadScreenState extends State<ThreadScreen> {
       if (replyView == null || !_hasPostField(replyView)) return;
 
       final replyPost = PostItem.fromFeedView(replyView, _service.handle);
-      items.add(_buildThreadPost(replyPost, isReply: true, depth: depth));
+      items.add(PostWidget(
+        post: replyPost,
+        onPostUpdated: _fetchThread,
+        leftPadding: 12.0 + (depth * 16.0),
+      ));
       items.add(const Divider(height: 1, indent: 50));
 
       if (_hasRepliesField(replyView) && depth < 3) {
@@ -258,6 +272,7 @@ class _ThreadScreenState extends State<ThreadScreen> {
   }
 
   Widget _buildMainPost(PostItem post) {
+    final l10n = AppLocalizations.of(context);
     return Padding(
       padding: const EdgeInsets.all(16.0),
       child: Column(
@@ -271,7 +286,7 @@ class _ThreadScreenState extends State<ThreadScreen> {
                   const Icon(Icons.repeat, size: 14, color: Colors.grey),
                   const SizedBox(width: 4),
                   Text(
-                    '${post.repostedBy} さんがリポスト',
+                    l10n.timeline_reposted_by(post.repostedBy!),
                     style: const TextStyle(color: Colors.grey, fontSize: 12, fontWeight: FontWeight.bold),
                   ),
                 ],
@@ -299,7 +314,11 @@ class _ThreadScreenState extends State<ThreadScreen> {
                   children: [
                     Text(
                       post.author,
-                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                        color: Theme.of(context).colorScheme.onSurface,
+                      ),
                     ),
                     Text(
                       '@${post.handle}',
@@ -313,7 +332,11 @@ class _ThreadScreenState extends State<ThreadScreen> {
           const SizedBox(height: 16),
           LinkifiedText(
             text: post.text,
-            style: const TextStyle(fontSize: 18, height: 1.4),
+            style: TextStyle(
+              fontSize: 18,
+              height: 1.4,
+              color: Theme.of(context).colorScheme.onSurface,
+            ),
             linkStyle: const TextStyle(color: Colors.blue, decoration: TextDecoration.none),
           ),
           if (post.quotedPost != null) _buildQuotedPost(post.quotedPost!),
@@ -348,121 +371,15 @@ class _ThreadScreenState extends State<ThreadScreen> {
     );
   }
 
-  Widget _buildThreadPost(PostItem post, {required bool isReply, int depth = 0}) {
-    return InkWell(
-      onTap: () {
-        if (post.uri != widget.postUri) {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => ThreadScreen(postUri: post.uri)),
-          );
-        }
-      },
-      child: Padding(
-        padding: EdgeInsets.only(left: 12.0 + (depth * 16.0), top: 12, right: 12, bottom: 12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (post.repostedBy != null)
-              Padding(
-                padding: const EdgeInsets.only(left: 32, bottom: 4),
-                child: Row(
-                  children: [
-                    const Icon(Icons.repeat, size: 12, color: Colors.grey),
-                    const SizedBox(width: 4),
-                    Text(
-                      '${post.repostedBy} さんがリポスト',
-                      style: const TextStyle(color: Colors.grey, fontSize: 11, fontWeight: FontWeight.bold),
-                    ),
-                  ],
-                ),
-              ),
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                GestureDetector(
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (context) => ProfileScreen(actor: post.handle)),
-                    );
-                  },
-                  child: CircleAvatar(
-                    radius: 20,
-                    backgroundImage: avatarImageProvider(post.avatar),
-                    child: post.avatar == null ? const Icon(Icons.person) : null,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              post.author,
-                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            _formatTime(post.createdAt),
-                            style: const TextStyle(color: Colors.grey, fontSize: 12),
-                          ),
-                        ],
-                      ),
-                      Text(
-                        '@${post.handle}',
-                        style: const TextStyle(color: Colors.grey, fontSize: 12),
-                      ),
-                      const SizedBox(height: 4),
-                      LinkifiedText(
-                        text: post.text,
-                        style: const TextStyle(fontSize: 14),
-                        linkStyle: const TextStyle(color: Colors.blue),
-                      ),
-                      if (post.media.isNotEmpty) MediaGrid(media: post.media),
-                      const SizedBox(height: 8),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          _buildActionIcon(Icons.chat_bubble_outline, post.replyCount, false, () => _showReplyDialog(post)),
-                          _buildActionIcon(
-                            post.viewerRepost != null ? Icons.repeat_on : Icons.repeat,
-                            post.repostCount,
-                            post.viewerRepost != null,
-                            () => _showRepostMenu(post),
-                          ),
-                          _buildActionIcon(
-                            post.viewerLike != null ? Icons.favorite : Icons.favorite_border,
-                            post.likeCount,
-                            post.viewerLike != null,
-                            () => _handleLike(post),
-                          ),
-                          const Icon(Icons.more_horiz, size: 18, color: Colors.grey),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   Widget _buildQuotedPost(PostItem quoted) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       margin: const EdgeInsets.only(top: 8),
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
-        border: Border.all(color: Colors.grey.shade300),
+        border: Border.all(color: isDark ? Colors.white10 : Colors.grey.shade300),
         borderRadius: BorderRadius.circular(12),
+        color: isDark ? Colors.white.withValues(alpha: 0.05) : null,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -481,13 +398,26 @@ class _ThreadScreenState extends State<ThreadScreen> {
                   : const Icon(Icons.person, size: 20),
               ),
               const SizedBox(width: 8),
-              Expanded(child: Text(quoted.author, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13))),
+              Expanded(
+                child: Text(
+                  quoted.author,
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13,
+                    color: Theme.of(context).colorScheme.onSurface,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 4),
           LinkifiedText(
             text: quoted.text,
-            style: const TextStyle(fontSize: 14),
+            style: TextStyle(
+              fontSize: 14,
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.9),
+            ),
           ),
           if (quoted.media.isNotEmpty) MediaGrid(media: quoted.media),
         ],
@@ -520,15 +450,6 @@ class _ThreadScreenState extends State<ThreadScreen> {
         ],
       ),
     );
-  }
-
-  String _formatTime(DateTime time) {
-    final now = DateTime.now();
-    final diff = now.difference(time.toLocal());
-    if (diff.inMinutes < 1) return '今';
-    if (diff.inHours < 1) return '${diff.inMinutes}分';
-    if (diff.inDays < 1) return '${diff.inHours}時間';
-    return '${time.month}/${time.day}';
   }
 
   String _formatFullDate(DateTime time) {
