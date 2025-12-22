@@ -9,10 +9,10 @@ class AppLocalizationsEn extends AppLocalizations {
   AppLocalizationsEn([String locale = 'en']) : super(locale);
 
   @override
-  String get appTitle => 'Bluesky LINE Client';
+  String get appTitle => 'Skyscraper';
 
   @override
-  String get login_title => 'Bluesky LINE Client';
+  String get login_title => 'Skyscraper';
 
   @override
   String get login_subtitle => 'Enjoy Bluesky in Talk Format';
@@ -286,7 +286,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get others_storage => 'Storage';
 
   @override
-  String get others_app_settings => 'App Settings';
+  String get others_app_settings => 'Features';
 
   @override
   String get others_drafts => 'Drafts';

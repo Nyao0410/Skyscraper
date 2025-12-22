@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import '../flutter_gen/gen_l10n/app_localizations.dart';
 import '../services/bluesky_service.dart';
+import '../services/locale_controller.dart';
+import '../services/font_controller.dart';
+import '../services/theme_controller.dart';
 import '../themes/line_theme.dart';
 import 'drafts_screen.dart';
-import 'settings_screen.dart';
 import 'profile_screen.dart';
 import 'general/language_screen.dart';
 import 'general/font_size_screen.dart';
@@ -19,6 +21,24 @@ class OthersScreen extends StatefulWidget {
 
 class _OthersScreenState extends State<OthersScreen> {
   final _service = BlueskyService();
+  // listen to controllers so we can update the subtitles dynamically
+  @override
+  void initState() {
+    super.initState();
+    LocaleController.locale.addListener(_onPrefsChanged);
+    FontController.fontScale.addListener(_onPrefsChanged);
+    ThemeController.mode.addListener(_onPrefsChanged);
+  }
+
+  @override
+  void dispose() {
+    LocaleController.locale.removeListener(_onPrefsChanged);
+    FontController.fontScale.removeListener(_onPrefsChanged);
+    ThemeController.mode.removeListener(_onPrefsChanged);
+    super.dispose();
+  }
+
+  void _onPrefsChanged() => setState(() {});
 
   @override
   Widget build(BuildContext context) {
@@ -131,15 +151,40 @@ class _OthersScreenState extends State<OthersScreen> {
 
   Widget _buildGeneralSection() {
     final l10n = AppLocalizations.of(context);
+    // Determine dynamic subtitles from controllers
+    // Language
+    final loc = LocaleController.locale.value ?? Localizations.localeOf(context);
+    final langCode = loc.languageCode;
+    final languageSubtitle = langCode == 'ja' ? l10n.language_japanese : l10n.language_english;
+
+    // Font size mapping
+    final scale = FontController.fontScale.value;
+    String fontSubtitle;
+    if (scale <= 0.85) {
+      fontSubtitle = l10n.font_size_small;
+    } else if (scale <= 1.1) {
+      fontSubtitle = l10n.font_size_medium;
+    } else if (scale <= 1.25) {
+      fontSubtitle = l10n.font_size_large;
+    } else {
+      fontSubtitle = l10n.font_size_extra_large;
+    }
+
+    // Theme mapping
+    final mode = ThemeController.mode.value;
+    final themeSubtitle = mode == ThemeMode.light
+        ? l10n.theme_light
+        : mode == ThemeMode.dark
+            ? l10n.theme_dark
+            : l10n.theme_system;
+
     return _buildSection(
       l10n.others_general,
       [
         SettingsItem(
           icon: Icons.language,
           title: l10n.others_language,
-          subtitle: Localizations.localeOf(context).languageCode == 'ja'
-              ? '日本語'
-              : 'English',
+          subtitle: languageSubtitle,
           onTap: () {
             Navigator.push(
               context,
@@ -149,8 +194,9 @@ class _OthersScreenState extends State<OthersScreen> {
         ),
         SettingsItem(
           icon: Icons.text_fields,
+          // show as just "Font" in the menu (localized)
           title: l10n.others_font_size,
-          subtitle: l10n.font_size_medium,
+          subtitle: fontSubtitle,
           onTap: () {
             Navigator.push(
               context,
@@ -161,7 +207,7 @@ class _OthersScreenState extends State<OthersScreen> {
         SettingsItem(
           icon: Icons.palette,
           title: l10n.others_theme,
-          subtitle: l10n.theme_system,
+          subtitle: themeSubtitle,
           onTap: () {
             Navigator.push(
               context,
@@ -200,17 +246,7 @@ class _OthersScreenState extends State<OthersScreen> {
             );
           },
         ),
-        SettingsItem(
-          icon: Icons.settings,
-          title: l10n.others_advanced_settings,
-          subtitle: l10n.advancedSettingsSubtitle,
-          onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => const SettingsScreen()),
-            );
-          },
-        ),
+        // Advanced settings removed per user request
       ],
     );
   }

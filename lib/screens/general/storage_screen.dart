@@ -18,7 +18,17 @@ class _StorageScreenState extends State<StorageScreen> {
   @override
   void initState() {
     super.initState();
-    _calculateCacheSize();
+    // Do not call context-dependent methods here. Defer work that uses
+    // inherited widgets (like AppLocalizations) to didChangeDependencies().
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Only calculate once when dependencies are first available.
+    if (_cacheSize == null) {
+      _calculateCacheSize();
+    }
   }
 
   Future<void> _calculateCacheSize() async {

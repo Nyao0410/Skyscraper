@@ -7,6 +7,7 @@ import 'flutter_gen/gen_l10n/app_localizations.dart';
 import 'services/locale_controller.dart';
 import 'services/font_controller.dart';
 import 'services/theme_controller.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 import 'screens/login_screen.dart';
 import 'screens/main_screen.dart';
@@ -53,6 +54,7 @@ class _BskyAppState extends State<BskyApp> {
     super.initState();
     LocaleController.locale.addListener(_onLocaleChanged);
     FontController.fontScale.addListener(_onFontChanged);
+    FontController.fontFamily.addListener(_onFontChanged);
     ThemeController.mode.addListener(_onThemeChanged);
   }
 
@@ -60,6 +62,7 @@ class _BskyAppState extends State<BskyApp> {
   void dispose() {
     LocaleController.locale.removeListener(_onLocaleChanged);
     FontController.fontScale.removeListener(_onFontChanged);
+    FontController.fontFamily.removeListener(_onFontChanged);
     ThemeController.mode.removeListener(_onThemeChanged);
     super.dispose();
   }
@@ -72,9 +75,10 @@ class _BskyAppState extends State<BskyApp> {
   Widget build(BuildContext context) {
     final currentLocale = LocaleController.locale.value;
     final currentScale = FontController.fontScale.value;
+    final currentFontFamily = FontController.fontFamily.value;
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      title: 'Bluesky LINE Client',
+      title: 'Skyscraper',
       locale: currentLocale,
       localizationsDelegates: [
         AppLocalizations.delegate,
@@ -87,8 +91,8 @@ class _BskyAppState extends State<BskyApp> {
         const Locale('en'), // English
       ],
       // Build base themes and apply text theme scaling based on currentScale
-      theme: _buildScaledLightTheme(currentScale),
-      darkTheme: _buildScaledDarkTheme(currentScale),
+      theme: _buildScaledLightTheme(currentScale, currentFontFamily),
+      darkTheme: _buildScaledDarkTheme(currentScale, currentFontFamily),
       themeMode: ThemeController.mode.value,
       builder: (context, child) {
         // Wrap the app content so we can show MaterialBanners from a central place
@@ -104,9 +108,11 @@ class _BskyAppState extends State<BskyApp> {
   }
 }
 
-ThemeData _buildScaledLightTheme(double scale) {
+ThemeData _buildScaledLightTheme(double scale, String fontFamily) {
   final base = ThemeData(
     useMaterial3: true,
+    // We will apply Google Fonts to the textTheme below for reliable rendering.
+    fontFamily: fontFamily == 'system' ? null : (fontFamily.startsWith('Noto') ? null : fontFamily),
     colorScheme: ColorScheme.fromSeed(
       seedColor: const Color(0xFF00C300),
       brightness: Brightness.light,
@@ -118,12 +124,57 @@ ThemeData _buildScaledLightTheme(double scale) {
     ),
     textTheme: _baseTextTheme(),
   );
-  return base.copyWith(textTheme: _scaledTextTheme(base.textTheme, scale));
+  // Apply selected font family via GoogleFonts when possible by wrapping
+  // each TextStyle. Some google_fonts helper methods for TextTheme may
+  // not be available on all package versions, so apply per-style to be
+  // robust.
+  TextStyle? applyFamily(TextStyle? s) {
+    if (s == null) return null;
+    if (fontFamily == 'system') return s;
+    String fontName;
+    if (fontFamily == 'NotoSansJP') {
+      fontName = 'Noto Sans JP';
+    } else if (fontFamily == 'Roboto') {
+      fontName = 'Roboto';
+    } else if (fontFamily == 'Georgia') {
+      fontName = 'Georgia';
+    } else {
+      fontName = fontFamily;
+    }
+    try {
+      return GoogleFonts.getFont(fontName, textStyle: s);
+    } catch (_) {
+      // Fallback to original style if requested font isn't available
+      return s;
+    }
+  }
+
+  final applied = TextTheme(
+    displayLarge: applyFamily(base.textTheme.displayLarge),
+    displayMedium: applyFamily(base.textTheme.displayMedium),
+    displaySmall: applyFamily(base.textTheme.displaySmall),
+    headlineLarge: applyFamily(base.textTheme.headlineLarge),
+    headlineMedium: applyFamily(base.textTheme.headlineMedium),
+    headlineSmall: applyFamily(base.textTheme.headlineSmall),
+    titleLarge: applyFamily(base.textTheme.titleLarge),
+    titleMedium: applyFamily(base.textTheme.titleMedium),
+    titleSmall: applyFamily(base.textTheme.titleSmall),
+    bodyLarge: applyFamily(base.textTheme.bodyLarge),
+    bodyMedium: applyFamily(base.textTheme.bodyMedium),
+    bodySmall: applyFamily(base.textTheme.bodySmall),
+    labelLarge: applyFamily(base.textTheme.labelLarge),
+    labelMedium: applyFamily(base.textTheme.labelMedium),
+    labelSmall: applyFamily(base.textTheme.labelSmall),
+  );
+
+  final scaled = _scaledTextTheme(applied, scale);
+  return base.copyWith(textTheme: scaled, primaryTextTheme: scaled);
 }
 
-ThemeData _buildScaledDarkTheme(double scale) {
+ThemeData _buildScaledDarkTheme(double scale, String fontFamily) {
   final base = ThemeData(
     useMaterial3: true,
+    fontFamily: fontFamily == 'system' ? null : (fontFamily.startsWith('Noto') ? null : fontFamily),
     colorScheme: ColorScheme.fromSeed(
       seedColor: const Color(0xFF00C300),
       brightness: Brightness.dark,
@@ -135,7 +186,46 @@ ThemeData _buildScaledDarkTheme(double scale) {
     ),
     textTheme: _baseTextTheme(),
   );
-  return base.copyWith(textTheme: _scaledTextTheme(base.textTheme, scale));
+  TextStyle? applyFamily(TextStyle? s) {
+    if (s == null) return null;
+    if (fontFamily == 'system') return s;
+    String fontName;
+    if (fontFamily == 'NotoSansJP') {
+      fontName = 'Noto Sans JP';
+    } else if (fontFamily == 'Roboto') {
+      fontName = 'Roboto';
+    } else if (fontFamily == 'Georgia') {
+      fontName = 'Georgia';
+    } else {
+      fontName = fontFamily;
+    }
+    try {
+      return GoogleFonts.getFont(fontName, textStyle: s);
+    } catch (_) {
+      return s;
+    }
+  }
+
+  final applied = TextTheme(
+    displayLarge: applyFamily(base.textTheme.displayLarge),
+    displayMedium: applyFamily(base.textTheme.displayMedium),
+    displaySmall: applyFamily(base.textTheme.displaySmall),
+    headlineLarge: applyFamily(base.textTheme.headlineLarge),
+    headlineMedium: applyFamily(base.textTheme.headlineMedium),
+    headlineSmall: applyFamily(base.textTheme.headlineSmall),
+    titleLarge: applyFamily(base.textTheme.titleLarge),
+    titleMedium: applyFamily(base.textTheme.titleMedium),
+    titleSmall: applyFamily(base.textTheme.titleSmall),
+    bodyLarge: applyFamily(base.textTheme.bodyLarge),
+    bodyMedium: applyFamily(base.textTheme.bodyMedium),
+    bodySmall: applyFamily(base.textTheme.bodySmall),
+    labelLarge: applyFamily(base.textTheme.labelLarge),
+    labelMedium: applyFamily(base.textTheme.labelMedium),
+    labelSmall: applyFamily(base.textTheme.labelSmall),
+  );
+
+  final scaled = _scaledTextTheme(applied, scale);
+  return base.copyWith(textTheme: scaled, primaryTextTheme: scaled);
 }
 
 // Safely scale a TextTheme's font sizes. Some TextStyle entries may have

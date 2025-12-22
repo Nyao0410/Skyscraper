@@ -82,7 +82,7 @@ class _LoginScreenState extends State<LoginScreen> {
           ),
           child: const Center(
             child: Text(
-              'B',
+              'S',
               style: TextStyle(
                 color: Colors.white,
                 fontSize: 32,
@@ -94,7 +94,7 @@ class _LoginScreenState extends State<LoginScreen> {
         ),
         const SizedBox(height: 12),
         Text(
-          l10n.login_title,
+          'Skyscraper',
           style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 6),

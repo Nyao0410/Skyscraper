@@ -1,7 +1,7 @@
 {
   "@@locale": "ja",
-  "appTitle": "Bluesky LINE Client",
-  "login_title": "Bluesky LINE Client",
+  "appTitle": "Skyscraper",
+  "login_title": "Skyscraper",
   "login_subtitle": "トーク形式で楽しむBluesky",
   "login_info": "ログイン方法: Blueskyでアプリパスワードを作成し、ハンドル名（example.bsky.social）と入力してください。",
   "login_handle_label": "HANDLE",
@@ -126,7 +126,7 @@
   "others_font_size": "フォントサイズ",
   "others_theme": "テーマ",
   "others_storage": "ストレージ",
-  "others_app_settings": "アプリ設定",
+  "others_app_settings": "機能",
   "others_drafts": "下書き",
   "drafts_no_drafts": "下書きはありません",
   "drafts_created_at": "作成: {date}",

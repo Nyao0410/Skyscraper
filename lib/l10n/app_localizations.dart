@@ -101,13 +101,13 @@ abstract class AppLocalizations {
   /// No description provided for @appTitle.
   ///
   /// In ja, this message translates to:
-  /// **'Bluesky LINE Client'**
+  /// **'Skyscraper'**
   String get appTitle;
 
   /// No description provided for @login_title.
   ///
   /// In ja, this message translates to:
-  /// **'Bluesky LINE Client'**
+  /// **'Skyscraper'**
   String get login_title;
 
   /// No description provided for @login_subtitle.
@@ -629,7 +629,7 @@ abstract class AppLocalizations {
   /// No description provided for @others_app_settings.
   ///
   /// In ja, this message translates to:
-  /// **'アプリ設定'**
+  /// **'機能'**
   String get others_app_settings;
 
   /// No description provided for @others_drafts.

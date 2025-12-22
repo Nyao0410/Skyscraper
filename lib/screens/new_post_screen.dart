@@ -182,6 +182,7 @@ class _NewPostScreenState extends State<NewPostScreen> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    final theme = Theme.of(context);
     final bool isDraftMode = widget.preferDraft || widget.draftId != null;
     String title = l10n.post_new_title;
     if (widget.draftId != null) title = l10n.post_edit_draft_title;
@@ -298,25 +299,28 @@ class _NewPostScreenState extends State<NewPostScreen> {
           const Divider(height: 1),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            color: Colors.grey.shade50,
+            color: theme.colorScheme.surface,
             child: Row(
               children: [
                 IconButton(
-                  icon: const Icon(Icons.image, color: Colors.blue),
+                  icon: Icon(Icons.image, color: theme.colorScheme.primary),
                   onPressed: _pickImages,
                 ),
                 if (widget.replyTo == null && widget.quoteOf == null)
                   IconButton(
-                    icon: Icon(Icons.schedule, color: _scheduledDate != null ? Colors.blue : Colors.grey),
+                    icon: Icon(
+                      Icons.schedule,
+                      color: _scheduledDate != null ? theme.colorScheme.primary : theme.iconTheme.color,
+                    ),
                     onPressed: _selectSchedule,
                   ),
                 if (_scheduledDate != null) ...[
                   Text(
                     DateFormat('MM/dd HH:mm').format(_scheduledDate!),
-                    style: const TextStyle(color: Colors.blue, fontWeight: FontWeight.bold),
+                    style: TextStyle(color: theme.colorScheme.primary, fontWeight: FontWeight.bold),
                   ),
                   IconButton(
-                    icon: const Icon(Icons.close, size: 16, color: Colors.blue),
+                    icon: Icon(Icons.close, size: 16, color: theme.colorScheme.primary),
                     onPressed: () => setState(() => _scheduledDate = null),
                   ),
                 ],
@@ -324,7 +328,7 @@ class _NewPostScreenState extends State<NewPostScreen> {
                 Text(
                   '${_controller.text.length}/300',
                   style: TextStyle(
-                    color: _controller.text.length > 300 ? Colors.red : Colors.grey,
+                    color: _controller.text.length > 300 ? theme.colorScheme.error : theme.colorScheme.onSurfaceVariant,
                   ),
                 ),
               ],

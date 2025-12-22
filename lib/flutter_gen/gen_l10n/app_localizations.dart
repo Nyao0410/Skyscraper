@@ -20,8 +20,8 @@ class AppLocalizations {
 
   bool get _isEn => locale.languageCode == 'en';
 
-  String get appTitle => _isEn ? 'Bluesky LINE Client' : 'Bluesky LINE Client';
-  String get login_title => _isEn ? 'Bluesky LINE Client' : 'Bluesky LINE Client';
+  String get appTitle => 'Skyscraper';
+  String get login_title => 'Skyscraper';
   String get login_subtitle => _isEn ? 'Enjoy Bluesky in Talk Format' : 'トーク形式で楽しむBluesky';
   String get login_info => _isEn ? 'How to login: Create an App Password on Bluesky and enter your handle (example.bsky.social).' : 'ログイン方法: Blueskyでアプリパスワードを作成し、ハンドル名（example.bsky.social）と入力してください。';
   String get login_handle_label => _isEn ? 'HANDLE' : 'HANDLE';
@@ -105,10 +105,10 @@ class AppLocalizations {
   String get others_logout => _isEn ? 'Logout' : 'ログアウト';
   String get others_general => _isEn ? 'General' : '一般';
   String get others_language => _isEn ? 'Language' : '言語';
-  String get others_font_size => _isEn ? 'Font Size' : 'フォントサイズ';
+  String get others_font_size => _isEn ? 'Font' : 'フォント';
   String get others_theme => _isEn ? 'Theme' : 'テーマ';
   String get others_storage => _isEn ? 'Storage' : 'ストレージ';
-  String get others_app_settings => _isEn ? 'App Settings' : 'アプリ設定';
+  String get others_app_settings => _isEn ? 'Features' : '機能';
   String get others_drafts => _isEn ? 'Drafts' : '下書き';
   String get drafts_no_drafts => _isEn ? 'No drafts' : '下書きはありません';
   String drafts_created_at(String date) => _isEn ? 'Created: $date' : '作成: $date';
@@ -143,13 +143,14 @@ class AppLocalizations {
   String get theme_system => _isEn ? 'System Default' : 'システム設定に従う';
   String get theme_light => _isEn ? 'Light Mode' : 'ライトモード';
   String get theme_dark => _isEn ? 'Dark Mode' : 'ダークモード';
-  String get font_size_title => _isEn ? 'Font Size' : 'フォントサイズ';
+  String get font_size_title => _isEn ? 'Font' : 'フォント';
   String get font_size_small => _isEn ? 'Small' : '小';
   String get font_size_medium => _isEn ? 'Medium' : '中';
   String get font_size_large => _isEn ? 'Large' : '大';
   String get font_size_extra_large => _isEn ? 'Extra Large' : '特大';
   String get font_size_preview => _isEn ? 'Preview' : 'プレビュー';
   String get font_size_preview_msg => _isEn ? 'This is a font size preview. Move the slider to adjust.' : 'これはフォントサイズのプレビューです。スライダーを動かして調整してください。';
+  String get fontFamilyLabel => _isEn ? 'Font Family' : 'フォントファミリー';
   String get language_title => _isEn ? 'Language' : '言語';
   String get language_japanese => _isEn ? 'Japanese' : '日本語';
   String get language_english => _isEn ? 'English' : 'English';

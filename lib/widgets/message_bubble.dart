@@ -68,7 +68,7 @@ class MessageBubble extends StatelessWidget {
                 crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
                 children: [
                   if (!isMe) ...[
-                    _buildAuthorName(),
+                    _buildAuthorName(context),
                     const SizedBox(height: 4),
                   ],
                   if (message.repostedBy != null) ...[
@@ -87,13 +87,13 @@ class MessageBubble extends StatelessWidget {
                       mainAxisAlignment: isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
                       crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
-                        if (isMe) _buildTimestamp(),
+                        if (isMe) _buildTimestamp(context),
                         const SizedBox(width: 4),
                         Flexible(
                           child: _buildMainBubble(maxBubbleWidth, context),
                         ),
                         const SizedBox(width: 4),
-                        if (!isMe) _buildTimestamp(),
+                        if (!isMe) _buildTimestamp(context),
                       ],
                     ),
                   if (message.media.isNotEmpty) ...[
@@ -103,7 +103,7 @@ class MessageBubble extends StatelessWidget {
                       mainAxisAlignment: isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
                       crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
-                        if (isMe) _buildTimestamp(),
+                        if (isMe) _buildTimestamp(context),
                         const SizedBox(width: 4),
                         Flexible(
                           child: Column(
@@ -112,7 +112,7 @@ class MessageBubble extends StatelessWidget {
                           ),
                         ),
                         const SizedBox(width: 4),
-                        if (!isMe) _buildTimestamp(),
+                        if (!isMe) _buildTimestamp(context),
                       ],
                     ),
                   ],
@@ -129,17 +129,17 @@ class MessageBubble extends StatelessWidget {
     final l10n = AppLocalizations.of(context);
     final handle = message.replyParentHandle;
     final displayHandle = (handle != null && !handle.startsWith('@')) ? '@$handle' : handle;
-    
+    final theme = Theme.of(context);
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 4),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.reply, size: 12, color: Colors.white70),
+          Icon(Icons.reply, size: 12, color: theme.colorScheme.onSurfaceVariant),
           const SizedBox(width: 2),
           Text(
             l10n.reply_to(displayHandle ?? ''),
-            style: const TextStyle(fontSize: 10, color: Colors.white70),
+            style: theme.textTheme.labelSmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
           ),
         ],
       ),
@@ -163,7 +163,7 @@ class MessageBubble extends StatelessWidget {
           Flexible(
             child: Text(
               rep.isNotEmpty ? l10n.reposted_by(rep) : l10n.repost,
-              style: const TextStyle(fontSize: 12, color: Colors.white70),
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),
               overflow: TextOverflow.ellipsis,
             ),
           ),
@@ -189,16 +189,12 @@ class MessageBubble extends StatelessWidget {
         children: [
           Row(
             children: [
-              const Icon(Icons.reply, size: 12, color: Colors.white70),
+              Icon(Icons.reply, size: 12, color: Theme.of(context).colorScheme.onSurfaceVariant),
               const SizedBox(width: 4),
               Expanded(
                 child: Text(
                   '${parent.author} (@${parent.handle})',
-                  style: const TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white70,
-                  ),
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.onSurfaceVariant),
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
@@ -207,7 +203,7 @@ class MessageBubble extends StatelessWidget {
           const SizedBox(height: 2),
           Text(
             parent.text,
-            style: const TextStyle(fontSize: 11, color: Colors.white),
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Theme.of(context).colorScheme.onSurface),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),
@@ -241,18 +237,13 @@ class MessageBubble extends StatelessWidget {
           if (message.text.isNotEmpty)
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
-              child: LinkifiedText(
+                child: LinkifiedText(
                 text: message.text,
-                style: TextStyle(
-                  color: isMe 
-                      ? Colors.black 
-                      : (isDark ? Colors.white : Colors.black87),
-                  fontSize: 15,
+                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                  color: isMe ? Colors.black : (isDark ? Colors.white : Colors.black87),
                 ),
-                linkStyle: TextStyle(
-                  color: isMe 
-                      ? Colors.blue.shade900 
-                      : (isDark ? Colors.blue.shade300 : Colors.blue.shade700),
+                linkStyle: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                  color: isMe ? Colors.blue.shade900 : (isDark ? Colors.blue.shade300 : Colors.blue.shade700),
                   decoration: TextDecoration.underline,
                 ),
                 onHashtagLongPress: (tag) => onInsertText?.call(tag),
@@ -302,12 +293,9 @@ class MessageBubble extends StatelessWidget {
               Expanded(
                 child: Text(
                   quoted.isMe ? l10n.me : quoted.author,
-                  style: TextStyle(
-                    fontSize: 11,
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
                     fontWeight: FontWeight.bold,
-                    color: quoted.isMe 
-                        ? (isMe ? Colors.white : Colors.blue) 
-                        : (isDark ? Colors.white70 : Colors.black54),
+                    color: quoted.isMe ? (isMe ? Colors.white : Colors.blue) : (isDark ? Colors.white70 : Colors.black54),
                   ),
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -317,10 +305,7 @@ class MessageBubble extends StatelessWidget {
           const SizedBox(height: 4),
           LinkifiedText(
             text: quoted.text,
-            style: TextStyle(
-              fontSize: 12, 
-              color: isDark ? Colors.white70 : Colors.black87,
-            ),
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: isDark ? Colors.white70 : Colors.black87),
             onHashtagLongPress: (tag) => onInsertText?.call(tag),
           ),
           if (quoted.media.isNotEmpty)
@@ -347,13 +332,13 @@ class MessageBubble extends StatelessWidget {
     );
   }
 
-  Widget _buildTimestamp() {
+  Widget _buildTimestamp(BuildContext context) {
     final localTime = message.createdAt.toLocal();
     return Padding(
       padding: const EdgeInsets.only(bottom: 2),
       child: Text(
         '${localTime.hour.toString().padLeft(2, '0')}:${localTime.minute.toString().padLeft(2, '0')}',
-        style: const TextStyle(fontSize: 10, color: Colors.white70),
+        style: Theme.of(context).textTheme.labelSmall?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),
       ),
     );
   }
@@ -392,13 +377,13 @@ class MessageBubble extends StatelessWidget {
     );
   }
 
-  Widget _buildAuthorName() {
+  Widget _buildAuthorName(BuildContext context) {
+    final theme = Theme.of(context);
     return Text(
       message.author,
-      style: const TextStyle(
-        color: Color.fromARGB(255, 65, 65, 65),
+      style: theme.textTheme.labelSmall?.copyWith(
+        color: theme.colorScheme.onSurface,
         fontWeight: FontWeight.bold,
-        fontSize: 10,
       ),
     );
   }

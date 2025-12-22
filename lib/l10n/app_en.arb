@@ -1,7 +1,7 @@
 {
   "@@locale": "en",
-  "appTitle": "Bluesky LINE Client",
-  "login_title": "Bluesky LINE Client",
+  "appTitle": "Skyscraper",
+  "login_title": "Skyscraper",
   "login_subtitle": "Enjoy Bluesky in Talk Format",
   "login_info": "How to login: Create an App Password on Bluesky and enter your handle (example.bsky.social).",
   "login_handle_label": "HANDLE",
@@ -126,7 +126,7 @@
   "others_font_size": "Font Size",
   "others_theme": "Theme",
   "others_storage": "Storage",
-  "others_app_settings": "App Settings",
+  "others_app_settings": "Features",
   "others_drafts": "Drafts",
   "drafts_no_drafts": "No drafts",
   "drafts_created_at": "Created: {date}",

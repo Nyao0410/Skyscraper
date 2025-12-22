@@ -44,6 +44,7 @@ class _FontSizeScreenState extends State<FontSizeScreen> {
           icon: Icon(Icons.arrow_back, color: theme.iconTheme.color),
           onPressed: () => Navigator.of(context).pop(),
         ),
+        // Show as "Font" (user requested rename)
         title: Text(AppLocalizations.of(context).fontSize, style: theme.appBarTheme.titleTextStyle ?? theme.textTheme.titleLarge),
         centerTitle: true,
       ),
@@ -67,10 +68,50 @@ class _FontSizeScreenState extends State<FontSizeScreen> {
                       style: TextStyle(
                         fontSize: 16 * _fontSize,
                         color: theme.colorScheme.onSurface,
+                        // apply selected font family to preview
+                        fontFamily: FontController.fontFamily.value == 'system' ? null : FontController.fontFamily.value,
                       ),
                     ),
                 ),
                 const SizedBox(height: 32),
+                // Font family selection
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Padding(
+                    padding: const EdgeInsets.only(bottom: 8.0),
+                    child: Text(AppLocalizations.of(context).fontFamilyLabel, style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
+                  ),
+                ),
+                ValueListenableBuilder<String>(
+                  valueListenable: FontController.fontFamily,
+                  builder: (context, family, _) {
+                    return Row(
+                      children: [
+                        Expanded(
+                          child: DropdownButtonFormField<String>(
+                            initialValue: family,
+                            decoration: InputDecoration(
+                              filled: true,
+                              fillColor: theme.colorScheme.surface,
+                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(8.0), borderSide: BorderSide.none),
+                            ),
+                            items: [
+                              DropdownMenuItem(value: 'system', child: Text('${AppLocalizations.of(context).fontFamilyLabel} — System')),
+                              DropdownMenuItem(value: 'NotoSansJP', child: Text('Noto Sans JP')),
+                              DropdownMenuItem(value: 'Roboto', child: Text('Roboto')),
+                              DropdownMenuItem(value: 'Georgia', child: Text('Georgia (Serif)')),
+                            ],
+                            onChanged: (value) async {
+                              if (value == null) return;
+                              await FontController.setFontFamily(value);
+                              setState(() {});
+                            },
+                          ),
+                        ),
+                      ],
+                    );
+                  },
+                ),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
