@@ -1,7 +1,9 @@
-import 'dart:io';
 import 'dart:typed_data';
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'io_stub.dart' if (dart.library.io) 'dart:io' as io;
 import 'package:flutter/widgets.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter/widgets.dart' show ImageProvider, MemoryImage;
 import '../services/bluesky_service.dart';
 
 // 1x1 transparent PNG to use as a safe placeholder when offline or file missing.
@@ -20,20 +22,27 @@ ImageProvider? avatarImageProvider(String? avatar) {
   if (avatar == null || avatar.isEmpty) return null;
 
   try {
-    // If the value looks like a local file path, prefer it.
-    if (!avatar.startsWith('http')) {
-      final file = File(avatar);
-      if (file.existsSync()) return FileImage(file);
-      // If file path provided but missing, return transparent placeholder to avoid network attempts.
+    // On web we cannot access local files reliably - use network provider.
+    if (kIsWeb) {
+      // Use a simple transparent placeholder on web to avoid repeated
+      // image decoding errors from remote CDN responses (CORS/HTML responses).
       return MemoryImage(_kTransparentImage);
     }
 
-    // For remote URLs: check if we already downloaded it to local manifest and prefer that.
+    // If the value looks like a local file path, prefer it on non-web platforms.
+    if (!avatar.startsWith('http')) {
+      final file = io.File(avatar);
+      if (file.existsSync()) return FileImage(file as dynamic);
+      return MemoryImage(_kTransparentImage);
+    }
+
+    // For remote URLs: check if we already downloaded it to local manifest and prefer that (non-web only).
     final local = BlueskyService().getLocalAvatarPathForUrl(avatar);
     if (local != null && local.isNotEmpty) {
-      final f = File(local);
-      if (f.existsSync()) return FileImage(f);
+      final f = io.File(local);
+      if (f.existsSync()) return FileImage(f as dynamic);
     }
+
     // Fallback to network provider.
     return CachedNetworkImageProvider(avatar);
   } catch (_) {

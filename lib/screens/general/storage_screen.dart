@@ -1,5 +1,6 @@
-import 'dart:io';
+import 'dart:io' if (dart.library.html) '../../utils/io_stub.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import '../../flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:path_provider/path_provider.dart';
 // Theme aware styles
@@ -34,6 +35,12 @@ class _StorageScreenState extends State<StorageScreen> {
   Future<void> _calculateCacheSize() async {
     final l10n = AppLocalizations.of(context);
     try {
+      if (kIsWeb) {
+        setState(() {
+          _cacheSize = l10n.unknown;
+        });
+        return;
+      }
       final tempDir = await getTemporaryDirectory();
       final appDir = await getApplicationDocumentsDirectory();
       
@@ -43,7 +50,8 @@ class _StorageScreenState extends State<StorageScreen> {
       if (tempDir.existsSync()) {
         await for (final file in tempDir.list(recursive: true, followLinks: false)) {
           if (file is File) {
-            totalSize += await file.length();
+            final l = await (file as File).length();
+            totalSize += (l is int) ? l : l.toInt();
           }
         }
       }
@@ -52,7 +60,8 @@ class _StorageScreenState extends State<StorageScreen> {
       if (appDir.existsSync()) {
         await for (final file in appDir.list(recursive: false)) {
           if (file is File && file.path.contains('avatar_')) {
-            totalSize += await file.length();
+            final l = await (file as File).length();
+            totalSize += (l is int) ? l : l.toInt();
           }
         }
       }
@@ -89,6 +98,17 @@ class _StorageScreenState extends State<StorageScreen> {
     });
 
     try {
+      if (kIsWeb) {
+        // Nothing to clear on web; simulate success
+        await Future.delayed(const Duration(milliseconds: 200));
+        await _calculateCacheSize();
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(AppLocalizations.of(context).clearCacheMessage)),
+          );
+        }
+        return;
+      }
       final tempDir = await getTemporaryDirectory();
       if (tempDir.existsSync()) {
         await tempDir.delete(recursive: true);

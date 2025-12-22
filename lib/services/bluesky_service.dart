@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart' hide Notification;
+import 'package:flutter/foundation.dart';
 import 'package:bluesky/bluesky.dart';
 import 'package:bluesky/atproto.dart';
 import 'package:atproto_core/atproto_core.dart';
@@ -207,31 +208,37 @@ class BlueskyService {
       avatarUrl = remoteAvatar;
 
       if (remoteAvatar != null && remoteAvatar.isNotEmpty) {
-        try {
-          final uri = Uri.parse(remoteAvatar);
-          final resp = await http.get(uri).timeout(const Duration(seconds: 10));
-          if (resp.statusCode == 200) {
-            final bytes = resp.bodyBytes;
-            final decoded = img.decodeImage(bytes);
-            if (decoded != null) {
-              // Resize to small width while preserving aspect ratio
-              final resized = img.copyResize(decoded, width: 128);
-              final jpg = img.encodeJpg(resized, quality: 60);
+        avatarUrl = remoteAvatar;
+        if (!kIsWeb) {
+          try {
+            final uri = Uri.parse(remoteAvatar);
+            final resp = await http.get(uri).timeout(const Duration(seconds: 10));
+            if (resp.statusCode == 200) {
+              final bytes = resp.bodyBytes;
+              final decoded = img.decodeImage(bytes);
+              if (decoded != null) {
+                // Resize to small width while preserving aspect ratio
+                final resized = img.copyResize(decoded, width: 128);
+                final jpg = img.encodeJpg(resized, quality: 60);
 
-              final dir = await getApplicationDocumentsDirectory();
-              final file = File('${dir.path}/avatar_${session.did}.jpg');
-              await file.writeAsBytes(jpg, flush: true);
-              avatar = file.path;
-            } else {
-              // fallback: save raw bytes
-              final dir = await getApplicationDocumentsDirectory();
-              final file = File('${dir.path}/avatar_${session.did}');
-              await file.writeAsBytes(bytes, flush: true);
-              avatar = file.path;
+                final dir = await getApplicationDocumentsDirectory();
+                final file = File('${dir.path}/avatar_${session.did}.jpg');
+                await file.writeAsBytes(jpg, flush: true);
+                avatar = file.path;
+              } else {
+                // fallback: save raw bytes
+                final dir = await getApplicationDocumentsDirectory();
+                final file = File('${dir.path}/avatar_${session.did}');
+                await file.writeAsBytes(bytes, flush: true);
+                avatar = file.path;
+              }
             }
+          } catch (e) {
+            debugPrint('Avatar download/process failed: $e');
           }
-        } catch (e) {
-          debugPrint('Avatar download/process failed: $e');
+        } else {
+          // On web we don't persist avatars to local filesystem; keep remote URL.
+          avatar = null;
         }
       } else {
         avatar = null;
@@ -294,6 +301,10 @@ class BlueskyService {
   }
 
   Future<void> _loadAvatarManifest() async {
+    if (kIsWeb) {
+      debugPrint('Avatar manifest not supported on web; skipping load');
+      return;
+    }
     try {
       final dir = await getApplicationDocumentsDirectory();
       final file = File('${dir.path}/$_avatarManifestFile');
@@ -448,6 +459,7 @@ class BlueskyService {
   }
 
   Future<void> _saveAvatarManifest() async {
+    if (kIsWeb) return; // not supported on web
     try {
       final dir = await getApplicationDocumentsDirectory();
       final file = File('${dir.path}/$_avatarManifestFile');
@@ -468,6 +480,7 @@ class BlueskyService {
   }
 
   Future<void> _pruneAvatarManifestIfNeeded(String dirPath) async {
+    if (kIsWeb) return;
     try {
       if (_avatarManifest.length <= _maxAvatarManifestEntries) return;
       // Build list of entries with file modified times
@@ -500,6 +513,7 @@ class BlueskyService {
   /// Rebuild the manifest by scanning the application documents directory for files
   /// created by the avatar prefetcher (files named `avatar_url_<base64>.jpg`).
   Future<void> rebuildAvatarManifestFromFiles() async {
+    if (kIsWeb) return;
     try {
       final dir = await getApplicationDocumentsDirectory();
       final d = Directory(dir.path);
@@ -533,6 +547,7 @@ class BlueskyService {
   }
 
   String? getLocalAvatarPathForUrl(String url) {
+    if (kIsWeb) return null;
     final path = _avatarManifest[url];
     if (path == null) return null;
     try {
@@ -544,6 +559,7 @@ class BlueskyService {
 
   // Prefetch avatars for a list of posts asynchronously (fire-and-forget).
   Future<void> prefetchAvatarsForPosts(List<PostItem> posts, {int concurrency = 4}) async {
+    if (kIsWeb) return; // no local avatar caching on web
     if (posts.isEmpty) return;
     final dir = await getApplicationDocumentsDirectory();
 
@@ -818,20 +834,22 @@ class BlueskyService {
     }
     // Check persistent cache meta for TTL. If expired, clear cache; if within TTL, return cached.
     try {
-      final now = DateTime.now().millisecondsSinceEpoch;
-      final key = 'following';
-      final last = await _db.getCacheFetched(did!, key);
-      if (cursor == null && last != null && !forceRefresh) {
-        if ((now - last) < _ttlTimeline.inMilliseconds) {
-          final cached = await getCachedTimeline(limit: limit);
-          if (cached.isNotEmpty) {
-            debugPrint('Returning cached timeline (within TTL)');
-            return FeedResponse(posts: cached, cursor: null);
+      if (!kIsWeb) {
+        final now = DateTime.now().millisecondsSinceEpoch;
+        final key = 'following';
+        final last = await _db.getCacheFetched(did!, key);
+        if (cursor == null && last != null && !forceRefresh) {
+          if ((now - last) < _ttlTimeline.inMilliseconds) {
+            final cached = await getCachedTimeline(limit: limit);
+            if (cached.isNotEmpty) {
+              debugPrint('Returning cached timeline (within TTL)');
+              return FeedResponse(posts: cached, cursor: null);
+            }
+          } else {
+            // expired -> clear cache for this feed
+            debugPrint('Timeline cache expired, clearing cached entries for $key');
+            await _db.clearFeedCache(did!, key);
           }
-        } else {
-          // expired -> clear cache for this feed
-          debugPrint('Timeline cache expired, clearing cached entries for $key');
-          await _db.clearFeedCache(did!, key);
         }
       }
     } catch (e) {
@@ -866,10 +884,14 @@ class BlueskyService {
       // Save to cache (only for first page). Keep only full JSON for the latest 'limit' posts,
       // older posts will be stored as text-only and pruned after 7 days.
       if (cursor == null) {
-        await _db.savePostsWithRetention(did!, 'following', posts, keepFull: limit);
-        // Also prune posts older than 7 days for this user
-        await _db.prunePostsOlderThan(did!, days: 7);
-        // Start avatar prefetch in background
+        if (!kIsWeb) {
+          if (!kIsWeb) {
+            await _db.savePostsWithRetention(did!, 'following', posts, keepFull: limit);
+            // Also prune posts older than 7 days for this user
+            await _db.prunePostsOlderThan(did!, days: 7);
+          }
+        }
+        // Start avatar prefetch in background (safe on web)
         _maybePrefetchAvatars(posts);
       }
       
@@ -885,6 +907,7 @@ class BlueskyService {
 
   Future<List<PostItem>> getCachedTimeline({int limit = 40}) async {
     if (did == null) return [];
+    if (kIsWeb) return [];
     return await _db.getCachedPosts(did!, 'following', limit: limit);
   }
 
@@ -896,18 +919,20 @@ class BlueskyService {
     // TTL guard: check DB-stored last_fetched; return cached if within TTL, clear if expired
     try {
       debugPrint('Fetching custom feed: $feedUri');
-      final now = DateTime.now().millisecondsSinceEpoch;
-      final last = await _db.getCacheFetched(did!, feedUri);
-      if (cursor == null && last != null && !forceRefresh) {
-        if ((now - last) < _ttlCustomFeed.inMilliseconds) {
-          final cached = await getCachedCustomFeed(feedUri, limit: limit);
-          if (cached.isNotEmpty) {
-            debugPrint('Returning cached custom feed ($feedUri) (within TTL)');
-            return FeedResponse(posts: cached, cursor: null);
+      if (!kIsWeb) {
+        final now = DateTime.now().millisecondsSinceEpoch;
+        final last = await _db.getCacheFetched(did!, feedUri);
+        if (cursor == null && last != null && !forceRefresh) {
+          if ((now - last) < _ttlCustomFeed.inMilliseconds) {
+            final cached = await getCachedCustomFeed(feedUri, limit: limit);
+            if (cached.isNotEmpty) {
+              debugPrint('Returning cached custom feed ($feedUri) (within TTL)');
+              return FeedResponse(posts: cached, cursor: null);
+            }
+          } else {
+            debugPrint('Custom feed cache expired for $feedUri, clearing');
+            await _db.clearFeedCache(did!, feedUri);
           }
-        } else {
-          debugPrint('Custom feed cache expired for $feedUri, clearing');
-          await _db.clearFeedCache(did!, feedUri);
         }
       }
       
@@ -958,8 +983,12 @@ class BlueskyService {
       // Save to cache (only for first page). Keep only full JSON for the latest 'limit' posts,
       // older posts will be stored as text-only and pruned after 7 days.
       if (cursor == null) {
-        await _db.savePostsWithRetention(did!, feedUri, posts, keepFull: limit);
-        await _db.prunePostsOlderThan(did!, days: 7);
+        if (!kIsWeb) {
+          if (!kIsWeb) {
+            await _db.savePostsWithRetention(did!, feedUri, posts, keepFull: limit);
+            await _db.prunePostsOlderThan(did!, days: 7);
+          }
+        }
         _maybePrefetchAvatars(posts);
       }
       
@@ -971,6 +1000,8 @@ class BlueskyService {
 
   Future<List<PostItem>> getCachedCustomFeed(String feedUri, {int limit = 40}) async {
     if (did == null) return [];
+    if (kIsWeb) return [];
+    if (kIsWeb) return [];
     return await _db.getCachedPosts(did!, feedUri, limit: limit);
   }
 
@@ -1241,7 +1272,7 @@ class BlueskyService {
 
       // If it's a post, also delete from local cache to avoid ghost notifications
       if (collection == 'app.bsky.feed.post' && cid != null) {
-        await _db.deletePostFromCache(did!, cid);
+        if (!kIsWeb) await _db.deletePostFromCache(did!, cid);
       }
     } catch (e) {
       debugPrint('Delete error detail: $e');
@@ -1352,7 +1383,7 @@ class BlueskyService {
     try {
       final key = 'profile:$actor';
       final now = DateTime.now().millisecondsSinceEpoch;
-      final last = did == null ? null : await _db.getCacheFetched(did!, key);
+      final last = (did == null || kIsWeb) ? null : await _db.getCacheFetched(did!, key);
       if (last != null) {
         if ((now - last) < _ttlProfile.inMilliseconds) {
           final cached = _profileCache[actor];
@@ -1363,7 +1394,7 @@ class BlueskyService {
         } else {
           debugPrint('Profile cache expired for $actor, clearing in-memory cache and meta');
           _profileCache.remove(actor);
-          if (did != null) {
+          if (did != null && !kIsWeb) {
             await _db.clearFeedCache(did!, key);
           }
         }
@@ -1376,7 +1407,7 @@ class BlueskyService {
       // Cache profile in memory and persist timestamp
       try {
         _profileCache[actor] = data;
-        if (did != null) {
+        if (did != null && !kIsWeb) {
           await _db.setCacheFetched(did!, key, DateTime.now().millisecondsSinceEpoch);
         }
       } catch (e) {

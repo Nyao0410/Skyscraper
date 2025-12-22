@@ -1,5 +1,6 @@
 // ignore_for_file: deprecated_member_use
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:intl/intl.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -17,6 +18,10 @@ import 'services/background_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  // Reduce noisy debug output on web to avoid overwhelming the VM/debug service.
+  if (kIsWeb) {
+    debugPrint = (String? message, {int? wrapWidth}) {};
+  }
   // Initialize saved locale before setting Intl.defaultLocale so
   // date/time formatting uses the user's preferred language.
   await LocaleController.init();

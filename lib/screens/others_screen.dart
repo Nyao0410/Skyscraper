@@ -259,7 +259,7 @@ class _OthersScreenState extends State<OthersScreen> {
         SettingsItem(
           icon: Icons.info_outline,
           title: l10n.appInfo,
-          subtitle: l10n.version_label('0.1.0'),
+          subtitle: l10n.version_label('0.9.7'),
           onTap: () {},
         ),
       ],

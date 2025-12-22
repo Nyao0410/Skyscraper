@@ -94,12 +94,19 @@ class BackgroundService {
   BackgroundService._internal();
 
   Future<void> init() async {
+    // Do not initialize background work on web builds — Workmanager
+    // and related platform APIs are not supported in browsers.
+    if (kIsWeb) {
+      debugPrint('BackgroundService: running on web, skipping background init');
+      return;
+    }
+
     await Workmanager().initialize(
       callbackDispatcher,
     );
-    
+
     // Register periodic task
-    if (Platform.isAndroid) {
+    if (!kIsWeb && Platform.isAndroid) {
       await Workmanager().registerPeriodicTask(
         "1",
         taskCheckScheduledPosts,

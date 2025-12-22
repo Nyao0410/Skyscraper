@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
 import '../models/post_item.dart';
@@ -9,8 +10,14 @@ class DatabaseService {
   DatabaseService._internal();
 
   Database? _database;
+  // In-memory fallback for web builds (sqflite is not supported on web).
+  final Map<int, Map<String, dynamic>> _inMemoryDrafts = {};
+  int _nextDraftId = 1;
 
   Future<Database> get database async {
+    if (kIsWeb) {
+      throw Exception('Database is not available on web. Use web-safe methods.');
+    }
     if (_database != null) return _database!;
     _database = await _initDatabase();
     return _database!;
@@ -158,6 +165,18 @@ class DatabaseService {
 
   // Draft & Scheduled Post Methods
   Future<int> saveDraft(String userDid, String text, {DateTime? scheduledAt}) async {
+    if (kIsWeb) {
+      final id = _nextDraftId++;
+      _inMemoryDrafts[id] = {
+        'id': id,
+        'user_did': userDid,
+        'text': text,
+        'scheduled_at': scheduledAt?.toIso8601String(),
+        'created_at': DateTime.now().toIso8601String(),
+        'is_sent': 0,
+      };
+      return id;
+    }
     final db = await database;
     return await db.insert('drafts', {
       'user_did': userDid,
@@ -169,6 +188,11 @@ class DatabaseService {
   }
 
   Future<List<Map<String, dynamic>>> getDrafts(String userDid) async {
+    if (kIsWeb) {
+      final list = _inMemoryDrafts.values.where((d) => d['user_did'] == userDid && (d['is_sent'] == 0 || d['is_sent'] == null)).toList();
+      list.sort((a, b) => (b['created_at'] as String).compareTo(a['created_at'] as String));
+      return list;
+    }
     final db = await database;
     return await db.query(
       'drafts', 
@@ -179,6 +203,11 @@ class DatabaseService {
   }
 
   Future<List<Map<String, dynamic>>> getScheduledPosts(String userDid) async {
+    if (kIsWeb) {
+      final list = _inMemoryDrafts.values.where((d) => d['user_did'] == userDid && (d['is_sent'] == 0 || d['is_sent'] == null) && d['scheduled_at'] != null).toList();
+      list.sort((a, b) => (a['scheduled_at'] as String).compareTo(b['scheduled_at'] as String));
+      return list;
+    }
     final db = await database;
     return await db.query(
       'drafts',
@@ -189,11 +218,24 @@ class DatabaseService {
   }
 
   Future<void> markAsSent(int id) async {
+    if (kIsWeb) {
+      final d = _inMemoryDrafts[id];
+      if (d != null) d['is_sent'] = 1;
+      return;
+    }
     final db = await database;
     await db.update('drafts', {'is_sent': 1}, where: 'id = ?', whereArgs: [id]);
   }
 
   Future<void> updateDraft(int id, String text, {DateTime? scheduledAt}) async {
+    if (kIsWeb) {
+      final d = _inMemoryDrafts[id];
+      if (d != null) {
+        d['text'] = text;
+        d['scheduled_at'] = scheduledAt?.toIso8601String();
+      }
+      return;
+    }
     final db = await database;
     await db.update(
       'drafts',
@@ -208,11 +250,19 @@ class DatabaseService {
   }
 
   Future<void> deleteDraft(int id) async {
+    if (kIsWeb) {
+      _inMemoryDrafts.remove(id);
+      return;
+    }
     final db = await database;
     await db.delete('drafts', where: 'id = ?', whereArgs: [id]);
   }
 
   Future<int> getDraftCount(String userDid) async {
+    if (kIsWeb) {
+      final count = _inMemoryDrafts.values.where((d) => d['user_did'] == userDid && (d['is_sent'] == 0 || d['is_sent'] == null)).length;
+      return count;
+    }
     final db = await database;
     final result = await db.rawQuery('SELECT COUNT(*) as count FROM drafts WHERE is_sent = 0 AND user_did = ?', [userDid]);
     return Sqflite.firstIntValue(result) ?? 0;
@@ -376,6 +426,7 @@ class DatabaseService {
   }
 
   Future<void> clearFeedCache(String userDid, String feedUri) async {
+    if (kIsWeb) return;
     final db = await database;
     // Delete feed_posts entries for this feed and user
     await db.delete('feed_posts', where: 'feed_uri = ? AND user_did = ?', whereArgs: [feedUri, userDid]);
@@ -392,6 +443,7 @@ class DatabaseService {
   }
 
   Future<void> clearFeedCacheIfExpired(String userDid, String feedUri, int ttlMillis) async {
+    if (kIsWeb) return;
     final last = await getCacheFetched(userDid, feedUri);
     if (last == null) return;
     final now = DateTime.now().millisecondsSinceEpoch;
@@ -401,6 +453,7 @@ class DatabaseService {
   }
 
   Future<List<PostItem>> getCachedPosts(String userDid, String feedUri, {int limit = 40}) async {
+    if (kIsWeb) return [];
     final db = await database;
     final List<Map<String, dynamic>> maps = await db.rawQuery('''
       SELECT p.data FROM posts p
@@ -417,18 +470,21 @@ class DatabaseService {
   }
 
   Future<void> clearCache() async {
+    if (kIsWeb) return;
     final db = await database;
     await db.delete('feed_posts');
     await db.delete('posts');
   }
 
   Future<void> deletePostFromCache(String userDid, String cid) async {
+    if (kIsWeb) return;
     final db = await database;
     await db.delete('posts', where: 'cid = ? AND user_did = ?', whereArgs: [cid, userDid]);
   }
 
   // Read Management Methods
   Future<void> updateLastSeen(String userDid, String feedUri, String postCid, DateTime postAt) async {
+    if (kIsWeb) return;
     final db = await database;
     // Ensure the last_seen table exists (handles older DBs that lack the table)
     await db.execute('''
@@ -454,6 +510,7 @@ class DatabaseService {
   }
 
   Future<int> getUnreadCount(String userDid, String feedUri) async {
+    if (kIsWeb) return 0;
     final db = await database;
     // Ensure the last_seen table exists (handles older DBs that lack the table)
     await db.execute('''
