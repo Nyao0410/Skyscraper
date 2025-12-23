@@ -65,8 +65,8 @@ Future<void> _processScheduledPosts(DatabaseService db, BlueskyService service, 
   final scheduledPosts = await db.getScheduledPosts(did);
   debugPrint("Found ${scheduledPosts.length} scheduled posts for $handle");
   for (final post in scheduledPosts) {
-    final scheduledAt = DateTime.parse(post['scheduled_at']);
-    if (scheduledAt.isBefore(now)) {
+    final scheduledAt = DateTime.parse(post['scheduled_at']).toUtc();
+    if (scheduledAt.isBefore(now.toUtc())) {
       try {
         await service.post(post['text']);
         await db.markAsSent(post['id']);

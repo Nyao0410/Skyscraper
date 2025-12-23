@@ -340,7 +340,11 @@ class _ThreadScreenState extends State<ThreadScreen> {
             linkStyle: const TextStyle(color: Colors.blue, decoration: TextDecoration.none),
           ),
           if (post.quotedPost != null) _buildQuotedPost(post.quotedPost!),
-          if (post.media.isNotEmpty) MediaGrid(media: post.media),
+          if (post.media.isNotEmpty)
+            MediaGrid(
+              media: post.media,
+              heroTagPrefix: post.uri,
+            ),
           const SizedBox(height: 16),
           Text(
             _formatFullDate(post.createdAt),
@@ -419,7 +423,11 @@ class _ThreadScreenState extends State<ThreadScreen> {
               color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.9),
             ),
           ),
-          if (quoted.media.isNotEmpty) MediaGrid(media: quoted.media),
+          if (quoted.media.isNotEmpty)
+            MediaGrid(
+              media: quoted.media,
+              heroTagPrefix: 'quoted-${quoted.uri}',
+            ),
         ],
       ),
     );

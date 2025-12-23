@@ -24,9 +24,15 @@ ImageProvider? avatarImageProvider(String? avatar) {
   try {
     // On web we cannot access local files reliably - use network provider.
     if (kIsWeb) {
-      // Use a simple transparent placeholder on web to avoid repeated
-      // image decoding errors from remote CDN responses (CORS/HTML responses).
-      return MemoryImage(_kTransparentImage);
+      // On web, prefer loading directly from the network. This will work
+      // when the avatar CDN provides proper CORS headers. If the request
+      // fails (CORS or other network error), fall back to a transparent
+      // placeholder to avoid crashing the UI.
+      try {
+        return NetworkImage(avatar);
+      } catch (_) {
+        return MemoryImage(_kTransparentImage);
+      }
     }
 
     // If the value looks like a local file path, prefer it on non-web platforms.

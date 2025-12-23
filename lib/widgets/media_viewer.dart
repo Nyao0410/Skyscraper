@@ -6,11 +6,13 @@ import '../models/post_item.dart';
 class MediaViewer extends StatelessWidget {
   final List<MediaItem> media;
   final int initialIndex;
+  final String? heroTagPrefix;
 
   const MediaViewer({
     super.key,
     required this.media,
     this.initialIndex = 0,
+    this.heroTagPrefix,
   });
 
   @override
@@ -27,10 +29,12 @@ class MediaViewer extends StatelessWidget {
           PhotoViewGallery.builder(
             scrollPhysics: const BouncingScrollPhysics(),
             builder: (BuildContext context, int index) {
+              final item = media[index];
+              final heroTag = heroTagPrefix != null ? '$heroTagPrefix-${item.url}' : item.url;
               return PhotoViewGalleryPageOptions(
-                imageProvider: NetworkImage(media[index].url),
+                imageProvider: NetworkImage(item.url),
                 initialScale: PhotoViewComputedScale.contained,
-                heroAttributes: PhotoViewHeroAttributes(tag: media[index].url),
+                heroAttributes: PhotoViewHeroAttributes(tag: heroTag),
               );
             },
             itemCount: media.length,

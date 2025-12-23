@@ -171,7 +171,7 @@ class DatabaseService {
         'id': id,
         'user_did': userDid,
         'text': text,
-        'scheduled_at': scheduledAt?.toIso8601String(),
+        'scheduled_at': scheduledAt?.toUtc().toIso8601String(),
         'created_at': DateTime.now().toIso8601String(),
         'is_sent': 0,
       };
@@ -181,7 +181,7 @@ class DatabaseService {
     return await db.insert('drafts', {
       'user_did': userDid,
       'text': text,
-      'scheduled_at': scheduledAt?.toIso8601String(),
+      'scheduled_at': scheduledAt?.toUtc().toIso8601String(),
       'created_at': DateTime.now().toIso8601String(),
       'is_sent': 0,
     });
@@ -232,7 +232,7 @@ class DatabaseService {
       final d = _inMemoryDrafts[id];
       if (d != null) {
         d['text'] = text;
-        d['scheduled_at'] = scheduledAt?.toIso8601String();
+        d['scheduled_at'] = scheduledAt?.toUtc().toIso8601String();
       }
       return;
     }
@@ -241,7 +241,7 @@ class DatabaseService {
       'drafts',
       {
         'text': text,
-        'scheduled_at': scheduledAt?.toIso8601String(),
+        'scheduled_at': scheduledAt?.toUtc().toIso8601String(),
         // keep created_at as-is
       },
       where: 'id = ?',

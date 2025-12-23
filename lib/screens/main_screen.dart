@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 import '../flutter_gen/gen_l10n/app_localizations.dart';
-import '../services/bluesky_service.dart';
-import '../services/database_service.dart';
 import 'talk_list_screen.dart';
 import 'home_screen.dart';
 import 'chat_detail_wrapper.dart';
@@ -19,24 +17,10 @@ class MainScreen extends StatefulWidget {
 
 class _MainScreenState extends State<MainScreen> {
   int _selectedIndex = 1; // Default to 'Talk' (index 1)
-  final _service = BlueskyService();
-  final _db = DatabaseService();
-  int _draftCount = 0;
 
   @override
   void initState() {
     super.initState();
-    _updateDraftCount();
-  }
-
-  Future<void> _updateDraftCount() async {
-    if (_service.did == null) return;
-    final count = await _db.getDraftCount(_service.did!);
-    if (mounted) {
-      setState(() {
-        _draftCount = count;
-      });
-    }
   }
   
   void _navigateToChat(String name, String uri) {
@@ -69,7 +53,6 @@ class _MainScreenState extends State<MainScreen> {
           setState(() {
             _selectedIndex = index;
           });
-          _updateDraftCount();
         },
         selectedItemColor: const Color(0xFF00C300),
         unselectedItemColor: Colors.grey,
@@ -79,11 +62,7 @@ class _MainScreenState extends State<MainScreen> {
           BottomNavigationBarItem(icon: const Icon(Icons.search), activeIcon: const Icon(Icons.search), label: AppLocalizations.of(context).nav_search),
           BottomNavigationBarItem(icon: const Icon(Icons.notifications_outlined), activeIcon: const Icon(Icons.notifications), label: AppLocalizations.of(context).nav_notifications),
           BottomNavigationBarItem(
-            icon: Badge(
-              label: _draftCount > 0 ? Text(_draftCount.toString()) : null,
-              isLabelVisible: _draftCount > 0,
-              child: const Icon(Icons.more_horiz),
-            ),
+            icon: const Icon(Icons.more_horiz),
             label: AppLocalizations.of(context).nav_others,
           ),
         ],

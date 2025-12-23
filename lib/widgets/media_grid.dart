@@ -6,8 +6,9 @@ import 'video_player_widget.dart';
 
 class MediaGrid extends StatelessWidget {
   final List<MediaItem> media;
+  final String? heroTagPrefix;
 
-  const MediaGrid({super.key, required this.media});
+  const MediaGrid({super.key, required this.media, this.heroTagPrefix});
 
   @override
   Widget build(BuildContext context) {
@@ -23,8 +24,8 @@ class MediaGrid extends StatelessWidget {
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
                 crossAxisCount: 2,
-                mainAxisSpacing: 4,
-                crossAxisSpacing: 4,
+                mainAxisSpacing: 2,
+                crossAxisSpacing: 2,
                 childAspectRatio: 1.0,
                 children: List.generate(media.length, (index) {
                   return _buildMediaItem(context, media, index);
@@ -39,10 +40,12 @@ class MediaGrid extends StatelessWidget {
       return VideoPlayerWidget(url: item.videoUrl!);
     }
 
+    final heroTag = heroTagPrefix != null ? '$heroTagPrefix-${item.url}' : item.url;
+
     return GestureDetector(
       onTap: () => _openViewer(context, [item], 0),
       child: Hero(
-        tag: item.url,
+        tag: heroTag,
         child: CachedNetworkImage(
           imageUrl: item.url,
           fit: BoxFit.contain,
@@ -63,13 +66,15 @@ class MediaGrid extends StatelessWidget {
 
   Widget _buildMediaItem(BuildContext context, List<MediaItem> media, int index) {
     final item = media[index];
+    final heroTag = heroTagPrefix != null ? '$heroTagPrefix-${item.url}' : item.url;
+
     return GestureDetector(
       onTap: () => _openViewer(context, media, index),
       child: Stack(
         fit: StackFit.expand,
         children: [
           Hero(
-            tag: item.url,
+            tag: heroTag,
             child: CachedNetworkImage(
               imageUrl: item.url,
               fit: BoxFit.cover,
@@ -120,7 +125,11 @@ class MediaGrid extends StatelessWidget {
 
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (context) => MediaViewer(media: media, initialIndex: index),
+        builder: (context) => MediaViewer(
+          media: media,
+          initialIndex: index,
+          heroTagPrefix: heroTagPrefix,
+        ),
       ),
     );
   }

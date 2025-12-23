@@ -484,12 +484,17 @@ class MessageBubble extends StatelessWidget {
 
   Widget _buildSingleMedia(MediaItem item, double maxWidth, BuildContext context) {
     if (item.type == MediaType.image) {
+      final heroTag = '${message.uri}-${item.url}';
       return GestureDetector(
         onLongPress: () => _showMenu(context),
         onTap: () {
           Navigator.of(context).push(
             MaterialPageRoute(
-              builder: (context) => MediaViewer(media: [item], initialIndex: 0),
+              builder: (context) => MediaViewer(
+                media: [item],
+                initialIndex: 0,
+                heroTagPrefix: message.uri,
+              ),
             ),
           );
         },
@@ -501,7 +506,7 @@ class MessageBubble extends StatelessWidget {
               maxHeight: 300,
             ),
             child: Hero(
-              tag: item.url,
+              tag: heroTag,
               child: CachedNetworkImage(
                 imageUrl: item.url,
                 fit: BoxFit.cover,

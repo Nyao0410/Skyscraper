@@ -82,8 +82,8 @@ class _DraftsScreenState extends State<DraftsScreen> {
                   itemBuilder: (context, index) {
                     final draft = _drafts[index];
                     final scheduledAt = draft['scheduled_at'] != null 
-                        ? DateTime.parse(draft['scheduled_at']) 
-                        : null;
+                      ? DateTime.parse(draft['scheduled_at']).toLocal()
+                      : null;
                     
                     return ListTile(
                       title: Text(draft['text'], maxLines: 2, overflow: TextOverflow.ellipsis),
@@ -102,7 +102,7 @@ class _DraftsScreenState extends State<DraftsScreen> {
                         // Open NewPostScreen for editing this draft
                         final id = draft['id'] as int?;
                         final text = draft['text'] as String?;
-                        final sched = draft['scheduled_at'] != null ? DateTime.parse(draft['scheduled_at']) : null;
+                        final sched = draft['scheduled_at'] != null ? DateTime.parse(draft['scheduled_at']).toLocal() : null;
                         final res = await Navigator.push(
                           context,
                           MaterialPageRoute(builder: (context) => NewPostScreen(initialText: text, draftId: id, scheduledAt: sched, preferDraft: true)),
