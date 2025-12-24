@@ -5,7 +5,6 @@ import '../services/bluesky_service.dart';
 import '../models/post_item.dart';
 import '../utils/feed_utils.dart';
 import 'chat_screen.dart';
-import 'new_post_screen.dart';
 import '../flutter_gen/gen_l10n/app_localizations.dart';
 
 class ChatDetailWrapper extends StatefulWidget {
@@ -109,7 +108,7 @@ class _ChatDetailWrapperState extends State<ChatDetailWrapper> {
     }
   }
 
-  Future<void> _handleSendMessage(String text, {List<XFile>? images}) async {
+  Future<void> _handleSendMessage(String text, {List<XFile>? images, PostItem? replyTo, PostItem? quoteOf}) async {
     try {
       List<EmbedImagesImage>? uploadedImages;
       if (images != null && images.isNotEmpty) {
@@ -120,7 +119,13 @@ class _ChatDetailWrapperState extends State<ChatDetailWrapper> {
           uploadedImages.add(EmbedImagesImage(image: blob, alt: ''));
         }
       }
-      await _service.post(text, images: uploadedImages);
+      if (replyTo != null) {
+        await _service.reply(replyTo, text, images: uploadedImages);
+      } else if (quoteOf != null) {
+        await _service.quote(quoteOf, text, images: uploadedImages);
+      } else {
+        await _service.post(text, images: uploadedImages);
+      }
       _handleRefresh();
     } catch (e) {
       if (mounted) {
@@ -170,20 +175,6 @@ class _ChatDetailWrapperState extends State<ChatDetailWrapper> {
       onDelete: (item) async {
         await _service.delete(item.uri, cid: item.id);
         _handleRefresh();
-      },
-      onReply: (item) async {
-        final result = await Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => NewPostScreen(replyTo: item)),
-        );
-        if (result == true) _handleRefresh();
-      },
-      onQuote: (item) async {
-        final result = await Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => NewPostScreen(quoteOf: item)),
-        );
-        if (result == true) _handleRefresh();
       },
     );
   }

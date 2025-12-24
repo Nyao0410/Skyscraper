@@ -115,14 +115,16 @@ class _PostWidgetState extends State<PostWidget> {
                         ],
                       ),
                       const SizedBox(height: 4),
-                      LinkifiedText(
-                        text: post.text,
-                        style: TextStyle(
-                          fontSize: 15,
-                          height: 1.3,
-                          color: Theme.of(context).colorScheme.onSurface,
+                      SelectionArea(
+                        child: LinkifiedText(
+                          text: post.text,
+                          style: TextStyle(
+                            fontSize: 15,
+                            height: 1.3,
+                            color: Theme.of(context).colorScheme.onSurface,
+                          ),
+                          linkStyle: const TextStyle(color: Colors.blue, decoration: TextDecoration.none),
                         ),
-                        linkStyle: const TextStyle(color: Colors.blue, decoration: TextDecoration.none),
                       ),
                       if (post.quotedPost != null) _buildQuotedPost(post.quotedPost!),
                       if (post.media.isNotEmpty)
@@ -166,60 +168,77 @@ class _PostWidgetState extends State<PostWidget> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       margin: const EdgeInsets.only(top: 8),
-      padding: const EdgeInsets.all(10),
-      decoration: BoxDecoration(
-        border: Border.all(color: isDark ? Colors.white10 : Colors.grey.shade300),
-        borderRadius: BorderRadius.circular(12),
-        color: isDark ? Colors.white.withValues(alpha: 0.05) : null,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              GestureDetector(
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => ProfileScreen(actor: quoted.handle)),
-                  );
-                },
-                child: quoted.avatar != null
-                    ? CircleAvatar(
-                        radius: 10,
-                        backgroundImage: avatarImageProvider(quoted.avatar),
-                      )
-                    : const Icon(Icons.person, size: 20),
+      child: Material(
+        color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.transparent,
+        shape: RoundedRectangleBorder(
+          side: BorderSide(color: isDark ? Colors.white10 : Colors.grey.shade300),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => ThreadScreen(postUri: quoted.uri),
               ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  quoted.author,
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 13,
-                    color: Theme.of(context).colorScheme.onSurface,
-                  ),
-                  overflow: TextOverflow.ellipsis,
+            );
+          },
+          child: Padding(
+            padding: const EdgeInsets.all(10),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    GestureDetector(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (context) => ProfileScreen(actor: quoted.handle)),
+                        );
+                      },
+                      child: quoted.avatar != null
+                          ? CircleAvatar(
+                              radius: 10,
+                              backgroundImage: avatarImageProvider(quoted.avatar),
+                            )
+                          : const Icon(Icons.person, size: 20),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        quoted.author,
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 13,
+                          color: Theme.of(context).colorScheme.onSurface,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
                 ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 4),
-          LinkifiedText(
-            text: quoted.text,
-            style: TextStyle(
-              fontSize: 14,
-              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.9),
+                const SizedBox(height: 4),
+                SelectionArea(
+                  child: LinkifiedText(
+                    text: quoted.text,
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.9),
+                    ),
+                  ),
+                ),
+                if (quoted.media.isNotEmpty)
+                  MediaGrid(
+                    media: quoted.media,
+                    postLabels: quoted.labels,
+                    heroTagPrefix: 'quoted-${quoted.uri}',
+                  ),
+              ],
             ),
           ),
-          if (quoted.media.isNotEmpty)
-            MediaGrid(
-              media: quoted.media,
-              postLabels: quoted.labels,
-              heroTagPrefix: 'quoted-${quoted.uri}',
-            ),
-        ],
+        ),
       ),
     );
   }
@@ -279,18 +298,59 @@ class _PostWidgetState extends State<PostWidget> {
 
   void _handleRepost(PostItem post) async {
     final l10n = AppLocalizations.of(context);
-    try {
-      if (post.viewerRepost != null) {
+    
+    // If already reposted, just undo it
+    if (post.viewerRepost != null) {
+      try {
         await _service.delete(post.viewerRepost!);
-      } else {
-        await _service.repost(post.id, post.uri);
+        widget.onPostUpdated?.call();
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(l10n.error_with_message(e.toString())))
+          );
+        }
       }
-      widget.onPostUpdated?.call();
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.error_with_message(e.toString()))));
-      }
+      return;
     }
+
+    // Show menu to choose between Repost and Quote
+    if (!mounted) return;
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
+    
+    showModalBottomSheet(
+      context: context,
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.repeat, color: Colors.green),
+              title: Text(l10n.repost),
+              onTap: () async {
+                Navigator.pop(context);
+                try {
+                  await _service.repost(post.id, post.uri);
+                  widget.onPostUpdated?.call();
+                } catch (e) {
+                  scaffoldMessenger.showSnackBar(
+                    SnackBar(content: Text(l10n.error_with_message(e.toString())))
+                  );
+                }
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.format_quote, color: Colors.blue),
+              title: Text(l10n.timeline_quote_post),
+              onTap: () {
+                Navigator.pop(context);
+                _showQuoteDialog(post);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   void _showPostMenu(PostItem post) {

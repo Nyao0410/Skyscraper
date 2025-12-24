@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../flutter_gen/gen_l10n/app_localizations.dart';
 import '../utils/avatar_provider.dart';
@@ -10,6 +11,99 @@ import '../screens/profile_screen.dart';
 import 'linkified_text.dart';
 import 'media_viewer.dart';
 import 'video_player_widget.dart';
+
+class SwipeToReply extends StatefulWidget {
+  final Widget child;
+  final VoidCallback onSwipe;
+  final bool isMe;
+
+  const SwipeToReply({
+    super.key,
+    required this.child,
+    required this.onSwipe,
+    required this.isMe,
+  });
+
+  @override
+  State<SwipeToReply> createState() => _SwipeToReplyState();
+}
+
+class _SwipeToReplyState extends State<SwipeToReply> with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<Offset> _animation;
+  double _dragExtent = 0.0;
+  static const double _triggerThreshold = 60.0;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 200),
+    );
+    _animation = Tween<Offset>(
+      begin: Offset.zero,
+      end: const Offset(-0.2, 0.0), // Swipe left moves child to the left
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.decelerate));
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _onHorizontalDragUpdate(DragUpdateDetails details) {
+    // Only allow swiping left (negative delta)
+    if (details.delta.dx < 0 || _dragExtent < 0) {
+      setState(() {
+        _dragExtent += details.delta.dx;
+        if (_dragExtent > 0) _dragExtent = 0;
+        // Limit the drag
+        if (_dragExtent < -100) _dragExtent = -100;
+        
+        _controller.value = (_dragExtent.abs() / 100).clamp(0.0, 1.0);
+      });
+    }
+  }
+
+  void _onHorizontalDragEnd(DragEndDetails details) {
+    if (_dragExtent.abs() >= _triggerThreshold) {
+      widget.onSwipe();
+      HapticFeedback.mediumImpact();
+    }
+    
+    setState(() {
+      _dragExtent = 0.0;
+    });
+    _controller.reverse();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onHorizontalDragUpdate: _onHorizontalDragUpdate,
+      onHorizontalDragEnd: _onHorizontalDragEnd,
+      child: Stack(
+        alignment: Alignment.centerRight,
+        children: [
+          // Reply icon that appears behind
+          Opacity(
+            opacity: (_dragExtent.abs() / _triggerThreshold).clamp(0.0, 1.0),
+            child: Container(
+              padding: const EdgeInsets.only(right: 20),
+              child: const Icon(Icons.reply, color: Colors.blue),
+            ),
+          ),
+          SlideTransition(
+            position: _animation,
+            child: widget.child,
+          ),
+        ],
+      ),
+    );
+  }
+}
 
 class MessageBubble extends StatelessWidget {
   final PostItem message;
@@ -42,95 +136,99 @@ class MessageBubble extends StatelessWidget {
     final screenWidth = MediaQuery.of(context).size.width;
     final maxBubbleWidth = screenWidth * 0.75;
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
-      child: Row(
-        mainAxisAlignment: isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (!isMe) ...[
-            _buildAvatar(context),
-            const SizedBox(width: 6),
-          ],
-          Flexible(
-            child: Column(
-              crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
-              children: [
-                if (!isMe) ...[
-                  _buildAuthorName(context),
-                  const SizedBox(height: 4),
-                ],
-                if (message.repostedBy != null) ...[
-                  _buildRepostIndicator(context),
-                  const SizedBox(height: 4),
-                ],
-                if (message.replyParentPost != null) ...[
-                  _buildReplyPost(maxBubbleWidth, context),
-                  const SizedBox(height: 1),
-                ] else if (message.replyParentHandle != null) ...[
-                  _buildReplyIndicator(context),
-                  const SizedBox(height: 2),
-                ],
-                if (message.text.isNotEmpty || message.quotedPost != null)
-                  Row(
-                    mainAxisAlignment: isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      if (isMe) _buildTimestamp(context),
-                      const SizedBox(width: 4),
-                      Flexible(
-                        child: GestureDetector(
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => ThreadScreen(postUri: message.uri),
-                              ),
-                            );
-                          },
-                          onLongPress: () => _showMenu(context),
-                          child: _buildMainBubble(maxBubbleWidth, context),
-                        ),
-                      ),
-                      const SizedBox(width: 4),
-                      if (!isMe) _buildTimestamp(context),
-                    ],
-                  ),
-                if (message.media.isNotEmpty) ...[
-                  if (message.text.isNotEmpty || message.quotedPost != null)
+    return SwipeToReply(
+      onSwipe: () => onReply?.call(message),
+      isMe: isMe,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
+        child: Row(
+          mainAxisAlignment: isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (!isMe) ...[
+              _buildAvatar(context),
+              const SizedBox(width: 6),
+            ],
+            Flexible(
+              child: Column(
+                crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+                children: [
+                  if (!isMe) ...[
+                    _buildAuthorName(context),
                     const SizedBox(height: 4),
-                  Row(
-                    mainAxisAlignment: isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      if (isMe) _buildTimestamp(context),
-                      const SizedBox(width: 4),
-                      Flexible(
-                        child: GestureDetector(
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => ThreadScreen(postUri: message.uri),
-                              ),
-                            );
-                          },
-                          onLongPress: () => _showMenu(context),
-                          child: Column(
-                            crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
-                            children: _buildMediaWidgets(message.media, maxBubbleWidth, context),
+                  ],
+                  if (message.repostedBy != null) ...[
+                    _buildRepostIndicator(context),
+                    const SizedBox(height: 4),
+                  ],
+                  if (message.replyParentPost != null) ...[
+                    _buildReplyPost(maxBubbleWidth, context),
+                    const SizedBox(height: 1),
+                  ] else if (message.replyParentHandle != null) ...[
+                    _buildReplyIndicator(context),
+                    const SizedBox(height: 2),
+                  ],
+                  if (message.text.isNotEmpty || message.quotedPost != null)
+                    Row(
+                      mainAxisAlignment: isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        if (isMe) _buildTimestamp(context),
+                        const SizedBox(width: 4),
+                        Flexible(
+                          child: GestureDetector(
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => ThreadScreen(postUri: message.uri),
+                                ),
+                              );
+                            },
+                            onLongPress: () => _showMenu(context),
+                            child: _buildMainBubble(maxBubbleWidth, context),
                           ),
                         ),
-                      ),
-                      const SizedBox(width: 4),
-                      if (!isMe) _buildTimestamp(context),
-                    ],
-                  ),
+                        const SizedBox(width: 4),
+                        if (!isMe) _buildTimestamp(context),
+                      ],
+                    ),
+                  if (message.media.isNotEmpty) ...[
+                    if (message.text.isNotEmpty || message.quotedPost != null)
+                      const SizedBox(height: 4),
+                    Row(
+                      mainAxisAlignment: isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        if (isMe) _buildTimestamp(context),
+                        const SizedBox(width: 4),
+                        Flexible(
+                          child: GestureDetector(
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => ThreadScreen(postUri: message.uri),
+                                ),
+                              );
+                            },
+                            onLongPress: () => _showMenu(context),
+                            child: Column(
+                              crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+                              children: _buildMediaWidgets(message.media, maxBubbleWidth, context),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        if (!isMe) _buildTimestamp(context),
+                      ],
+                    ),
+                  ],
                 ],
-              ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -276,68 +374,84 @@ class MessageBubble extends StatelessWidget {
     
     return Container(
       constraints: BoxConstraints(maxWidth: maxWidth),
-      padding: const EdgeInsets.all(8),
-      decoration: BoxDecoration(
+      margin: const EdgeInsets.only(top: 4),
+      child: Material(
         color: isMe 
             ? (quoted.isMe ? const Color(0xFF6FB83A) : const Color(0xFF7BC946))
             : (isDark ? Colors.black26 : (quoted.isMe ? Colors.grey.shade100 : Colors.grey.shade200)),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: isDark ? Colors.white10 : Colors.black12, 
-          width: 0.5,
+        shape: RoundedRectangleBorder(
+          side: BorderSide(
+            color: isDark ? Colors.white10 : Colors.black12, 
+            width: 0.5,
+          ),
+          borderRadius: BorderRadius.circular(12),
         ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              if (quoted.avatar != null)
-                CircleAvatar(
-                  radius: 8,
-                  backgroundImage: avatarImageProvider(quoted.avatar),
-                )
-              else
-                const Icon(Icons.account_circle, size: 16, color: Colors.grey),
-              const SizedBox(width: 4),
-              Expanded(
-                child: Text(
-                  quoted.isMe ? l10n.me : quoted.author,
-                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: quoted.isMe ? (isMe ? Colors.white : Colors.blue) : (isDark ? Colors.white70 : Colors.black54),
-                  ),
-                  overflow: TextOverflow.ellipsis,
-                ),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => ThreadScreen(postUri: quoted.uri),
               ),
-            ],
-          ),
-          const SizedBox(height: 4),
-          LinkifiedText(
-            text: quoted.text,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: isDark ? Colors.white70 : Colors.black87),
-            onHashtagLongPress: (tag) => onInsertText?.call(tag),
-          ),
-          if (quoted.media.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.only(top: 4),
-              child: Wrap(
-                spacing: 4,
-                runSpacing: 4,
-                children: quoted.media.take(2).map((m) => Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(4),
-                    image: DecorationImage(
-                      image: CachedNetworkImageProvider(m.url),
-                      fit: BoxFit.cover,
+            );
+          },
+          child: Padding(
+            padding: const EdgeInsets.all(8),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    if (quoted.avatar != null)
+                      CircleAvatar(
+                        radius: 8,
+                        backgroundImage: avatarImageProvider(quoted.avatar),
+                      )
+                    else
+                      const Icon(Icons.account_circle, size: 16, color: Colors.grey),
+                    const SizedBox(width: 4),
+                    Expanded(
+                      child: Text(
+                        quoted.isMe ? l10n.me : quoted.author,
+                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: quoted.isMe ? (isMe ? Colors.white : Colors.blue) : (isDark ? Colors.white70 : Colors.black54),
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                LinkifiedText(
+                  text: quoted.text,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: isDark ? Colors.white70 : Colors.black87),
+                  onHashtagLongPress: (tag) => onInsertText?.call(tag),
+                ),
+                if (quoted.media.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: Wrap(
+                      spacing: 4,
+                      runSpacing: 4,
+                      children: quoted.media.take(2).map((m) => Container(
+                        width: 40,
+                        height: 40,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(4),
+                          image: DecorationImage(
+                            image: CachedNetworkImageProvider(m.url),
+                            fit: BoxFit.cover,
+                          ),
+                        ),
+                      )).toList(),
                     ),
                   ),
-                )).toList(),
-              ),
+              ],
             ),
-        ],
+          ),
+        ),
       ),
     );
   }
@@ -402,10 +516,18 @@ class MessageBubble extends StatelessWidget {
     final l10n = AppLocalizations.of(context);
     final isLiked = message.viewerLike != null;
     final isReposted = message.viewerRepost != null;
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final bgColor = theme.colorScheme.surface;
+    final onBg = theme.colorScheme.onSurface;
+    final likeColor = isDark ? Colors.pinkAccent.shade100 : Colors.pink;
+    final repostColor = isDark ? Colors.greenAccent.shade200 : Colors.green;
+    final quoteColor = isDark ? Colors.blue.shade200 : Colors.blue;
+    final replyColor = isDark ? Colors.grey.shade300 : Colors.grey.shade700;
 
     showModalBottomSheet(
       context: context,
-      backgroundColor: Colors.white,
+      backgroundColor: bgColor,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -417,9 +539,12 @@ class MessageBubble extends StatelessWidget {
               ListTile(
                 leading: Icon(
                   isLiked ? Icons.favorite : Icons.favorite_border,
-                  color: Colors.pink,
+                  color: likeColor,
                 ),
-                title: Text(isLiked ? l10n.unlike : l10n.like),
+                title: Text(
+                  isLiked ? l10n.unlike : l10n.like,
+                  style: theme.textTheme.bodyLarge?.copyWith(color: onBg),
+                ),
                 onTap: () {
                   Navigator.pop(context);
                   if (isLiked) {
@@ -432,9 +557,12 @@ class MessageBubble extends StatelessWidget {
               ListTile(
                 leading: Icon(
                   isReposted ? Icons.repeat_on : Icons.repeat,
-                  color: Colors.green,
+                  color: repostColor,
                 ),
-                title: Text(isReposted ? l10n.unrepost : l10n.repost),
+                title: Text(
+                  isReposted ? l10n.unrepost : l10n.repost,
+                  style: theme.textTheme.bodyLarge?.copyWith(color: onBg),
+                ),
                 onTap: () {
                   Navigator.pop(context);
                   if (isReposted) {
@@ -445,16 +573,16 @@ class MessageBubble extends StatelessWidget {
                 },
               ),
               ListTile(
-                leading: const Icon(Icons.format_quote, color: Colors.blue),
-                title: Text(l10n.quote),
+                leading: Icon(Icons.format_quote, color: quoteColor),
+                title: Text(l10n.quote, style: theme.textTheme.bodyLarge?.copyWith(color: onBg)),
                 onTap: () {
                   Navigator.pop(context);
                   onQuote?.call(message);
                 },
               ),
               ListTile(
-                leading: const Icon(Icons.reply, color: Colors.grey),
-                title: Text(l10n.reply),
+                leading: Icon(Icons.reply, color: replyColor),
+                title: Text(l10n.reply, style: theme.textTheme.bodyLarge?.copyWith(color: onBg)),
                 onTap: () {
                   Navigator.pop(context);
                   onReply?.call(message);
@@ -462,8 +590,8 @@ class MessageBubble extends StatelessWidget {
               ),
               if (isMe)
                 ListTile(
-                  leading: const Icon(Icons.delete_outline, color: Colors.red),
-                  title: Text(l10n.delete_local, style: const TextStyle(color: Colors.red)),
+                  leading: Icon(Icons.delete_outline, color: theme.colorScheme.error),
+                  title: Text(l10n.delete_local, style: theme.textTheme.bodyLarge?.copyWith(color: theme.colorScheme.error)),
                   onTap: () {
                     Navigator.pop(context);
                     onDelete?.call(message);

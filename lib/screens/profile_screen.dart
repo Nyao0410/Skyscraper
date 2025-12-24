@@ -149,67 +149,65 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     return Scaffold(
-      body: SelectionArea(
-        child: _profile == null && _loading
-            ? const Center(child: CircularProgressIndicator())
-            : _profile == null
-                ? Center(child: Text(l10n.profile_not_found))
-                : RefreshIndicator(
-                    onRefresh: () => _fetchFeedForTab(_tabController.index, forceRefresh: true),
-                    child: CustomScrollView(
-                      slivers: [
-                        _buildAppBar(),
-                      SliverToBoxAdapter(child: _buildProfileHeader()),
-                      SliverPersistentHeader(
-                        pinned: true,
-                        delegate: _SliverAppBarDelegate(
-                          TabBar(
-                            controller: _tabController,
-                            isScrollable: true,
-                            indicatorColor: const Color(0xFF00C300),
-                            labelColor: const Color(0xFF00C300),
-                            unselectedLabelColor: Colors.grey,
-                            labelStyle: const TextStyle(fontWeight: FontWeight.bold),
-                            tabs: [
-                              Tab(text: l10n.profile_tab_posts),
-                              Tab(text: l10n.profile_tab_replies),
-                              Tab(text: l10n.profile_tab_media),
-                              Tab(text: l10n.profile_tab_video),
-                              Tab(text: l10n.profile_tab_feeds),
-                            ],
-                          ),
+      body: _profile == null && _loading
+          ? const Center(child: CircularProgressIndicator())
+          : _profile == null
+              ? Center(child: Text(l10n.profile_not_found))
+              : RefreshIndicator(
+                  onRefresh: () => _fetchFeedForTab(_tabController.index, forceRefresh: true),
+                  child: CustomScrollView(
+                    slivers: [
+                      _buildAppBar(),
+                    SliverToBoxAdapter(child: _buildProfileHeader()),
+                    SliverPersistentHeader(
+                      pinned: true,
+                      delegate: _SliverAppBarDelegate(
+                        TabBar(
+                          controller: _tabController,
+                          isScrollable: true,
+                          indicatorColor: const Color(0xFF00C300),
+                          labelColor: const Color(0xFF00C300),
+                          unselectedLabelColor: Colors.grey,
+                          labelStyle: const TextStyle(fontWeight: FontWeight.bold),
+                          tabs: [
+                            Tab(text: l10n.profile_tab_posts),
+                            Tab(text: l10n.profile_tab_replies),
+                            Tab(text: l10n.profile_tab_media),
+                            Tab(text: l10n.profile_tab_video),
+                            Tab(text: l10n.profile_tab_feeds),
+                          ],
                         ),
                       ),
-                      if (_loading)
-                        const SliverFillRemaining(
-                          child: Center(child: CircularProgressIndicator()),
-                        )
-                      else if (_currentData.isEmpty)
-                        SliverFillRemaining(
-                          child: Center(child: Text(l10n.profile_no_data)),
-                        )
-                      else
-                        SliverList(
-                          delegate: SliverChildBuilderDelegate(
-                            (context, index) {
-                              final item = _currentData[index];
-                              if (item is PostItem) {
-                                return PostWidget(
-                                  post: item,
-                                  onPostUpdated: _fetchData,
-                                );
-                              } else {
-                                // FeedGeneratorView or ListView
-                                return _buildGenericItem(item);
-                              }
-                            },
-                            childCount: _currentData.length,
-                          ),
+                    ),
+                    if (_loading)
+                      const SliverFillRemaining(
+                        child: Center(child: CircularProgressIndicator()),
+                      )
+                    else if (_currentData.isEmpty)
+                      SliverFillRemaining(
+                        child: Center(child: Text(l10n.profile_no_data)),
+                      )
+                    else
+                      SliverList(
+                        delegate: SliverChildBuilderDelegate(
+                          (context, index) {
+                            final item = _currentData[index];
+                            if (item is PostItem) {
+                              return PostWidget(
+                                post: item,
+                                onPostUpdated: _fetchData,
+                              );
+                            } else {
+                              // FeedGeneratorView or ListView
+                              return _buildGenericItem(item);
+                            }
+                          },
+                          childCount: _currentData.length,
                         ),
-                    ],
-                  ),
+                      ),
+                  ],
                 ),
-      ),
+              ),
     );
   }
 
@@ -232,12 +230,14 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
         children: [
           if (creator != null) Text('by @$creator', style: const TextStyle(fontSize: 12, color: Colors.blue)),
           if (description != null)
-            LinkifiedText(
-              text: description,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontSize: 13),
-              linkStyle: const TextStyle(color: Colors.blue),
+            SelectionArea(
+              child: LinkifiedText(
+                text: description,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontSize: 13),
+                linkStyle: const TextStyle(color: Colors.blue),
+              ),
             ),
         ],
       ),

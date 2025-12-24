@@ -118,10 +118,6 @@ class AppLocalizations {
   String drafts_created_at(String date) => _isEn ? 'Created: $date' : '作成: $date';
   String drafts_scheduled_at(String date) => _isEn ? 'Scheduled: $date' : '予約: $date';
   String get post_success => _isEn ? 'Posted successfully' : '投稿しました';
-  String get thread_title => _isEn ? 'Thread' : 'スレッド';
-  String get thread_not_found => _isEn ? 'Thread not found' : 'スレッドが見つかりませんでした';
-  String get thread_parse_error => _isEn ? 'Could not parse thread data' : 'スレッドデータを解析できませんでした';
-  String get post_not_viewable => _isEn ? 'This post is not viewable' : 'この投稿は表示できません';
   String get feed_search_title => _isEn ? 'Find Feeds & Lists' : 'フィード・リストを探す';
   String get feed_search_hint => _isEn ? 'Search feeds' : 'フィードを検索';
   String get feed_search_tab_feeds => _isEn ? 'Feeds' : 'フィード';
@@ -166,7 +162,7 @@ class AppLocalizations {
   String get profile_handle => _isEn ? 'Handle' : 'ハンドル';
   String get profile_did => _isEn ? 'DID' : 'DID';
   String version_label(String version) => _isEn ? 'Version $version' : 'バージョン $version';
-  String get repost_undo => _isEn ? 'Undo Repost' : 'リポストを取り消す';
+  
   String get repost => _isEn ? 'Repost' : 'リポスト';
   String get loading => _isEn ? 'Loading...' : '読み込み中...';
   String get settings_title => _isEn ? 'Advanced Settings' : '詳細設定';
@@ -265,6 +261,20 @@ class AppLocalizations {
   String get profile_unfollow => _isEn ? 'Unfollow' : 'フォローを外す';
   String get profile_follow => _isEn ? 'Follow' : 'フォローする';
   String get no_results => _isEn ? 'No results' : '結果がありません';
+
+  // Thread & Interactions
+  String get thread_title => _isEn ? 'Thread' : 'スレッド';
+  String get thread_not_found => _isEn ? 'Post not found' : '投稿が見つかりませんでした';
+  String get thread_parse_error => _isEn ? 'Failed to parse thread' : 'スレッドの解析に失敗しました';
+  String get post_not_viewable => _isEn ? 'This post is not viewable' : 'この投稿は表示できません';
+  String get repost_undo => _isEn ? 'Undo Repost' : 'リポストを取り消す';
+  String get post_interactions_title => _isEn ? 'Interactions' : '反応';
+  String get post_interactions_reposts => _isEn ? 'Reposts' : 'リポスト';
+  String get post_interactions_quotes => _isEn ? 'Quotes' : '引用';
+  String get post_interactions_likes => _isEn ? 'Likes' : 'いいね';
+  String get post_interactions_no_reposts => _isEn ? 'No reposts yet' : 'まだリポストはありません';
+  String get post_interactions_no_quotes => _isEn ? 'No quotes yet' : 'まだ引用はありません';
+  String get post_interactions_no_likes => _isEn ? 'No likes yet' : 'まだいいねはありません';
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

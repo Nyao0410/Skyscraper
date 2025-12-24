@@ -9,6 +9,7 @@ import '../widgets/media_grid.dart';
 import '../widgets/post_widget.dart';
 import 'profile_screen.dart';
 import 'new_post_screen.dart';
+import 'post_interactions_screen.dart';
 
 class ThreadScreen extends StatefulWidget {
   final String postUri;
@@ -67,18 +68,16 @@ class _ThreadScreenState extends State<ThreadScreen> {
       appBar: AppBar(
         title: Text(l10n.thread_title, style: const TextStyle(fontWeight: FontWeight.bold)),
       ),
-      body: SelectionArea(
-        child: _loading
-            ? const Center(child: CircularProgressIndicator())
-            : _thread == null
-                ? Center(child: Text(l10n.thread_not_found))
-                : RefreshIndicator(
-                    onRefresh: _fetchThread,
-                    child: ListView(
-                      children: _buildThreadItems(_thread),
-                    ),
+      body: _loading
+          ? const Center(child: CircularProgressIndicator())
+          : _thread == null
+              ? Center(child: Text(l10n.thread_not_found))
+              : RefreshIndicator(
+                  onRefresh: _fetchThread,
+                  child: ListView(
+                    children: _buildThreadItems(_thread),
                   ),
-      ),
+                ),
     );
   }
 
@@ -351,6 +350,65 @@ class _ThreadScreenState extends State<ThreadScreen> {
             _formatFullDate(post.createdAt),
             style: const TextStyle(color: Colors.grey, fontSize: 14),
           ),
+          if (post.repostCount > 0 || post.likeCount > 0) ...[
+            const Divider(height: 32),
+            Row(
+              children: [
+                if (post.repostCount > 0)
+                  GestureDetector(
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => PostInteractionsScreen(
+                          postUri: post.uri,
+                          initialTabIndex: 0,
+                        ),
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Text(
+                          post.repostCount.toString(),
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          l10n.post_interactions_reposts,
+                          style: const TextStyle(color: Colors.grey),
+                        ),
+                      ],
+                    ),
+                  ),
+                if (post.repostCount > 0 && post.likeCount > 0)
+                  const SizedBox(width: 20),
+                if (post.likeCount > 0)
+                  GestureDetector(
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => PostInteractionsScreen(
+                          postUri: post.uri,
+                          initialTabIndex: 2,
+                        ),
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Text(
+                          post.likeCount.toString(),
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          l10n.post_interactions_likes,
+                          style: const TextStyle(color: Colors.grey),
+                        ),
+                      ],
+                    ),
+                  ),
+              ],
+            ),
+          ],
           const Divider(height: 32),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,

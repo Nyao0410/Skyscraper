@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 import '../flutter_gen/gen_l10n/app_localizations.dart';
+import '../utils/avatar_provider.dart';
 
 import '../models/post_item.dart';
 import '../widgets/message_bubble.dart';
@@ -16,13 +17,11 @@ class ChatScreen extends StatefulWidget {
   final bool isLoadingMore;
   final Function() onRefresh;
   final Function() onLoadMore;
-  final Function(String text, {List<XFile>? images}) onSendMessage;
+  final Function(String text, {List<XFile>? images, PostItem? replyTo, PostItem? quoteOf}) onSendMessage;
   final Function(PostItem item)? onLike;
   final Function(PostItem item)? onUnlike;
   final Function(PostItem item)? onRepost;
   final Function(PostItem item)? onUnrepost;
-  final Function(PostItem item)? onReply;
-  final Function(PostItem item)? onQuote;
   final Function(PostItem item)? onDelete;
 
   const ChatScreen({
@@ -38,8 +37,6 @@ class ChatScreen extends StatefulWidget {
     this.onUnlike,
     this.onRepost,
     this.onUnrepost,
-    this.onReply,
-    this.onQuote,
     this.onDelete,
   });
 
@@ -50,11 +47,14 @@ class ChatScreen extends StatefulWidget {
 class _ChatScreenState extends State<ChatScreen> {
   final _scrollController = ScrollController();
   final _textController = TextEditingController();
+  final _focusNode = FocusNode();
   final _picker = ImagePicker();
   final List<XFile> _selectedImages = [];
   final int _maxChars = 300;
   bool _canSend = false;
   int _remaining = 300;
+  PostItem? _replyTo;
+  PostItem? _quoteOf;
 
   @override
   void initState() {
@@ -107,6 +107,7 @@ class _ChatScreenState extends State<ChatScreen> {
     _scrollController.dispose();
     _textController.removeListener(_onTextChanged);
     _textController.dispose();
+    _focusNode.dispose();
     super.dispose();
   }
 
@@ -138,12 +139,39 @@ class _ChatScreenState extends State<ChatScreen> {
   void _handleSend() {
     final text = _textController.text.trim();
     if (text.isEmpty && _selectedImages.isEmpty) return;
-    widget.onSendMessage(text, images: _selectedImages.isEmpty ? null : List.from(_selectedImages));
+    widget.onSendMessage(
+      text,
+      images: _selectedImages.isEmpty ? null : List.from(_selectedImages),
+      replyTo: _replyTo,
+      quoteOf: _quoteOf,
+    );
     _textController.clear();
     setState(() {
       _selectedImages.clear();
+      _replyTo = null;
+      _quoteOf = null;
     });
     _onTextChanged();
+  }
+
+  void _setReplyTo(PostItem? item) {
+    setState(() {
+      _replyTo = item;
+      _quoteOf = null; // Clear quote if replying
+    });
+    if (item != null) {
+      _focusNode.requestFocus();
+    }
+  }
+
+  void _setQuoteOf(PostItem? item) {
+    setState(() {
+      _quoteOf = item;
+      _replyTo = null; // Clear reply if quoting
+    });
+    if (item != null) {
+      _focusNode.requestFocus();
+    }
   }
 
   void _insertTagToComposer(String tag) {
@@ -288,8 +316,8 @@ class _ChatScreenState extends State<ChatScreen> {
                 onUnlike: widget.onUnlike,
                 onRepost: widget.onRepost,
                 onUnrepost: widget.onUnrepost,
-                onReply: widget.onReply,
-                onQuote: widget.onQuote,
+                onReply: _setReplyTo,
+                onQuote: _setQuoteOf,
                 onDelete: widget.onDelete,
                 onInsertText: _insertTagToComposer,
               ),
@@ -304,8 +332,8 @@ class _ChatScreenState extends State<ChatScreen> {
           onUnlike: widget.onUnlike,
           onRepost: widget.onRepost,
           onUnrepost: widget.onUnrepost,
-          onReply: widget.onReply,
-          onQuote: widget.onQuote,
+          onReply: _setReplyTo,
+          onQuote: _setQuoteOf,
           onDelete: widget.onDelete,
           onInsertText: _insertTagToComposer,
         );
@@ -328,6 +356,102 @@ class _ChatScreenState extends State<ChatScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            if (_replyTo != null)
+              Container(
+                margin: const EdgeInsets.only(bottom: 8),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: inputBgColor,
+                  borderRadius: BorderRadius.circular(12),
+                  border: const Border(left: BorderSide(color: Colors.blue, width: 4)),
+                ),
+                child: Row(
+                  children: [
+                    CircleAvatar(
+                      radius: 16,
+                      backgroundImage: avatarImageProvider(_replyTo!.avatar),
+                      child: _replyTo!.avatar == null ? const Icon(Icons.person, size: 16) : null,
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            '${_replyTo!.author} (@${_replyTo!.handle})',
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 12,
+                              color: Colors.blue,
+                            ),
+                          ),
+                          Text(
+                            _replyTo!.text,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(fontSize: 12, color: textColor.withValues(alpha: 0.7)),
+                          ),
+                        ],
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close, size: 18),
+                      onPressed: () => _setReplyTo(null),
+                    ),
+                  ],
+                ),
+              ),
+            if (_quoteOf != null)
+              Container(
+                margin: const EdgeInsets.only(bottom: 8),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: inputBgColor,
+                  borderRadius: BorderRadius.circular(12),
+                  border: const Border(left: BorderSide(color: Colors.green, width: 4)),
+                ),
+                child: Row(
+                  children: [
+                    CircleAvatar(
+                      radius: 16,
+                      backgroundImage: avatarImageProvider(_quoteOf!.avatar),
+                      child: _quoteOf!.avatar == null ? const Icon(Icons.person, size: 16) : null,
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              const Icon(Icons.format_quote, size: 14, color: Colors.green),
+                              const SizedBox(width: 4),
+                              Text(
+                                '${_quoteOf!.author} (@${_quoteOf!.handle})',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 12,
+                                  color: Colors.green,
+                                ),
+                              ),
+                            ],
+                          ),
+                          Text(
+                            _quoteOf!.text,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(fontSize: 12, color: textColor.withValues(alpha: 0.7)),
+                          ),
+                        ],
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close, size: 18),
+                      onPressed: () => _setQuoteOf(null),
+                    ),
+                  ],
+                ),
+              ),
             if (_selectedImages.isNotEmpty)
               Padding(
                 padding: const EdgeInsets.only(bottom: 8.0),
@@ -389,6 +513,7 @@ class _ChatScreenState extends State<ChatScreen> {
                     ),
                     child: TextField(
                       controller: _textController,
+                      focusNode: _focusNode,
                       // Limit input to 10 lines to avoid unlimited growth
                       maxLines: 10,
                       minLines: 1,
@@ -400,7 +525,9 @@ class _ChatScreenState extends State<ChatScreen> {
                       maxLengthEnforcement: MaxLengthEnforcement.enforced,
                       decoration: InputDecoration(
                         border: InputBorder.none,
-                        hintText: l10n.chat_hint,
+                        hintText: _replyTo != null 
+                            ? l10n.reply_to(_replyTo!.handle) 
+                            : (_quoteOf != null ? l10n.timeline_quote_post : l10n.chat_hint),
                         hintStyle: TextStyle(color: textColor.withValues(alpha: 0.5)),
                         counterText: '', // hide default counter to keep UI compact
                       ),

@@ -7,6 +7,7 @@ import 'dart:io';
 import 'package:bluesky/app_bsky_embed_images.dart';
 import '../services/bluesky_service.dart';
 import '../services/database_service.dart';
+import '../utils/avatar_provider.dart';
 
 import '../models/post_item.dart';
 
@@ -235,8 +236,10 @@ class _NewPostScreenState extends State<NewPostScreen> {
       ),
       body: Column(
         children: [
-          if (widget.replyTo != null || widget.quoteOf != null)
-            _buildReferencePost(widget.replyTo ?? widget.quoteOf!),
+          if (widget.replyTo != null)
+            _buildReferencePost(widget.replyTo!, true),
+          if (widget.quoteOf != null)
+            _buildReferencePost(widget.quoteOf!, false),
           Expanded(
             child: Padding(
               padding: const EdgeInsets.all(16.0),
@@ -343,33 +346,146 @@ class _NewPostScreenState extends State<NewPostScreen> {
     );
   }
 
-  Widget _buildReferencePost(PostItem post) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(12),
-      margin: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.grey.shade100,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.black12),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              if (post.avatar != null)
-                CircleAvatar(radius: 10, backgroundImage: NetworkImage(post.avatar!))
-              else
-                const Icon(Icons.account_circle, size: 20),
-              const SizedBox(width: 8),
-              Text(post.author, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Text(post.text, maxLines: 3, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 14)),
-        ],
-      ),
-    );
+  Widget _buildReferencePost(PostItem post, bool isReply) {
+    final l10n = AppLocalizations.of(context);
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final secondaryTextColor = isDark ? Colors.grey.shade400 : Colors.grey.shade600;
+
+    if (isReply) {
+      return Padding(
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.reply, size: 16, color: secondaryTextColor),
+                const SizedBox(width: 4),
+                Text(
+                  '${l10n.post_reply_title} @${post.handle}',
+                  style: TextStyle(
+                    color: secondaryTextColor,
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            IntrinsicHeight(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Container(
+                    width: 2,
+                    margin: const EdgeInsets.symmetric(horizontal: 8),
+                    decoration: BoxDecoration(
+                      color: isDark ? Colors.white24 : Colors.black12,
+                      borderRadius: BorderRadius.circular(1),
+                    ),
+                  ),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            CircleAvatar(
+                              radius: 10,
+                              backgroundImage: avatarImageProvider(post.avatar),
+                              child: post.avatar == null ? const Icon(Icons.person, size: 12) : null,
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              post.author,
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold, 
+                                fontSize: 12,
+                                color: theme.colorScheme.onSurface,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          post.text,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    } else {
+      // Quote
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(12),
+        margin: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.grey.shade100,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: isDark ? Colors.white10 : Colors.black12),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.format_quote, size: 16, color: Colors.blue),
+                const SizedBox(width: 4),
+                Text(
+                  l10n.post_quote_title,
+                  style: const TextStyle(
+                    color: Colors.blue,
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                CircleAvatar(
+                  radius: 10,
+                  backgroundImage: avatarImageProvider(post.avatar),
+                  child: post.avatar == null ? const Icon(Icons.person, size: 12) : null,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  post.author,
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold, 
+                    fontSize: 12,
+                    color: theme.colorScheme.onSurface,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              post.text,
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: 14,
+                color: theme.colorScheme.onSurface,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
   }
 }
