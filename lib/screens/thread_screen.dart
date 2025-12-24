@@ -343,6 +343,7 @@ class _ThreadScreenState extends State<ThreadScreen> {
           if (post.media.isNotEmpty)
             MediaGrid(
               media: post.media,
+              postLabels: post.labels,
               heroTagPrefix: post.uri,
             ),
           const SizedBox(height: 16),
@@ -426,6 +427,7 @@ class _ThreadScreenState extends State<ThreadScreen> {
           if (quoted.media.isNotEmpty)
             MediaGrid(
               media: quoted.media,
+              postLabels: quoted.labels,
               heroTagPrefix: 'quoted-${quoted.uri}',
             ),
         ],

@@ -3,7 +3,6 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'io_stub.dart' if (dart.library.io) 'dart:io' as io;
 import 'package:flutter/widgets.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:flutter/widgets.dart' show ImageProvider, MemoryImage;
 import '../services/bluesky_service.dart';
 
 // 1x1 transparent PNG to use as a safe placeholder when offline or file missing.

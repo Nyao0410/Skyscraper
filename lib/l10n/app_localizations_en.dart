@@ -221,6 +221,18 @@ class AppLocalizationsEn extends AppLocalizations {
   String get profile_following_status => 'Following';
 
   @override
+  String get profile_edit_title => 'Edit Profile';
+
+  @override
+  String get profile_display_name => 'Display Name';
+
+  @override
+  String get profile_description => 'Description';
+
+  @override
+  String get save => 'Save';
+
+  @override
   String get profile_no_users => 'No users found';
 
   @override

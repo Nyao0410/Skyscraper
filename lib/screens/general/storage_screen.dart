@@ -50,8 +50,8 @@ class _StorageScreenState extends State<StorageScreen> {
       if (tempDir.existsSync()) {
         await for (final file in tempDir.list(recursive: true, followLinks: false)) {
           if (file is File) {
-            final l = await (file as File).length();
-            totalSize += (l is int) ? l : l.toInt();
+            final l = await file.length();
+            totalSize += l;
           }
         }
       }
@@ -60,8 +60,8 @@ class _StorageScreenState extends State<StorageScreen> {
       if (appDir.existsSync()) {
         await for (final file in appDir.list(recursive: false)) {
           if (file is File && file.path.contains('avatar_')) {
-            final l = await (file as File).length();
-            totalSize += (l is int) ? l : l.toInt();
+            final l = await file.length();
+            totalSize += l;
           }
         }
       }

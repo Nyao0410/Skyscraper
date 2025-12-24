@@ -98,6 +98,10 @@
   "profile_followers": "フォロワー",
   "profile_edit_button": "プロフィールを編集",
   "profile_following_status": "フォロー中",
+  "profile_edit_title": "プロフィールを編集",
+  "profile_display_name": "表示名",
+  "profile_description": "自己紹介",
+  "save": "保存",
   "profile_no_users": "ユーザーがいません",
   "error_with_message": "エラー: {message}",
   "@error_with_message": {

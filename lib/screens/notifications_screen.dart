@@ -136,19 +136,22 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    final bgColor = LineColors.getBackgroundPrimary(context);
+    final borderColor = LineColors.getBorderLight(context);
+
     return Scaffold(
-      backgroundColor: LineColors.backgroundPrimary,
+      backgroundColor: bgColor,
       appBar: AppBar(
-        backgroundColor: LineColors.backgroundPrimary,
+        backgroundColor: bgColor,
         elevation: 0,
         centerTitle: true,
         title: Text(
           l10n.notifications_title,
-          style: LineTextStyles.appBarTitle,
+          style: LineTextStyles.appBarTitle(context),
         ),
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(1),
-          child: Container(color: LineColors.borderLight, height: 1),
+          child: Container(color: borderColor, height: 1),
         ),
       ),
       body: RefreshIndicator(
@@ -163,15 +166,15 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Icon(
+                    Icon(
                       Icons.notifications_none,
                       size: 64,
-                      color: LineColors.textTertiary,
+                      color: LineColors.getTextTertiary(context),
                     ),
                     const SizedBox(height: 16),
                     Text(
                       l10n.notifications_empty,
-                      style: const TextStyle(color: LineColors.textSecondary),
+                      style: TextStyle(color: LineColors.getTextSecondary(context)),
                     ),
                   ],
                 ),
@@ -180,7 +183,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                 itemCount: _groupedNotifications.length,
                 separatorBuilder: (context, index) => Padding(
                   padding: const EdgeInsets.only(left: 72),
-                  child: Container(color: LineColors.borderLight, height: 1),
+                  child: Container(color: borderColor, height: 1),
                 ),
                 itemBuilder: (context, index) {
                   final group = _groupedNotifications[index];
@@ -279,7 +282,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                       Expanded(child: _buildNotificationTitle(group, text)),
                       Text(
                         _formatDate(group.latestIndexedAt),
-                        style: LineTextStyles.bodyText2,
+                        style: LineTextStyles.bodyText2(context),
                       ),
                     ],
                   ),
@@ -291,7 +294,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                       padding: const EdgeInsets.only(top: 4),
                       child: Text(
                         _getRecordText(firstItem),
-                        style: LineTextStyles.bodyText2,
+                        style: LineTextStyles.bodyText2(context),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -304,12 +307,12 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                         width: double.infinity,
                         padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(
-                          color: LineColors.backgroundSecondary,
+                          color: LineColors.getBackgroundSecondary(context),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Text(
                           subjectText,
-                          style: LineTextStyles.bodyText2.copyWith(
+                          style: LineTextStyles.bodyText2(context).copyWith(
                             fontSize: 12,
                           ),
                           maxLines: 2,
@@ -359,9 +362,9 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
             child: Container(
               padding: const EdgeInsets.all(2),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: LineColors.getBackgroundPrimary(context),
                 shape: BoxShape.circle,
-                border: Border.all(color: LineColors.borderLight, width: 1),
+                border: Border.all(color: LineColors.getBorderLight(context), width: 1),
               ),
               child: Icon(icon, size: 12, color: color),
             ),
@@ -383,7 +386,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
               child: Container(
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  border: Border.all(color: Colors.white, width: 2),
+                  border: Border.all(color: LineColors.getBackgroundPrimary(context), width: 2),
                 ),
                 child: CircleAvatar(
                   radius: 14,
@@ -400,9 +403,9 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
             child: Container(
               padding: const EdgeInsets.all(2),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: LineColors.getBackgroundPrimary(context),
                 shape: BoxShape.circle,
-                border: Border.all(color: LineColors.borderLight, width: 1),
+                border: Border.all(color: LineColors.getBorderLight(context), width: 1),
               ),
               child: Icon(icon, size: 12, color: color),
             ),
@@ -422,7 +425,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         maxLines: 2,
         overflow: TextOverflow.ellipsis,
         text: TextSpan(
-          style: LineTextStyles.bodyText1,
+          style: LineTextStyles.bodyText1(context),
           children: [
             TextSpan(
               text: firstAuthor,
@@ -439,7 +442,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       maxLines: 2,
       overflow: TextOverflow.ellipsis,
       text: TextSpan(
-        style: LineTextStyles.bodyText1,
+        style: LineTextStyles.bodyText1(context),
         children: [
           TextSpan(
             text: firstAuthor,

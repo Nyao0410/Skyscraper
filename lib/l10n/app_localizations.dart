@@ -500,6 +500,30 @@ abstract class AppLocalizations {
   /// **'フォロー中'**
   String get profile_following_status;
 
+  /// No description provided for @profile_edit_title.
+  ///
+  /// In ja, this message translates to:
+  /// **'プロフィールを編集'**
+  String get profile_edit_title;
+
+  /// No description provided for @profile_display_name.
+  ///
+  /// In ja, this message translates to:
+  /// **'表示名'**
+  String get profile_display_name;
+
+  /// No description provided for @profile_description.
+  ///
+  /// In ja, this message translates to:
+  /// **'自己紹介'**
+  String get profile_description;
+
+  /// No description provided for @save.
+  ///
+  /// In ja, this message translates to:
+  /// **'保存'**
+  String get save;
+
   /// No description provided for @profile_no_users.
   ///
   /// In ja, this message translates to:

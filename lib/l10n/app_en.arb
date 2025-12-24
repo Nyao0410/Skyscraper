@@ -98,6 +98,10 @@
   "profile_followers": "Followers",
   "profile_edit_button": "Edit Profile",
   "profile_following_status": "Following",
+  "profile_edit_title": "Edit Profile",
+  "profile_display_name": "Display Name",
+  "profile_description": "Description",
+  "save": "Save",
   "profile_no_users": "No users found",
   "error_with_message": "Error: {message}",
   "@error_with_message": {

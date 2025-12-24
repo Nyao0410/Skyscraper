@@ -195,7 +195,9 @@ class _NewPostScreenState extends State<NewPostScreen> {
         Navigator.pop(context, _controller.text);
         return false;
       },
-      child: Scaffold(
+      child: GestureDetector(
+        onTap: () => FocusScope.of(context).unfocus(),
+        child: Scaffold(
       appBar: AppBar(
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
@@ -336,6 +338,7 @@ class _NewPostScreenState extends State<NewPostScreen> {
           ),
         ],
       ),
+    ),
     )
     );
   }

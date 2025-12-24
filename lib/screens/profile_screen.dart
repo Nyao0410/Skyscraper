@@ -7,6 +7,7 @@ import '../services/bluesky_service.dart';
 import '../widgets/linkified_text.dart';
 import '../widgets/post_widget.dart';
 import '../utils/feed_utils.dart';
+import 'edit_profile_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   final String actor; // handle or DID
@@ -490,13 +491,23 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
         child: SizedBox(
           width: double.infinity,
           child: OutlinedButton.icon(
-            onPressed: () {},
+            onPressed: () async {
+              final result = await Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => EditProfileScreen(profile: _profile),
+                ),
+              );
+              if (result == true) {
+                _fetchData(); // Refresh profile
+              }
+            },
             style: OutlinedButton.styleFrom(
               padding: const EdgeInsets.symmetric(vertical: 12),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
             ),
             icon: const Icon(Icons.edit),
-            label: Text(l10n.profile_edit, style: const TextStyle(fontWeight: FontWeight.bold)),
+            label: Text(l10n.profile_edit_button, style: const TextStyle(fontWeight: FontWeight.bold)),
           ),
         ),
       );

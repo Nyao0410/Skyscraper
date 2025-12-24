@@ -160,30 +160,33 @@ class _ChatScreenState extends State<ChatScreen> {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     // debugPrint('ChatScreen build: ${widget.messages.length} messages, refreshing: ${widget.isRefreshing}');
-    return Scaffold(
-      backgroundColor: isDark ? const Color(0xFF1A1D21) : const Color(0xFF7494C0),
-      appBar: _buildAppBar(),
-      body: Column(
-        children: [
-          Expanded(
-            child: RefreshIndicator(
-              onRefresh: () async => widget.onRefresh(),
-              child: Container(
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                decoration: const BoxDecoration(
-                  borderRadius: BorderRadius.only(
-                    topLeft: Radius.circular(12),
-                    topRight: Radius.circular(12),
+    return GestureDetector(
+      onTap: () => FocusScope.of(context).unfocus(),
+      child: Scaffold(
+        backgroundColor: isDark ? const Color(0xFF1A1D21) : const Color(0xFF7494C0),
+        appBar: _buildAppBar(),
+        body: Column(
+          children: [
+            Expanded(
+              child: RefreshIndicator(
+                onRefresh: () async => widget.onRefresh(),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  decoration: const BoxDecoration(
+                    borderRadius: BorderRadius.only(
+                      topLeft: Radius.circular(12),
+                      topRight: Radius.circular(12),
+                    ),
                   ),
+                  child: widget.messages.isEmpty && !widget.isRefreshing
+                      ? _buildEmptyState()
+                      : _buildMessageList(),
                 ),
-                child: widget.messages.isEmpty && !widget.isRefreshing
-                    ? _buildEmptyState()
-                    : _buildMessageList(),
               ),
             ),
-          ),
-          _buildInputArea(),
-        ],
+            _buildInputArea(),
+          ],
+        ),
       ),
     );
   }

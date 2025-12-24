@@ -128,6 +128,7 @@ class _PostWidgetState extends State<PostWidget> {
                       if (post.media.isNotEmpty)
                         MediaGrid(
                           media: post.media,
+                          postLabels: post.labels,
                           heroTagPrefix: post.uri,
                         ),
                       const SizedBox(height: 12),
@@ -215,6 +216,7 @@ class _PostWidgetState extends State<PostWidget> {
           if (quoted.media.isNotEmpty)
             MediaGrid(
               media: quoted.media,
+              postLabels: quoted.labels,
               heroTagPrefix: 'quoted-${quoted.uri}',
             ),
         ],

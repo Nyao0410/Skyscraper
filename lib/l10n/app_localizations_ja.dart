@@ -219,6 +219,18 @@ class AppLocalizationsJa extends AppLocalizations {
   String get profile_following_status => 'フォロー中';
 
   @override
+  String get profile_edit_title => 'プロフィールを編集';
+
+  @override
+  String get profile_display_name => '表示名';
+
+  @override
+  String get profile_description => '自己紹介';
+
+  @override
+  String get save => '保存';
+
+  @override
   String get profile_no_users => 'ユーザーがいません';
 
   @override

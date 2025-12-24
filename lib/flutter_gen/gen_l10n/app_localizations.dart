@@ -87,6 +87,10 @@ class AppLocalizations {
   String get profile_followers => _isEn ? 'Followers' : 'フォロワー';
   String get profile_edit_button => _isEn ? 'Edit Profile' : 'プロフィールを編集';
   String get profile_following_status => _isEn ? 'Following' : 'フォロー中';
+  String get profile_edit_title => _isEn ? 'Edit Profile' : 'プロフィールを編集';
+  String get profile_display_name => _isEn ? 'Display Name' : '表示名';
+  String get profile_description => _isEn ? 'Description' : '自己紹介';
+  String get save => _isEn ? 'Save' : '保存';
   String get profile_no_users => _isEn ? 'No users found' : 'ユーザーがいません';
   String error_with_message(String message) => _isEn ? 'Error: $message' : 'エラー: $message';
   String get cancel => _isEn ? 'Cancel' : 'キャンセル';

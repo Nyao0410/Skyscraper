@@ -53,71 +53,81 @@ class MessageBubble extends StatelessWidget {
             const SizedBox(width: 6),
           ],
           Flexible(
-            child: GestureDetector(
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => ThreadScreen(postUri: message.uri),
-                  ),
-                );
-              },
-              onLongPress: () => _showMenu(context),
-              behavior: HitTestBehavior.opaque,
-              child: Column(
-                crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
-                children: [
-                  if (!isMe) ...[
-                    _buildAuthorName(context),
-                    const SizedBox(height: 4),
-                  ],
-                  if (message.repostedBy != null) ...[
-                    _buildRepostIndicator(context),
-                    const SizedBox(height: 4),
-                  ],
-                  if (message.replyParentPost != null) ...[
-                    _buildReplyPost(maxBubbleWidth, context),
-                    const SizedBox(height: 1),
-                  ] else if (message.replyParentHandle != null) ...[
-                    _buildReplyIndicator(context),
-                    const SizedBox(height: 2),
-                  ],
-                  if (message.text.isNotEmpty || message.quotedPost != null)
-                    Row(
-                      mainAxisAlignment: isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        if (isMe) _buildTimestamp(context),
-                        const SizedBox(width: 4),
-                        Flexible(
+            child: Column(
+              crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+              children: [
+                if (!isMe) ...[
+                  _buildAuthorName(context),
+                  const SizedBox(height: 4),
+                ],
+                if (message.repostedBy != null) ...[
+                  _buildRepostIndicator(context),
+                  const SizedBox(height: 4),
+                ],
+                if (message.replyParentPost != null) ...[
+                  _buildReplyPost(maxBubbleWidth, context),
+                  const SizedBox(height: 1),
+                ] else if (message.replyParentHandle != null) ...[
+                  _buildReplyIndicator(context),
+                  const SizedBox(height: 2),
+                ],
+                if (message.text.isNotEmpty || message.quotedPost != null)
+                  Row(
+                    mainAxisAlignment: isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      if (isMe) _buildTimestamp(context),
+                      const SizedBox(width: 4),
+                      Flexible(
+                        child: GestureDetector(
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => ThreadScreen(postUri: message.uri),
+                              ),
+                            );
+                          },
+                          onLongPress: () => _showMenu(context),
                           child: _buildMainBubble(maxBubbleWidth, context),
                         ),
-                        const SizedBox(width: 4),
-                        if (!isMe) _buildTimestamp(context),
-                      ],
-                    ),
-                  if (message.media.isNotEmpty) ...[
-                    if (message.text.isNotEmpty || message.quotedPost != null)
-                      const SizedBox(height: 4),
-                    Row(
-                      mainAxisAlignment: isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        if (isMe) _buildTimestamp(context),
-                        const SizedBox(width: 4),
-                        Flexible(
+                      ),
+                      const SizedBox(width: 4),
+                      if (!isMe) _buildTimestamp(context),
+                    ],
+                  ),
+                if (message.media.isNotEmpty) ...[
+                  if (message.text.isNotEmpty || message.quotedPost != null)
+                    const SizedBox(height: 4),
+                  Row(
+                    mainAxisAlignment: isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      if (isMe) _buildTimestamp(context),
+                      const SizedBox(width: 4),
+                      Flexible(
+                        child: GestureDetector(
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => ThreadScreen(postUri: message.uri),
+                              ),
+                            );
+                          },
+                          onLongPress: () => _showMenu(context),
                           child: Column(
                             crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
                             children: _buildMediaWidgets(message.media, maxBubbleWidth, context),
                           ),
                         ),
-                        const SizedBox(width: 4),
-                        if (!isMe) _buildTimestamp(context),
-                      ],
-                    ),
-                  ],
+                      ),
+                      const SizedBox(width: 4),
+                      if (!isMe) _buildTimestamp(context),
+                    ],
+                  ),
                 ],
-              ),
+              ],
             ),
           ),
         ],

@@ -7,12 +7,14 @@ class MediaItem {
   final String url; // Thumbnail or Image URL
   final String? videoUrl; // HLS playlist URL for videos
   final String alt;
+  final List<String> labels;
 
   MediaItem({
     required this.type,
     required this.url,
     this.videoUrl,
     this.alt = '',
+    this.labels = const [],
   });
 
   Map<String, dynamic> toJson() => {
@@ -20,6 +22,7 @@ class MediaItem {
         'url': url,
         'videoUrl': videoUrl,
         'alt': alt,
+        'labels': labels,
       };
 
   factory MediaItem.fromJson(Map<String, dynamic> json) => MediaItem(
@@ -27,6 +30,7 @@ class MediaItem {
         url: json['url'] as String,
         videoUrl: json['videoUrl'] as String?,
         alt: json['alt'] as String? ?? '',
+        labels: (json['labels'] as List?)?.map((e) => e.toString()).toList() ?? [],
       );
 }
 
@@ -62,6 +66,7 @@ class PostItem {
   final DateTime createdAt;
   final bool isMe;
   final List<MediaItem> media;
+  final List<String> labels;
   final PostItem? quotedPost;
   final int replyCount;
   final int repostCount;
@@ -84,6 +89,7 @@ class PostItem {
     required this.createdAt,
     required this.isMe,
     this.media = const [],
+    this.labels = const [],
     this.quotedPost,
     this.replyCount = 0,
     this.repostCount = 0,
@@ -107,6 +113,7 @@ class PostItem {
         'createdAt': createdAt.toIso8601String(),
         'isMe': isMe ? 1 : 0,
         'media': media.map((m) => m.toJson()).toList(),
+        'labels': labels,
         'quotedPost': quotedPost?.toJson(),
         'replyCount': replyCount,
         'repostCount': repostCount,
@@ -134,6 +141,7 @@ class PostItem {
               ?.map((m) => MediaItem.fromJson(m as Map<String, dynamic>))
               .toList() ??
           [],
+      labels: (json['labels'] as List?)?.map((e) => e.toString()).toList() ?? [],
       quotedPost: json['quotedPost'] != null
           ? PostItem.fromJson(json['quotedPost'] as Map<String, dynamic>)
           : null,
@@ -197,6 +205,26 @@ class PostItem {
       final reason = data['reason'];
       final viewer = postData['viewer'] ?? {};
 
+      final List<String> labels = [];
+      if (postData['labels'] != null && postData['labels'] is List) {
+        for (final label in postData['labels']) {
+          if (label is Map && label['val'] != null) {
+            labels.add(label['val'].toString());
+          }
+        }
+      }
+      // Self-labels in record
+      if (record is Map && record['labels'] != null) {
+        final recordLabels = record['labels'];
+        if (recordLabels is Map && recordLabels['values'] != null && recordLabels['values'] is List) {
+          for (final label in recordLabels['values']) {
+            if (label is Map && label['val'] != null) {
+              labels.add(label['val'].toString());
+            }
+          }
+        }
+      }
+
       String? repostedBy;
       if (reason != null && reason is Map) {
         final dynamic typeStr = reason['\$type'] ?? reason[r'$type'];
@@ -223,6 +251,16 @@ class PostItem {
         try {
           final embed = postData['embed'];
           final Map<String, dynamic> embedMap = (embed is Map) ? Map<String, dynamic>.from(embed) : embed.toJson();
+          
+          // If the embed itself has labels (common in recordWithMedia or external)
+          if (embedMap['labels'] != null && embedMap['labels'] is List) {
+            for (final label in embedMap['labels']) {
+              if (label is Map && label['val'] != null) {
+                labels.add(label['val'].toString());
+              }
+            }
+          }
+          
           _parseEmbedMap(embedMap, mediaList, (q) => quoted = q, myHandle);
         } catch (e) {
           debugPrint('Error parsing embed: $e');
@@ -287,6 +325,7 @@ class PostItem {
         createdAt: createdAt ?? (postData['indexedAt'] != null ? DateTime.tryParse(postData['indexedAt'].toString()) : null) ?? DateTime.now(),
         isMe: author['handle']?.toString() == myHandle,
         media: mediaList,
+        labels: labels,
         quotedPost: quoted,
         replyCount: postData['replyCount'] ?? 0,
         repostCount: postData['repostCount'] ?? 0,
@@ -312,28 +351,57 @@ class PostItem {
       final List? images = embedMap['images'];
       if (images != null) {
         for (final img in images) {
+          final List<String> imgLabels = [];
+          if (img['labels'] != null && img['labels'] is List) {
+            for (final label in img['labels']) {
+              if (label is Map && label['val'] != null) {
+                imgLabels.add(label['val'].toString());
+              }
+            }
+          }
           mediaList.add(MediaItem(
             type: MediaType.image,
             url: img['fullsize']?.toString() ?? img['thumb']?.toString() ?? '',
             alt: img['alt']?.toString() ?? '',
+            labels: imgLabels,
           ));
         }
       }
     } else if (typeStr.contains('app.bsky.embed.video#view')) {
+      final List<String> videoLabels = [];
+      if (embedMap['labels'] != null && embedMap['labels'] is List) {
+        for (final label in embedMap['labels']) {
+          if (label is Map && label['val'] != null) {
+            videoLabels.add(label['val'].toString());
+          }
+        }
+      }
       mediaList.add(MediaItem(
         type: MediaType.video,
         url: embedMap['thumbnail']?.toString() ?? '',
         videoUrl: embedMap['playlist']?.toString(),
         alt: embedMap['alt']?.toString() ?? 'Video',
+        labels: videoLabels,
       ));
     } else if (typeStr.contains('app.bsky.embed.external#view')) {
       final external = embedMap['external'];
-      if (external != null && external['thumb'] != null) {
-        mediaList.add(MediaItem(
-          type: MediaType.image,
-          url: external['thumb'].toString(),
-          alt: external['title']?.toString() ?? '',
-        ));
+      if (external != null) {
+        final List<String> extLabels = [];
+        if (external['labels'] != null && external['labels'] is List) {
+          for (final label in external['labels']) {
+            if (label is Map && label['val'] != null) {
+              extLabels.add(label['val'].toString());
+            }
+          }
+        }
+        if (external['thumb'] != null) {
+          mediaList.add(MediaItem(
+            type: MediaType.image,
+            url: external['thumb'].toString(),
+            alt: external['title']?.toString() ?? '',
+            labels: extLabels,
+          ));
+        }
       }
     } else if (typeStr.contains('app.bsky.embed.record#view')) {
       final record = embedMap['record'];
@@ -364,6 +432,15 @@ class PostItem {
       }
     }
 
+    final List<String> labels = [];
+    if (recordMap['labels'] != null && recordMap['labels'] is List) {
+      for (final label in recordMap['labels']) {
+        if (label is Map && label['val'] != null) {
+          labels.add(label['val'].toString());
+        }
+      }
+    }
+
     return PostItem(
       id: recordMap['cid']?.toString() ?? '',
       uri: recordMap['uri']?.toString() ?? '',
@@ -374,6 +451,7 @@ class PostItem {
       createdAt: DateTime.tryParse(value['createdAt']?.toString() ?? '') ?? DateTime.now(),
       isMe: author['handle'] == myHandle,
       media: mediaList,
+      labels: labels,
     );
   }
 }
