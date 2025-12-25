@@ -201,9 +201,15 @@ class _LoginScreenState extends State<LoginScreen> {
 
   Widget _buildStatusText() {
     final l10n = AppLocalizations.of(context);
-    return Text(
-      widget.isLoading ? l10n.login_status_checking : l10n.login_status_ready,
-      style: const TextStyle(fontSize: 12, color: Colors.grey),
-    );
+    // Show status text only while checking/loading.
+    if (widget.isLoading) {
+      return Text(
+        l10n.login_status_checking,
+        style: const TextStyle(fontSize: 12, color: Colors.grey),
+      );
+    }
+
+    // Do not show the "ready" message after initialization.
+    return const SizedBox.shrink();
   }
 }

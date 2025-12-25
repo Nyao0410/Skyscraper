@@ -154,6 +154,7 @@ class _ChatDetailWrapperState extends State<ChatDetailWrapper> {
       );
     }
     return ChatScreen(
+      id: widget.feedUri,
       title: widget.feedName,
       messages: _feed,
       isRefreshing: _refreshing,

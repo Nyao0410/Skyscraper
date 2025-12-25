@@ -1,7 +1,10 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import '../flutter_gen/gen_l10n/app_localizations.dart';
 import '../utils/avatar_provider.dart';
 import '../widgets/date_separator.dart';
+import '../services/background_image_service.dart';
 
 class DMMessage {
   final String id;
@@ -22,6 +25,7 @@ class DMMessage {
 }
 
 class DMDetailScreen extends StatefulWidget {
+  final String? id;
   final String participantHandle;
   final String? participantAvatar;
   final List<DMMessage> messages;
@@ -31,6 +35,7 @@ class DMDetailScreen extends StatefulWidget {
 
   const DMDetailScreen({
     super.key,
+    this.id,
     required this.participantHandle,
     this.participantAvatar,
     required this.messages,
@@ -47,12 +52,45 @@ class _DMDetailScreenState extends State<DMDetailScreen> {
   final _scrollController = ScrollController();
   final _textController = TextEditingController();
   final _focusNode = FocusNode();
+  final _picker = ImagePicker();
   bool _canSend = false;
+  String? _backgroundImagePath;
 
   @override
   void initState() {
     super.initState();
     _textController.addListener(_onTextChanged);
+    _loadBackgroundImage();
+  }
+
+  Future<void> _loadBackgroundImage() async {
+    if (widget.id != null) {
+      final path = await BackgroundImageService.getBackgroundImage(widget.id!);
+      if (mounted) {
+        setState(() {
+          _backgroundImagePath = path;
+        });
+      }
+    }
+  }
+
+  Future<void> _setBackgroundImage() async {
+    if (widget.id == null) return;
+    final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
+    if (image != null) {
+      await BackgroundImageService.setBackgroundImage(widget.id!, image.path);
+      setState(() {
+        _backgroundImagePath = image.path;
+      });
+    }
+  }
+
+  Future<void> _removeBackgroundImage() async {
+    if (widget.id == null) return;
+    await BackgroundImageService.removeBackgroundImage(widget.id!);
+    setState(() {
+      _backgroundImagePath = null;
+    });
   }
 
   void _onTextChanged() {
@@ -98,23 +136,41 @@ class _DMDetailScreenState extends State<DMDetailScreen> {
     return GestureDetector(
       onTap: () => FocusScope.of(context).unfocus(),
       child: Scaffold(
+        extendBodyBehindAppBar: _backgroundImagePath != null,
         backgroundColor: isDark ? const Color(0xFF1A1D21) : const Color(0xFF7494C0),
         appBar: _buildAppBar(),
-        body: Column(
-          children: [
-            Expanded(
-              child: RefreshIndicator(
-                onRefresh: () async => widget.onRefresh(),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  child: widget.messages.isEmpty && !widget.isRefreshing
-                      ? _buildEmptyState()
-                      : _buildMessageList(),
+        body: Container(
+          decoration: _backgroundImagePath != null
+              ? BoxDecoration(
+                  image: DecorationImage(
+                    image: FileImage(File(_backgroundImagePath!)),
+                    fit: BoxFit.cover,
+                    colorFilter: ColorFilter.mode(
+                      Colors.black.withValues(alpha: isDark ? 0.6 : 0.3),
+                      BlendMode.darken,
+                    ),
+                  ),
+                )
+              : null,
+          child: SafeArea(
+            bottom: false,
+            child: Column(
+              children: [
+                Expanded(
+                  child: RefreshIndicator(
+                    onRefresh: () async => widget.onRefresh(),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      child: widget.messages.isEmpty && !widget.isRefreshing
+                          ? _buildEmptyState()
+                          : _buildMessageList(),
+                    ),
+                  ),
                 ),
-              ),
+                _buildInputArea(),
+              ],
             ),
-            _buildInputArea(),
-          ],
+          ),
         ),
       ),
     );
@@ -124,11 +180,9 @@ class _DMDetailScreenState extends State<DMDetailScreen> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final appBarColor = isDark ? const Color(0xFF1A1A1A) : const Color(0xFF7494C0);
     final textColor = Colors.white;
-    final l10n = AppLocalizations.of(context);
-
     return AppBar(
-      backgroundColor: appBarColor,
-      elevation: 1,
+      backgroundColor: _backgroundImagePath != null ? Colors.transparent : appBarColor,
+      elevation: _backgroundImagePath != null ? 0 : 1,
       leading: Navigator.canPop(context)
           ? IconButton(
               icon: Icon(Icons.arrow_back_ios, color: textColor),
@@ -144,19 +198,10 @@ class _DMDetailScreenState extends State<DMDetailScreen> {
           ),
           const SizedBox(width: 12),
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  widget.participantHandle,
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: textColor),
-                  overflow: TextOverflow.ellipsis,
-                ),
-                Text(
-                  l10n.online,
-                  style: TextStyle(fontSize: 12, color: textColor.withValues(alpha: 0.7)),
-                ),
-              ],
+            child: Text(
+              widget.participantHandle,
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: textColor),
+              overflow: TextOverflow.ellipsis,
             ),
           ),
         ],
@@ -172,6 +217,40 @@ class _DMDetailScreenState extends State<DMDetailScreen> {
                 )
               : Icon(Icons.refresh, color: textColor),
         ),
+        if (widget.id != null)
+          PopupMenuButton<String>(
+            icon: Icon(Icons.menu, color: textColor),
+            onSelected: (value) {
+              if (value == 'set_bg') {
+                _setBackgroundImage();
+              } else if (value == 'remove_bg') {
+                _removeBackgroundImage();
+              }
+            },
+            itemBuilder: (context) => [
+              const PopupMenuItem(
+                value: 'set_bg',
+                child: Row(
+                  children: [
+                    Icon(Icons.image, size: 20),
+                    SizedBox(width: 8),
+                    Text('背景画像を設定'),
+                  ],
+                ),
+              ),
+              if (_backgroundImagePath != null)
+                const PopupMenuItem(
+                  value: 'remove_bg',
+                  child: Row(
+                    children: [
+                      Icon(Icons.delete, size: 20, color: Colors.red),
+                      SizedBox(width: 8),
+                      Text('背景画像を削除', style: TextStyle(color: Colors.red)),
+                    ],
+                  ),
+                ),
+            ],
+          ),
       ],
     );
   }
@@ -368,13 +447,13 @@ class _DMDetailScreenState extends State<DMDetailScreen> {
               ),
             ),
             const SizedBox(width: 8),
-            GestureDetector(
-              onTap: _canSend ? _handleSend : null,
-              child: Icon(
-                Icons.send,
-                color: _canSend ? Colors.blue : Colors.grey.shade400,
-                size: 28,
-              ),
+            IconButton(
+              onPressed: _canSend ? _handleSend : null,
+              icon: Icon(Icons.send, size: 28),
+              color: _canSend ? Colors.blue : Colors.grey.shade400,
+              disabledColor: Colors.grey.shade400,
+              padding: const EdgeInsets.all(8),
+              constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
             ),
           ],
         ),

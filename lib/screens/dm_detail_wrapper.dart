@@ -111,6 +111,7 @@ class _DMDetailWrapperState extends State<DMDetailWrapper> {
     }
 
     return DMDetailScreen(
+      id: _convoId ?? widget.participantDid,
       participantHandle: widget.participantHandle,
       participantAvatar: widget.participantAvatar,
       messages: _messages,

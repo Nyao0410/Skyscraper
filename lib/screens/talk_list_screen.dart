@@ -141,7 +141,6 @@ class _TalkListScreenState extends State<TalkListScreen> with SingleTickerProvid
               );
             },
           ),
-          IconButton(icon: const Icon(Icons.chat_bubble_outline), onPressed: () {}),
         ],
             bottom: TabBar(
               controller: _tabController,

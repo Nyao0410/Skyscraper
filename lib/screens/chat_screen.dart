@@ -4,6 +4,7 @@ import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 import '../flutter_gen/gen_l10n/app_localizations.dart';
 import '../utils/avatar_provider.dart';
+import '../services/background_image_service.dart';
 
 import '../models/post_item.dart';
 import '../widgets/message_bubble.dart';
@@ -11,6 +12,7 @@ import '../widgets/date_separator.dart';
 import 'new_post_screen.dart';
 
 class ChatScreen extends StatefulWidget {
+  final String? id;
   final String title;
   final List<PostItem> messages;
   final bool isRefreshing;
@@ -26,6 +28,7 @@ class ChatScreen extends StatefulWidget {
 
   const ChatScreen({
     super.key,
+    this.id,
     this.title = '',
     required this.messages,
     required this.isRefreshing,
@@ -56,6 +59,7 @@ class _ChatScreenState extends State<ChatScreen> {
   int _remaining = 300;
   PostItem? _replyTo;
   PostItem? _quoteOf;
+  String? _backgroundImagePath;
 
   @override
   void initState() {
@@ -63,6 +67,37 @@ class _ChatScreenState extends State<ChatScreen> {
     _scrollController.addListener(_onScroll);
     _textController.addListener(_onTextChanged);
     _onTextChanged();
+    _loadBackgroundImage();
+  }
+
+  Future<void> _loadBackgroundImage() async {
+    if (widget.id != null) {
+      final path = await BackgroundImageService.getBackgroundImage(widget.id!);
+      if (mounted) {
+        setState(() {
+          _backgroundImagePath = path;
+        });
+      }
+    }
+  }
+
+  Future<void> _setBackgroundImage() async {
+    if (widget.id == null) return;
+    final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
+    if (image != null) {
+      await BackgroundImageService.setBackgroundImage(widget.id!, image.path);
+      setState(() {
+        _backgroundImagePath = image.path;
+      });
+    }
+  }
+
+  Future<void> _removeBackgroundImage() async {
+    if (widget.id == null) return;
+    await BackgroundImageService.removeBackgroundImage(widget.id!);
+    setState(() {
+      _backgroundImagePath = null;
+    });
   }
 
   void _onTextChanged() {
@@ -253,29 +288,41 @@ class _ChatScreenState extends State<ChatScreen> {
     return GestureDetector(
       onTap: () => FocusScope.of(context).unfocus(),
       child: Scaffold(
+        extendBodyBehindAppBar: _backgroundImagePath != null,
         backgroundColor: isDark ? const Color(0xFF1A1D21) : const Color(0xFF7494C0),
         appBar: _buildAppBar(),
-        body: Column(
-          children: [
-            Expanded(
-              child: RefreshIndicator(
-                onRefresh: () async => widget.onRefresh(),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  decoration: const BoxDecoration(
-                    borderRadius: BorderRadius.only(
-                      topLeft: Radius.circular(12),
-                      topRight: Radius.circular(12),
+        body: Container(
+          decoration: _backgroundImagePath != null
+              ? BoxDecoration(
+                  image: DecorationImage(
+                    image: FileImage(File(_backgroundImagePath!)),
+                    fit: BoxFit.cover,
+                    colorFilter: ColorFilter.mode(
+                      Colors.black.withValues(alpha: isDark ? 0.6 : 0.3),
+                      BlendMode.darken,
                     ),
                   ),
-                  child: widget.messages.isEmpty && !widget.isRefreshing
-                      ? _buildEmptyState()
-                      : _buildMessageList(),
+                )
+              : null,
+          child: SafeArea(
+            bottom: false,
+            child: Column(
+              children: [
+                Expanded(
+                  child: RefreshIndicator(
+                    onRefresh: () async => widget.onRefresh(),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      child: widget.messages.isEmpty && !widget.isRefreshing
+                          ? _buildEmptyState()
+                          : _buildMessageList(),
+                    ),
+                  ),
                 ),
-              ),
+                _buildInputArea(),
+              ],
             ),
-            _buildInputArea(),
-          ],
+          ),
         ),
       ),
     );
@@ -289,21 +336,19 @@ class _ChatScreenState extends State<ChatScreen> {
     final l10n = AppLocalizations.of(context);
 
     return AppBar(
-      backgroundColor: appBarColor,
-      elevation: 1,
+      backgroundColor: _backgroundImagePath != null ? Colors.transparent : appBarColor,
+      elevation: _backgroundImagePath != null ? 0 : 1,
       leading: Navigator.canPop(context)
           ? IconButton(
               icon: Icon(Icons.arrow_back_ios, color: textColor),
               onPressed: () => Navigator.pop(context),
             )
           : null,
-        title: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(widget.title.isNotEmpty ? widget.title : l10n.chat_default_title, style: TextStyle(fontWeight: FontWeight.bold, color: textColor)),
-          Text(l10n.online, style: TextStyle(fontSize: 12, color: textColor.withValues(alpha: 0.7))),
-        ],
-      ),
+        title: Text(
+          widget.title.isNotEmpty ? widget.title : l10n.chat_default_title,
+          style: TextStyle(fontWeight: FontWeight.bold, color: textColor),
+          overflow: TextOverflow.ellipsis,
+        ),
       actions: [
         IconButton(
           onPressed: widget.onRefresh,
@@ -315,6 +360,40 @@ class _ChatScreenState extends State<ChatScreen> {
                 )
               : Icon(Icons.refresh, color: textColor),
         ),
+        if (widget.id != null)
+          PopupMenuButton<String>(
+            icon: Icon(Icons.menu, color: textColor),
+            onSelected: (value) {
+              if (value == 'set_bg') {
+                _setBackgroundImage();
+              } else if (value == 'remove_bg') {
+                _removeBackgroundImage();
+              }
+            },
+            itemBuilder: (context) => [
+              const PopupMenuItem(
+                value: 'set_bg',
+                child: Row(
+                  children: [
+                    Icon(Icons.image, size: 20),
+                    SizedBox(width: 8),
+                    Text('背景画像を設定'),
+                  ],
+                ),
+              ),
+              if (_backgroundImagePath != null)
+                const PopupMenuItem(
+                  value: 'remove_bg',
+                  child: Row(
+                    children: [
+                      Icon(Icons.delete, size: 20, color: Colors.red),
+                      SizedBox(width: 8),
+                      Text('背景画像を削除', style: TextStyle(color: Colors.red)),
+                    ],
+                  ),
+                ),
+            ],
+          ),
       ],
     );
   }
@@ -646,7 +725,6 @@ class _ChatScreenState extends State<ChatScreen> {
                 ),
                 const SizedBox(width: 8),
                 GestureDetector(
-                  onTap: _canSend ? _handleSend : null,
                   onLongPress: () async {
                     // Open NewPostScreen with current input text and await result
                     final result = await Navigator.push(
@@ -671,10 +749,13 @@ class _ChatScreenState extends State<ChatScreen> {
                       _onTextChanged();
                     }
                   },
-                  child: Icon(
-                    Icons.send,
-                    color: _canSend ? Colors.blue : Colors.grey.shade400,
-                    size: 28,
+                  child: IconButton(
+                    onPressed: _canSend ? _handleSend : null,
+                    icon: const Icon(Icons.send, size: 28),
+                    color: _canSend ? Colors.blue : Colors.grey,
+                    disabledColor: Colors.grey.shade400,
+                    padding: const EdgeInsets.all(8),
+                    constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
                   ),
                 ),
               ],

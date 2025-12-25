@@ -1,7 +1,7 @@
 name: skyscraper
 description: "bluesky client."
 publish_to: 'none'
-version: 1.0.0
+version: 1.0.4
 
 environment:
   sdk: ^3.9.0
@@ -20,6 +20,7 @@ dependencies:
   cached_network_image: ^3.4.1
   flutter_linkify: ^6.0.0
   url_launcher: ^6.3.2
+  package_info_plus: ^9.0.0
   image_picker: ^1.1.2
   http: ^1.6.0
   sqflite: ^2.4.2

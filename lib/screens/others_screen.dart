@@ -5,12 +5,14 @@ import '../services/locale_controller.dart';
 import '../services/font_controller.dart';
 import '../services/theme_controller.dart';
 import '../themes/line_theme.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'drafts_screen.dart';
 import 'profile_screen.dart';
 import 'general/language_screen.dart';
 import 'general/font_size_screen.dart';
 import 'general/theme_screen.dart';
 import 'general/storage_screen.dart';
+import 'app_info_screen.dart';
 
 class OthersScreen extends StatefulWidget {
   const OthersScreen({super.key});
@@ -256,14 +258,35 @@ class _OthersScreenState extends State<OthersScreen> {
     return _buildSection(
       l10n.others_support,
       [
-        SettingsItem(
-          icon: Icons.info_outline,
-          title: l10n.appInfo,
-          subtitle: l10n.version_label('1.0.0'),
-          onTap: () {},
+        // package info will be loaded via FutureBuilder below
+        FutureBuilder<PackageInfo?>(
+          future: _loadPackageInfo(),
+          builder: (context, snap) {
+            final info = snap.data;
+            final ver = info?.version ?? '1.0.4';
+            return SettingsItem(
+              icon: Icons.info_outline,
+              title: l10n.appInfo,
+              subtitle: l10n.version_label(ver),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const AppInfoScreen()),
+                );
+              },
+            );
+          },
         ),
       ],
     );
+  }
+
+  Future<PackageInfo?> _loadPackageInfo() async {
+    try {
+      return await PackageInfo.fromPlatform();
+    } catch (_) {
+      return null;
+    }
   }
 
   Widget _buildSection(String title, List<Widget> items) {

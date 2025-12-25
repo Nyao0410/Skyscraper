@@ -74,6 +74,9 @@ class DatabaseService {
         try {
           await db.execute("ALTER TABLE dm_messages ADD COLUMN attempts INTEGER DEFAULT 0");
         } catch (_) {}
+        try {
+          await db.execute("ALTER TABLE drafts ADD COLUMN attempts INTEGER DEFAULT 0");
+        } catch (_) {}
         // Normalize possible NULLs from older DBs
         try {
           await db.execute("UPDATE dm_messages SET status = 'sent' WHERE status IS NULL");
@@ -287,13 +290,34 @@ class DatabaseService {
       return id;
     }
     final db = await database;
-    return await db.insert('drafts', {
-      'user_did': userDid,
-      'text': text,
-      'scheduled_at': scheduledAt?.toUtc().toIso8601String(),
-      'created_at': DateTime.now().toIso8601String(),
-      'is_sent': 0,
-    });
+    // Ensure attempts column exists when possible; if not, fall back to inserting without it.
+    try {
+      await db.execute("ALTER TABLE drafts ADD COLUMN attempts INTEGER DEFAULT 0");
+    } catch (_) {}
+
+    try {
+      return await db.insert('drafts', {
+        'user_did': userDid,
+        'text': text,
+        'scheduled_at': scheduledAt?.toUtc().toIso8601String(),
+        'created_at': DateTime.now().toIso8601String(),
+        'is_sent': 0,
+        'attempts': 0,
+      });
+    } on DatabaseException catch (e) {
+      final msg = e.toString();
+      if (msg.contains('no column named attempts')) {
+        // Retry without attempts column
+        return await db.insert('drafts', {
+          'user_did': userDid,
+          'text': text,
+          'scheduled_at': scheduledAt?.toUtc().toIso8601String(),
+          'created_at': DateTime.now().toIso8601String(),
+          'is_sent': 0,
+        });
+      }
+      rethrow;
+    }
   }
 
   Future<List<Map<String, dynamic>>> getDrafts(String userDid) async {
@@ -334,6 +358,41 @@ class DatabaseService {
     }
     final db = await database;
     await db.update('drafts', {'is_sent': 1}, where: 'id = ?', whereArgs: [id]);
+  }
+
+  Future<int> incrementDraftAttempts(int id) async {
+    if (kIsWeb) {
+      final d = _inMemoryDrafts[id];
+      if (d == null) return 0;
+      final prev = (d['attempts'] is int) ? d['attempts'] as int : int.tryParse('${d['attempts']}') ?? 0;
+      final next = prev + 1;
+      d['attempts'] = next;
+      return next;
+    }
+    final db = await database;
+    try {
+      await db.rawUpdate('UPDATE drafts SET attempts = COALESCE(attempts,0) + 1 WHERE id = ?', [id]);
+      final res = await db.query('drafts', columns: ['attempts'], where: 'id = ?', whereArgs: [id]);
+      if (res.isNotEmpty) {
+        final v = res.first['attempts'];
+        return (v is int) ? v : int.tryParse('$v') ?? 0;
+      }
+      return 0;
+    } catch (_) {
+      // If the column doesn't exist, try to add it and retry once
+      try {
+        await db.execute("ALTER TABLE drafts ADD COLUMN attempts INTEGER DEFAULT 0");
+        await db.rawUpdate('UPDATE drafts SET attempts = COALESCE(attempts,0) + 1 WHERE id = ?', [id]);
+        final res = await db.query('drafts', columns: ['attempts'], where: 'id = ?', whereArgs: [id]);
+        if (res.isNotEmpty) {
+          final v = res.first['attempts'];
+          return (v is int) ? v : int.tryParse('$v') ?? 0;
+        }
+        return 0;
+      } catch (_) {
+        return 0;
+      }
+    }
   }
 
   Future<void> updateDraft(int id, String text, {DateTime? scheduledAt}) async {
