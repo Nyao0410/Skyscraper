@@ -26,7 +26,7 @@ class ChatScreen extends StatefulWidget {
 
   const ChatScreen({
     super.key,
-    this.title = 'Bluesky タイムライン',
+    this.title = '',
     required this.messages,
     required this.isRefreshing,
     this.isLoadingMore = false,
@@ -182,6 +182,8 @@ class _ChatScreenState extends State<ChatScreen> {
     _textController.text = newText;
     _textController.selection = TextSelection.collapsed(offset: _textController.text.length);
     _onTextChanged();
+    // Ensure the composer has focus for better UX
+    _focusNode.requestFocus();
   }
 
   @override
@@ -224,6 +226,8 @@ class _ChatScreenState extends State<ChatScreen> {
     final appBarColor = isDark ? const Color(0xFF1A1A1A) : const Color(0xFF7494C0);
     final textColor = Colors.white;
 
+    final l10n = AppLocalizations.of(context);
+
     return AppBar(
       backgroundColor: appBarColor,
       elevation: 1,
@@ -233,11 +237,11 @@ class _ChatScreenState extends State<ChatScreen> {
               onPressed: () => Navigator.pop(context),
             )
           : null,
-      title: Column(
+        title: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(widget.title, style: TextStyle(fontWeight: FontWeight.bold, color: textColor)),
-          Text('オンライン', style: TextStyle(fontSize: 12, color: textColor.withValues(alpha: 0.7))),
+          Text(widget.title.isNotEmpty ? widget.title : l10n.chat_default_title, style: TextStyle(fontWeight: FontWeight.bold, color: textColor)),
+          Text(l10n.online, style: TextStyle(fontSize: 12, color: textColor.withValues(alpha: 0.7))),
         ],
       ),
       actions: [

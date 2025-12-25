@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../flutter_gen/gen_l10n/app_localizations.dart';
 import '../models/post_item.dart';
 import '../services/bluesky_service.dart';
@@ -115,16 +116,23 @@ class _PostWidgetState extends State<PostWidget> {
                         ],
                       ),
                       const SizedBox(height: 4),
-                      SelectionArea(
-                        child: LinkifiedText(
-                          text: post.text,
-                          style: TextStyle(
-                            fontSize: 15,
-                            height: 1.3,
-                            color: Theme.of(context).colorScheme.onSurface,
-                          ),
-                          linkStyle: const TextStyle(color: Colors.blue, decoration: TextDecoration.none),
+                      LinkifiedText(
+                        text: post.text,
+                        selectable: true,
+                        onHashtagLongPress: (tag) {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => NewPostScreen(initialText: '$tag '),
+                            ),
+                          );
+                        },
+                        style: TextStyle(
+                          fontSize: 15,
+                          height: 1.3,
+                          color: Theme.of(context).colorScheme.onSurface,
                         ),
+                        linkStyle: const TextStyle(color: Colors.blue, decoration: TextDecoration.none),
                       ),
                       if (post.quotedPost != null) _buildQuotedPost(post.quotedPost!),
                       if (post.media.isNotEmpty)
@@ -220,13 +228,20 @@ class _PostWidgetState extends State<PostWidget> {
                   ],
                 ),
                 const SizedBox(height: 4),
-                SelectionArea(
-                  child: LinkifiedText(
-                    text: quoted.text,
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.9),
-                    ),
+                LinkifiedText(
+                  text: quoted.text,
+                  selectable: true,
+                  onHashtagLongPress: (tag) {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => NewPostScreen(initialText: '$tag '),
+                      ),
+                    );
+                  },
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.9),
                   ),
                 ),
                 if (quoted.media.isNotEmpty)
@@ -383,8 +398,17 @@ class _PostWidgetState extends State<PostWidget> {
               leading: const Icon(Icons.copy),
               title: Text(l10n.copyText),
               onTap: () {
-                // TODO: Implement copy to clipboard
                 Navigator.pop(context);
+                try {
+                  Clipboard.setData(ClipboardData(text: post.text));
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('${l10n.copyText} ✓')),
+                  );
+                } catch (e) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text(l10n.error_with_message(e.toString()))),
+                  );
+                }
               },
             ),
           ],

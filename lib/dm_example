@@ -1,0 +1,24 @@
+import 'package:bluesky/atproto.dart';
+import 'package:bluesky/bluesky_chat.dart';
+import 'package:bluesky/chat_bsky_convo_defs.dart';
+
+Future<void> main(List<String> args) async {
+  // Create a session with your Bluesky credentials
+  final session = await createSession(
+    service: 'bsky.social',
+    identifier: 'your.handle.bsky.social',
+    password: 'your-app-password',
+  );
+
+  // Initialize chat client
+  final chat = BlueskyChat.fromSession(session.data);
+
+  // List conversations
+  final conversations = await chat.convo.listConvos();
+
+  // Send a message
+  await chat.convo.sendMessage(
+    convoId: 'conversation-id',
+    message: MessageInput(text: 'Hello there!'),
+  );
+}

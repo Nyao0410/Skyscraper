@@ -525,6 +525,10 @@ class MessageBubble extends StatelessWidget {
     final quoteColor = isDark ? Colors.blue.shade200 : Colors.blue;
     final replyColor = isDark ? Colors.grey.shade300 : Colors.grey.shade700;
 
+    // Extract hashtags from message text
+    final hashtagRegex = RegExp(r'#[^\s#]+');
+    final hashtags = hashtagRegex.allMatches(message.text).map((m) => m.group(0)!).toSet().toList();
+
     showModalBottomSheet(
       context: context,
       backgroundColor: bgColor,
@@ -536,6 +540,20 @@ class MessageBubble extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
+              if (hashtags.isNotEmpty) ...[
+                ...hashtags.map((tag) => ListTile(
+                  leading: Icon(Icons.tag, color: theme.colorScheme.primary),
+                  title: Text(
+                    '「$tag」で投稿する',
+                    style: theme.textTheme.bodyLarge?.copyWith(color: onBg),
+                  ),
+                  onTap: () {
+                    Navigator.pop(context);
+                    onInsertText?.call('$tag ');
+                  },
+                )),
+                const Divider(),
+              ],
               ListTile(
                 leading: Icon(
                   isLiked ? Icons.favorite : Icons.favorite_border,

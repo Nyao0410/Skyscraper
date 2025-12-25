@@ -96,10 +96,10 @@ class _FontSizeScreenState extends State<FontSizeScreen> {
                               border: OutlineInputBorder(borderRadius: BorderRadius.circular(8.0), borderSide: BorderSide.none),
                             ),
                             items: [
-                              DropdownMenuItem(value: 'system', child: Text('${AppLocalizations.of(context).fontFamilyLabel} — System')),
-                              DropdownMenuItem(value: 'NotoSansJP', child: Text('Noto Sans JP')),
-                              DropdownMenuItem(value: 'Roboto', child: Text('Roboto')),
-                              DropdownMenuItem(value: 'Georgia', child: Text('Georgia (Serif)')),
+                              DropdownMenuItem(value: 'system', child: Text('${AppLocalizations.of(context).fontFamilyLabel} — ${AppLocalizations.of(context).system}')),
+                              DropdownMenuItem(value: 'NotoSansJP', child: Text(AppLocalizations.of(context).font_family_noto)),
+                              DropdownMenuItem(value: 'Roboto', child: Text(AppLocalizations.of(context).font_family_roboto)),
+                              DropdownMenuItem(value: 'Georgia', child: Text(AppLocalizations.of(context).font_family_georgia)),
                             ],
                             onChanged: (value) async {
                               if (value == null) return;

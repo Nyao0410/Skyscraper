@@ -8,6 +8,7 @@ import '../widgets/linkified_text.dart';
 import '../widgets/post_widget.dart';
 import '../utils/feed_utils.dart';
 import 'edit_profile_screen.dart';
+import 'dm_detail_wrapper.dart';
 
 class ProfileScreen extends StatefulWidget {
   final String actor; // handle or DID
@@ -24,11 +25,13 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
   bool _loading = true;
   late TabController _tabController;
   bool _didInit = false;
+  int _lastTabIndex = -1;
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 5, vsync: this);
+    // Added one more tab for "Lists"
+    _tabController = TabController(length: 6, vsync: this);
     _tabController.addListener(_handleTabChange);
   }
 
@@ -77,6 +80,12 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
 
   Future<void> _fetchFeedForTab(int index, {bool forceRefresh = false}) async {
     final l10n = AppLocalizations.of(context);
+    // If tab changed since last fetch, clear current data to avoid mixing
+    if (_lastTabIndex != index) {
+      setState(() {
+        _currentData = [];
+      });
+    }
     // 1. Load from cache first
     if (!forceRefresh) {
       try {
@@ -126,13 +135,23 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
         case 4: // フィード
           data = await _service.getActorFeeds(widget.actor);
           break;
+        case 5: // リスト
+          // Retrieve lists (not posts). These will be rendered via _buildGenericItem
+          data = await _service.getLists(widget.actor);
+          break;
         default:
           data = [];
       }
       if (mounted) {
         setState(() {
-          _currentData = mergePosts(_currentData, data, atTop: true);
+          // If we switched tabs, replace data; otherwise merge for pagination
+          if (_lastTabIndex != index) {
+            _currentData = data;
+          } else {
+            _currentData = mergePosts(_currentData, data, atTop: true);
+          }
           _loading = false;
+          _lastTabIndex = index;
         });
       }
     } catch (e) {
@@ -175,6 +194,8 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                             Tab(text: l10n.profile_tab_media),
                             Tab(text: l10n.profile_tab_video),
                             Tab(text: l10n.profile_tab_feeds),
+                            // New Lists tab
+                            Tab(text: l10n.profile_tab_lists),
                           ],
                         ),
                       ),
@@ -228,7 +249,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
       subtitle: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          if (creator != null) Text('by @$creator', style: const TextStyle(fontSize: 12, color: Colors.blue)),
+          if (creator != null) Text(l10n.by_handle(creator), style: const TextStyle(fontSize: 12, color: Colors.blue)),
           if (description != null)
             SelectionArea(
               child: LinkifiedText(
@@ -322,6 +343,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
           onSelected: _handleMenuAction,
           itemBuilder: (context) => [
             PopupMenuItem(value: 'share', child: Text(l10n.share)),
+            PopupMenuItem(value: 'dm', child: Text(l10n.send_dm)),
             if (_profile.viewer?.muted == true)
               PopupMenuItem(value: 'unmute', child: Text(l10n.profile_unmute))
             else
@@ -409,6 +431,18 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
         case 'unblock':
           await _service.unblock(_profile.viewer!.blocking!.toString());
           _fetchData();
+          break;
+        case 'dm':
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => DMDetailWrapper(
+                participantDid: _profile.did,
+                participantHandle: _profile.handle,
+                participantAvatar: _profile.avatar,
+              ),
+            ),
+          );
           break;
       }
     } catch (e) {
@@ -636,17 +670,19 @@ class _SliverAppBarDelegate extends SliverPersistentHeaderDelegate {
   _SliverAppBarDelegate(this._tabBar);
 
   @override
-  double get minExtent => _tabBar.preferredSize.height;
+  double get minExtent => _tabBar.preferredSize.height + 1.0;
 
   @override
-  double get maxExtent => _tabBar.preferredSize.height;
+  double get maxExtent => _tabBar.preferredSize.height + 1.0;
 
   @override
   Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
+      height: _tabBar.preferredSize.height + 1.0,
       color: isDark ? const Color(0xFF121212) : Colors.white,
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
           _tabBar,
           Divider(height: 1, color: isDark ? Colors.grey[800] : Colors.grey[200]),

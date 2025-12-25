@@ -428,6 +428,12 @@ abstract class AppLocalizations {
   /// **'フィード'**
   String get profile_tab_feeds;
 
+  /// No description provided for @profile_tab_lists.
+  ///
+  /// In ja, this message translates to:
+  /// **'リスト'**
+  String get profile_tab_lists;
+
   /// No description provided for @profile_no_data.
   ///
   /// In ja, this message translates to:
@@ -860,6 +866,18 @@ abstract class AppLocalizations {
   /// **'メッセージを入力'**
   String get chat_hint;
 
+  /// No description provided for @chat_default_title.
+  ///
+  /// In ja, this message translates to:
+  /// **'Bluesky タイムライン'**
+  String get chat_default_title;
+
+  /// No description provided for @system.
+  ///
+  /// In ja, this message translates to:
+  /// **'システム'**
+  String get system;
+
   /// No description provided for @nav_home.
   ///
   /// In ja, this message translates to:
@@ -1015,6 +1033,102 @@ abstract class AppLocalizations {
   /// In ja, this message translates to:
   /// **'トーク'**
   String get talk_list_title;
+
+  /// No description provided for @talk_list_tab_all.
+  ///
+  /// In ja, this message translates to:
+  /// **'全て'**
+  String get talk_list_tab_all;
+
+  /// No description provided for @talk_list_tab_feeds.
+  ///
+  /// In ja, this message translates to:
+  /// **'フィード'**
+  String get talk_list_tab_feeds;
+
+  /// No description provided for @talk_list_tab_lists.
+  ///
+  /// In ja, this message translates to:
+  /// **'リスト'**
+  String get talk_list_tab_lists;
+
+  /// No description provided for @talk_list_tab_dm.
+  ///
+  /// In ja, this message translates to:
+  /// **'DM'**
+  String get talk_list_tab_dm;
+
+  /// No description provided for @online.
+  ///
+  /// In ja, this message translates to:
+  /// **'オンライン'**
+  String get online;
+
+  /// No description provided for @by_handle.
+  ///
+  /// In ja, this message translates to:
+  /// **'by @{handle}'**
+  String by_handle(Object handle);
+
+  /// No description provided for @empty_list.
+  ///
+  /// In ja, this message translates to:
+  /// **'表示する項目がありません'**
+  String get empty_list;
+
+  /// No description provided for @dm_fetch_error.
+  ///
+  /// In ja, this message translates to:
+  /// **'メッセージ取得失敗: {error}'**
+  String dm_fetch_error(Object error);
+
+  /// No description provided for @dm_send_error.
+  ///
+  /// In ja, this message translates to:
+  /// **'送信失敗: {error}'**
+  String dm_send_error(Object error);
+
+  /// No description provided for @font_family_noto.
+  ///
+  /// In ja, this message translates to:
+  /// **'Noto Sans JP'**
+  String get font_family_noto;
+
+  /// No description provided for @font_family_roboto.
+  ///
+  /// In ja, this message translates to:
+  /// **'Roboto'**
+  String get font_family_roboto;
+
+  /// No description provided for @font_family_georgia.
+  ///
+  /// In ja, this message translates to:
+  /// **'Georgia (Serif)'**
+  String get font_family_georgia;
+
+  /// No description provided for @send_dm.
+  ///
+  /// In ja, this message translates to:
+  /// **'DMを送る'**
+  String get send_dm;
+
+  /// No description provided for @notifications_suffix_san.
+  ///
+  /// In ja, this message translates to:
+  /// **' さん'**
+  String get notifications_suffix_san;
+
+  /// No description provided for @notifications_others_count.
+  ///
+  /// In ja, this message translates to:
+  /// **'、他{count}人'**
+  String notifications_others_count(Object count);
+
+  /// No description provided for @days.
+  ///
+  /// In ja, this message translates to:
+  /// **'日'**
+  String get days;
 
   /// No description provided for @talk_list_fetch_error.
   ///

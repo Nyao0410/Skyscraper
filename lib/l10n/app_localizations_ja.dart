@@ -179,6 +179,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String get profile_tab_feeds => 'フィード';
 
   @override
+  String get profile_tab_lists => 'リスト';
+
+  @override
   String get profile_no_data => 'データがありません';
 
   @override
@@ -407,6 +410,12 @@ class AppLocalizationsJa extends AppLocalizations {
   String get chat_hint => 'メッセージを入力';
 
   @override
+  String get chat_default_title => 'Bluesky タイムライン';
+
+  @override
+  String get system => 'システム';
+
+  @override
   String get nav_home => 'ホーム';
 
   @override
@@ -485,6 +494,62 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get talk_list_title => 'トーク';
+
+  @override
+  String get talk_list_tab_all => '全て';
+
+  @override
+  String get talk_list_tab_feeds => 'フィード';
+
+  @override
+  String get talk_list_tab_lists => 'リスト';
+
+  @override
+  String get talk_list_tab_dm => 'DM';
+
+  @override
+  String get online => 'オンライン';
+
+  @override
+  String by_handle(Object handle) {
+    return 'by @$handle';
+  }
+
+  @override
+  String get empty_list => '表示する項目がありません';
+
+  @override
+  String dm_fetch_error(Object error) {
+    return 'メッセージ取得失敗: $error';
+  }
+
+  @override
+  String dm_send_error(Object error) {
+    return '送信失敗: $error';
+  }
+
+  @override
+  String get font_family_noto => 'Noto Sans JP';
+
+  @override
+  String get font_family_roboto => 'Roboto';
+
+  @override
+  String get font_family_georgia => 'Georgia (Serif)';
+
+  @override
+  String get send_dm => 'DMを送る';
+
+  @override
+  String get notifications_suffix_san => ' さん';
+
+  @override
+  String notifications_others_count(Object count) {
+    return '、他$count人';
+  }
+
+  @override
+  String get days => '日';
 
   @override
   String get talk_list_fetch_error => 'フィードの取得に失敗しました';

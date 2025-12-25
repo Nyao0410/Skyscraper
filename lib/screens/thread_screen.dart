@@ -74,8 +74,12 @@ class _ThreadScreenState extends State<ThreadScreen> {
               ? Center(child: Text(l10n.thread_not_found))
               : RefreshIndicator(
                   onRefresh: _fetchThread,
-                  child: ListView(
-                    children: _buildThreadItems(_thread),
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.translucent,
+                    onTap: () => _clearSelection(context),
+                    child: ListView(
+                      children: _buildThreadItems(_thread),
+                    ),
                   ),
                 ),
     );
@@ -331,6 +335,15 @@ class _ThreadScreenState extends State<ThreadScreen> {
           const SizedBox(height: 16),
           LinkifiedText(
             text: post.text,
+            selectable: true,
+            onHashtagLongPress: (tag) {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => NewPostScreen(initialText: '$tag '),
+                ),
+              );
+            },
             style: TextStyle(
               fontSize: 18,
               height: 1.4,
@@ -477,6 +490,15 @@ class _ThreadScreenState extends State<ThreadScreen> {
           const SizedBox(height: 4),
           LinkifiedText(
             text: quoted.text,
+            selectable: true,
+            onHashtagLongPress: (tag) {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => NewPostScreen(initialText: '$tag '),
+                ),
+              );
+            },
             style: TextStyle(
               fontSize: 14,
               color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.9),
@@ -608,5 +630,26 @@ class _ThreadScreenState extends State<ThreadScreen> {
     if (result == true) {
       _fetchThread();
     }
+  }
+
+  void _clearSelection(BuildContext context) {
+    try {
+      // Try to clear selection via SelectionContainer if available
+      final sel = SelectionContainer.maybeOf(context);
+      if (sel != null) {
+        // Some Flutter versions expose clearSelection()
+        // Use dynamic to avoid static errors if method missing
+        final dynamic s = sel;
+        if (s.clearSelection != null) {
+          s.clearSelection();
+          return;
+        }
+      }
+    } catch (_) {}
+
+    // Fallback: unfocus to remove focus-based selections
+    try {
+      FocusScope.of(context).unfocus();
+    } catch (_) {}
   }
 }

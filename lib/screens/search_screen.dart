@@ -294,9 +294,10 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
   String _formatTime(DateTime time) {
     final now = DateTime.now();
     final diff = now.difference(time.toLocal());
-    if (diff.inMinutes < 1) return '今';
-    if (diff.inHours < 1) return '${diff.inMinutes}分';
-    if (diff.inDays < 1) return '${diff.inHours}時間';
+    final l10n = AppLocalizations.of(context);
+    if (diff.inMinutes < 1) return l10n.now;
+    if (diff.inHours < 1) return '${diff.inMinutes}${l10n.minutes}';
+    if (diff.inDays < 1) return '${diff.inHours}${l10n.hours}';
     return '${time.month}/${time.day}';
   }
 }

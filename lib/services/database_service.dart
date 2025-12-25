@@ -29,7 +29,57 @@ class DatabaseService {
 
     return await openDatabase(
       path,
-      version: 6,
+      version: 8,
+      onOpen: (db) async {
+        // Ensure DM tables exist for older DBs that may not have been migrated
+        await db.execute('''
+          CREATE TABLE IF NOT EXISTS dm_conversations (
+            id TEXT PRIMARY KEY,
+            user_did TEXT,
+            participant_did TEXT,
+            participant_handle TEXT,
+            participant_avatar TEXT,
+            last_message TEXT,
+            last_message_at TEXT,
+            unread_count INTEGER DEFAULT 0
+          )
+        ''');
+        await db.execute('''
+          CREATE TABLE IF NOT EXISTS dm_messages (
+            id TEXT PRIMARY KEY,
+            convo_id TEXT,
+            sender_did TEXT,
+            text TEXT,
+            sent_at TEXT,
+            status TEXT DEFAULT 'sent',
+            attempts INTEGER DEFAULT 0,
+            FOREIGN KEY (convo_id) REFERENCES dm_conversations (id) ON DELETE CASCADE
+          )
+        ''');
+        await db.execute('''
+          CREATE TABLE IF NOT EXISTS saved_feeds (
+            uri TEXT,
+            user_did TEXT,
+            name TEXT,
+            desc TEXT,
+            avatar TEXT,
+            indexed_at TEXT,
+            PRIMARY KEY (uri, user_did)
+          )
+        ''');
+        // Ensure new columns exist for older DBs; add them if missing
+        try {
+          await db.execute("ALTER TABLE dm_messages ADD COLUMN status TEXT DEFAULT 'sent'");
+        } catch (_) {}
+        try {
+          await db.execute("ALTER TABLE dm_messages ADD COLUMN attempts INTEGER DEFAULT 0");
+        } catch (_) {}
+        // Normalize possible NULLs from older DBs
+        try {
+          await db.execute("UPDATE dm_messages SET status = 'sent' WHERE status IS NULL");
+          await db.execute("UPDATE dm_messages SET attempts = 0 WHERE attempts IS NULL");
+        } catch (_) {}
+      },
       onCreate: (db, version) async {
         await db.execute('''
           CREATE TABLE posts (
@@ -76,6 +126,41 @@ class DatabaseService {
             user_did TEXT,
             last_fetched INTEGER,
             PRIMARY KEY (feed_uri, user_did)
+          )
+        ''');
+        await db.execute('''
+          CREATE TABLE dm_conversations (
+            id TEXT PRIMARY KEY,
+            user_did TEXT,
+            participant_did TEXT,
+            participant_handle TEXT,
+            participant_avatar TEXT,
+            last_message TEXT,
+            last_message_at TEXT,
+            unread_count INTEGER DEFAULT 0
+          )
+        ''');
+        await db.execute('''
+          CREATE TABLE dm_messages (
+            id TEXT PRIMARY KEY,
+            convo_id TEXT,
+            sender_did TEXT,
+            text TEXT,
+            sent_at TEXT,
+            status TEXT DEFAULT 'sent',
+            attempts INTEGER DEFAULT 0,
+            FOREIGN KEY (convo_id) REFERENCES dm_conversations (id) ON DELETE CASCADE
+          )
+        ''');
+        await db.execute('''
+          CREATE TABLE saved_feeds (
+            uri TEXT,
+            user_did TEXT,
+            name TEXT,
+            desc TEXT,
+            avatar TEXT,
+            indexed_at TEXT,
+            PRIMARY KEY (uri, user_did)
           )
         ''');
       },
@@ -156,8 +241,32 @@ class DatabaseService {
           try {
             await db.execute('ALTER TABLE posts ADD COLUMN is_text_only INTEGER DEFAULT 0');
           } catch (e) {
-            // ignore if column already exists or DB doesn't support ALTER
+            // ignore if already exists
           }
+        }
+        if (oldVersion < 7) {
+          await db.execute('''
+            CREATE TABLE IF NOT EXISTS dm_conversations (
+              id TEXT PRIMARY KEY,
+              user_did TEXT,
+              participant_did TEXT,
+              participant_handle TEXT,
+              participant_avatar TEXT,
+              last_message TEXT,
+              last_message_at TEXT,
+              unread_count INTEGER DEFAULT 0
+            )
+          ''');
+          await db.execute('''
+            CREATE TABLE IF NOT EXISTS dm_messages (
+              id TEXT PRIMARY KEY,
+              convo_id TEXT,
+              sender_did TEXT,
+              text TEXT,
+              sent_at TEXT,
+              FOREIGN KEY (convo_id) REFERENCES dm_conversations (id) ON DELETE CASCADE
+            )
+          ''');
         }
       },
     );
@@ -549,5 +658,184 @@ class DatabaseService {
     ''', [feedUri, userDid, lastAt]);
 
     return Sqflite.firstIntValue(result) ?? 0;
+  }
+
+  // DM Methods
+  Future<void> saveSavedFeeds(String userDid, List<Map<String, String>> feeds) async {
+    if (kIsWeb) return;
+    final db = await database;
+    await db.transaction((txn) async {
+      // Delete old feeds for this user to keep it fresh
+      await txn.delete('saved_feeds', where: 'user_did = ?', whereArgs: [userDid]);
+      for (final feed in feeds) {
+        await txn.insert('saved_feeds', {
+          'uri': feed['uri'],
+          'user_did': userDid,
+          'name': feed['name'],
+          'desc': feed['desc'],
+          'avatar': feed['avatar'],
+          'indexed_at': feed['indexedAt'],
+        }, conflictAlgorithm: ConflictAlgorithm.replace);
+      }
+    });
+  }
+
+  Future<List<Map<String, String>>> getSavedFeeds(String userDid) async {
+    if (kIsWeb) return [];
+    final db = await database;
+    final results = await db.query(
+      'saved_feeds',
+      where: 'user_did = ?',
+      whereArgs: [userDid],
+    );
+    return results.map((r) => {
+      'uri': r['uri'] as String,
+      'name': r['name'] as String? ?? '',
+      'desc': r['desc'] as String? ?? '',
+      'avatar': r['avatar'] as String? ?? '',
+      'indexedAt': r['indexed_at'] as String? ?? '',
+    }).toList();
+  }
+
+  Future<void> saveDMConversation(Map<String, dynamic> convo) async {
+    if (kIsWeb) return;
+    final db = await database;
+    // Ensure DM tables exist (covers running app instances where DB wasn't migrated)
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS dm_conversations (
+        id TEXT PRIMARY KEY,
+        user_did TEXT,
+        participant_did TEXT,
+        participant_handle TEXT,
+        participant_avatar TEXT,
+        last_message TEXT,
+        last_message_at TEXT,
+        unread_count INTEGER DEFAULT 0
+      )
+    ''');
+    await db.insert('dm_conversations', convo, conflictAlgorithm: ConflictAlgorithm.replace);
+  }
+
+  Future<List<Map<String, dynamic>>> getDMConversations(String userDid) async {
+    if (kIsWeb) return [];
+    final db = await database;
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS dm_conversations (
+        id TEXT PRIMARY KEY,
+        user_did TEXT,
+        participant_did TEXT,
+        participant_handle TEXT,
+        participant_avatar TEXT,
+        last_message TEXT,
+        last_message_at TEXT,
+        unread_count INTEGER DEFAULT 0
+      )
+    ''');
+    return await db.query(
+      'dm_conversations',
+      where: 'user_did = ?',
+      whereArgs: [userDid],
+      orderBy: 'last_message_at DESC',
+    );
+  }
+
+  Future<void> saveDMMessage(Map<String, dynamic> message) async {
+    if (kIsWeb) return;
+    final db = await database;
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS dm_messages (
+        id TEXT PRIMARY KEY,
+        convo_id TEXT,
+        sender_did TEXT,
+        text TEXT,
+        sent_at TEXT,
+        status TEXT DEFAULT 'sent',
+        attempts INTEGER DEFAULT 0,
+        FOREIGN KEY (convo_id) REFERENCES dm_conversations (id) ON DELETE CASCADE
+      )
+    ''');
+    await db.insert('dm_messages', message, conflictAlgorithm: ConflictAlgorithm.replace);
+    
+    // Update conversation last message
+    await db.update(
+      'dm_conversations',
+      {
+        'last_message': message['text'],
+        'last_message_at': message['sent_at'],
+      },
+      where: 'id = ?',
+      whereArgs: [message['convo_id']],
+    );
+  }
+
+  Future<List<Map<String, dynamic>>> getDMMessages(String convoId) async {
+    if (kIsWeb) return [];
+    final db = await database;
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS dm_messages (
+        id TEXT PRIMARY KEY,
+        convo_id TEXT,
+        sender_did TEXT,
+        text TEXT,
+        sent_at TEXT,
+        status TEXT DEFAULT 'sent',
+        attempts INTEGER DEFAULT 0,
+        FOREIGN KEY (convo_id) REFERENCES dm_conversations (id) ON DELETE CASCADE
+      )
+    ''');
+    return await db.query(
+      'dm_messages',
+      where: 'convo_id = ?',
+      whereArgs: [convoId],
+      orderBy: 'sent_at ASC',
+    );
+  }
+
+  /// Return messages that are not yet confirmed as sent (status != 'sent')
+  /// Optionally limit attempts to avoid infinite retries.
+  Future<List<Map<String, dynamic>>> getPendingDMMessages({int maxAttempts = 5}) async {
+    if (kIsWeb) return [];
+    final db = await database;
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS dm_messages (
+        id TEXT PRIMARY KEY,
+        convo_id TEXT,
+        sender_did TEXT,
+        text TEXT,
+        sent_at TEXT,
+        status TEXT DEFAULT 'sent',
+        attempts INTEGER DEFAULT 0,
+        FOREIGN KEY (convo_id) REFERENCES dm_conversations (id) ON DELETE CASCADE
+      )
+    ''');
+
+    return await db.query(
+      'dm_messages',
+      where: "(status IS NULL OR status != ?) AND (attempts < ?)",
+      whereArgs: ['sent', maxAttempts],
+      orderBy: 'sent_at ASC',
+    );
+  }
+
+  Future<void> updateDMMessageStatus(String id, String status, {int? attempts}) async {
+    if (kIsWeb) return;
+    final db = await database;
+    final Map<String, Object?> values = {'status': status};
+    if (attempts != null) values['attempts'] = attempts;
+    await db.update('dm_messages', values, where: 'id = ?', whereArgs: [id]);
+  }
+
+  Future<Map<String, dynamic>?> getDMConversationById(String convoId) async {
+    if (kIsWeb) return null;
+    final db = await database;
+    final rows = await db.query('dm_conversations', where: 'id = ?', whereArgs: [convoId], limit: 1);
+    if (rows.isEmpty) return null;
+    return rows.first;
+  }
+
+  Future<void> updateDMMessageConvo(String messageId, String newConvoId) async {
+    if (kIsWeb) return;
+    final db = await database;
+    await db.update('dm_messages', {'convo_id': newConvoId}, where: 'id = ?', whereArgs: [messageId]);
   }
 }

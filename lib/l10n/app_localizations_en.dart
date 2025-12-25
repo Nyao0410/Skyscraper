@@ -181,6 +181,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get profile_tab_feeds => 'Feeds';
 
   @override
+  String get profile_tab_lists => 'Lists';
+
+  @override
   String get profile_no_data => 'No data';
 
   @override
@@ -411,6 +414,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get chat_hint => 'Enter message';
 
   @override
+  String get chat_default_title => 'Bluesky Timeline';
+
+  @override
+  String get system => 'System';
+
+  @override
   String get nav_home => 'Home';
 
   @override
@@ -490,6 +499,62 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get talk_list_title => 'Talks';
+
+  @override
+  String get talk_list_tab_all => 'All';
+
+  @override
+  String get talk_list_tab_feeds => 'Feeds';
+
+  @override
+  String get talk_list_tab_lists => 'Lists';
+
+  @override
+  String get talk_list_tab_dm => 'DM';
+
+  @override
+  String get online => 'Online';
+
+  @override
+  String by_handle(Object handle) {
+    return 'by @$handle';
+  }
+
+  @override
+  String get empty_list => 'No items to display';
+
+  @override
+  String dm_fetch_error(Object error) {
+    return 'Failed to fetch messages: $error';
+  }
+
+  @override
+  String dm_send_error(Object error) {
+    return 'Failed to send message: $error';
+  }
+
+  @override
+  String get font_family_noto => 'Noto Sans JP';
+
+  @override
+  String get font_family_roboto => 'Roboto';
+
+  @override
+  String get font_family_georgia => 'Georgia (Serif)';
+
+  @override
+  String get send_dm => 'Send DM';
+
+  @override
+  String get notifications_suffix_san => '';
+
+  @override
+  String notifications_others_count(Object count) {
+    return ' and $count others';
+  }
+
+  @override
+  String get days => 'd';
 
   @override
   String get talk_list_fetch_error => 'Failed to fetch feeds';

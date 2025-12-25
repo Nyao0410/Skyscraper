@@ -431,7 +431,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
               text: firstAuthor,
               style: const TextStyle(fontWeight: FontWeight.bold),
             ),
-            TextSpan(text: ' $actionText'),
+                TextSpan(text: ' $actionText'),
           ],
         ),
       );
@@ -448,12 +448,12 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
             text: firstAuthor,
             style: const TextStyle(fontWeight: FontWeight.bold),
           ),
-          const TextSpan(text: ' さん'),
+              TextSpan(text: AppLocalizations.of(context).notifications_suffix_san),
           if (count > 1)
-            TextSpan(
-              text: '、他${count - 1}人',
-              style: const TextStyle(fontWeight: FontWeight.bold),
-            ),
+                TextSpan(
+                  text: AppLocalizations.of(context).notifications_others_count(count - 1),
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
           TextSpan(text: ' $actionText'),
         ],
       ),
@@ -464,10 +464,11 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     final now = DateTime.now();
     final diff = now.difference(date);
 
-    if (diff.inMinutes < 1) return '今';
-    if (diff.inMinutes < 60) return '${diff.inMinutes}分';
-    if (diff.inHours < 24) return '${diff.inHours}時間';
-    if (diff.inDays < 7) return '${diff.inDays}日';
+    final l10n = AppLocalizations.of(context);
+    if (diff.inMinutes < 1) return l10n.now;
+        if (diff.inMinutes < 60) return '${diff.inMinutes}${l10n.minutes}';
+        if (diff.inHours < 24) return '${diff.inHours}${l10n.hours}';
+        if (diff.inDays < 7) return '${diff.inDays}${l10n.days}';
 
     return DateFormat('MM/dd').format(date);
   }

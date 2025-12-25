@@ -6,6 +6,7 @@ import 'database_service.dart';
 import 'dart:io';
 
 const taskCheckScheduledPosts = "checkScheduledPosts";
+const taskRetryPendingDMs = "retryPendingDMs";
 
 @pragma('vm:entry-point')
 void callbackDispatcher() {
@@ -53,6 +54,44 @@ void callbackDispatcher() {
           }
         } catch (e) {
           debugPrint("Background task critical error: $e");
+          return false;
+        }
+        break;
+      case taskRetryPendingDMs:
+        try {
+          final service = BlueskyService();
+          final accounts = await service.getAccounts();
+
+          if (accounts.isEmpty) {
+            final success = await service.restoreSession();
+            if (success) {
+              await service.retryPendingDMs();
+            }
+          } else {
+            for (final account in accounts) {
+              try {
+                final session = Session.fromJson(account['session']);
+                await service.activateSession(session);
+                await service.retryPendingDMs();
+              } catch (e) {
+                debugPrint('Error retrying DMs for ${account['handle']}: $e');
+              }
+            }
+          }
+
+          // For iOS re-register
+          if (Platform.isIOS) {
+            await Workmanager().registerOneOffTask(
+              "2",
+              taskRetryPendingDMs,
+              initialDelay: const Duration(minutes: 15),
+              constraints: Constraints(
+                networkType: NetworkType.connected,
+              ),
+            );
+          }
+        } catch (e) {
+          debugPrint('Background task retryPendingDMs error: $e');
           return false;
         }
         break;
@@ -116,11 +155,30 @@ class BackgroundService {
           networkType: NetworkType.connected,
         ),
       );
+      // Register periodic DM retry task as well
+      await Workmanager().registerPeriodicTask(
+        "2",
+        taskRetryPendingDMs,
+        frequency: const Duration(minutes: 15),
+        existingWorkPolicy: ExistingPeriodicWorkPolicy.replace,
+        constraints: Constraints(
+          networkType: NetworkType.connected,
+        ),
+      );
     } else if (Platform.isIOS) {
       // For iOS, we register a one-off task that we'll re-register
       await Workmanager().registerOneOffTask(
         "1",
         taskCheckScheduledPosts,
+        initialDelay: const Duration(minutes: 15),
+        constraints: Constraints(
+          networkType: NetworkType.connected,
+        ),
+      );
+      // Also register DM retry one-off task
+      await Workmanager().registerOneOffTask(
+        "2",
+        taskRetryPendingDMs,
         initialDelay: const Duration(minutes: 15),
         constraints: Constraints(
           networkType: NetworkType.connected,

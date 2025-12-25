@@ -37,18 +37,18 @@ packages:
     dependency: "direct main"
     description:
       name: atproto
-      sha256: "33a8355a7eee37c87ac08242911693a6037ebb0a39cde8f6a7cc52e09324c4f9"
+      sha256: "160da2b0bc9207336aee4be8bf67a801f4eb2d7e7574550b2ab8e6bbac8728d4"
       url: "https://pub.dev"
     source: hosted
-    version: "1.2.4"
+    version: "1.3.0"
   atproto_core:
     dependency: "direct main"
     description:
       name: atproto_core
-      sha256: "0f060b31745d01bcf73e8a25fc1c24ecf14dc78039d59a526ae9d7653f4f8fe7"
+      sha256: d8938e1fbde4eb7cea57129b8c2e0ec1e680e0197a5e46bae49f8e3d85aa36f4
       url: "https://pub.dev"
     source: hosted
-    version: "1.0.7"
+    version: "1.1.0"
   atproto_oauth:
     dependency: transitive
     description:
@@ -69,10 +69,10 @@ packages:
     dependency: "direct main"
     description:
       name: bluesky
-      sha256: eea4944e15fca6c72838cdfcd1ed440a4da450e3f97d0f420c80c63229bcdddf
+      sha256: "37b970b31b4b4b7ba0a6416f11133005854ae409f452e0d90266f465e35f33ae"
       url: "https://pub.dev"
     source: hosted
-    version: "1.2.6"
+    version: "1.3.0"
   bluesky_text:
     dependency: "direct main"
     description:
@@ -590,7 +590,7 @@ packages:
     source: hosted
     version: "0.11.1"
   meta:
-    dependency: transitive
+    dependency: "direct overridden"
     description:
       name: meta
       sha256: e3641ec5d63ebf0d9b41bd43201a66e3fc79a65db5f61fc181f04cd27aab950c
@@ -613,6 +613,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.0.2"
+  nanoid:
+    dependency: transitive
+    description:
+      name: nanoid
+      sha256: be3f8752d9046c825df2f3914195151eb876f3ad64b9d833dd0b799b77b8759e
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.0.0"
   nested:
     dependency: transitive
     description:

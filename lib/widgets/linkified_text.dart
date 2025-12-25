@@ -46,6 +46,7 @@ class LinkifiedText extends StatefulWidget {
   final int? maxLines;
   final TextOverflow overflow;
   final TextAlign textAlign;
+  final bool selectable;
 
   const LinkifiedText({
     super.key,
@@ -56,6 +57,7 @@ class LinkifiedText extends StatefulWidget {
     this.maxLines,
     this.overflow = TextOverflow.clip,
     this.textAlign = TextAlign.start,
+    this.selectable = false,
   });
 
   @override
@@ -95,11 +97,19 @@ class _LinkifiedTextState extends State<LinkifiedText> {
 
     final spans = _buildTextSpans(context, defaultStyle, defaultLinkStyle);
 
+    final textSpan = TextSpan(children: spans);
+
+    if (widget.selectable) {
+      return SelectableText.rich(
+        textSpan,
+        textAlign: widget.textAlign,
+        maxLines: widget.maxLines,
+      );
+    }
+
     return RichText(
       textAlign: widget.textAlign,
-      text: TextSpan(
-        children: spans,
-      ),
+      text: textSpan,
       maxLines: widget.maxLines,
       overflow: widget.overflow,
     );
