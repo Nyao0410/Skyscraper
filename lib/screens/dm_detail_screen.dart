@@ -236,10 +236,10 @@ class _DMDetailScreenState extends State<DMDetailScreen> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     
     // Colors matching ChatScreen/MessageBubble
-    final myBubbleColor = isDark ? const Color(0xFF005C4B) : const Color(0xFFDCF8C6);
-    final otherBubbleColor = isDark ? const Color(0xFF202C33) : Colors.white;
-    final textColor = isDark ? Colors.white : Colors.black87;
-    final timeColor = isDark ? Colors.white60 : Colors.black54;
+    final myBubbleColor = const Color(0xFF8DE055);
+    final otherBubbleColor = isDark ? const Color(0xFF2C2C2E) : Colors.white;
+    final textColor = isMe ? Colors.black : (isDark ? Colors.white : Colors.black87);
+    final timeColor = isMe ? Colors.black54 : (isDark ? Colors.white60 : Colors.black54);
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
@@ -269,13 +269,6 @@ class _DMDetailScreenState extends State<DMDetailScreen> {
                       bottomLeft: Radius.circular(isMe ? 16 : 0),
                       bottomRight: Radius.circular(isMe ? 0 : 16),
                     ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.1),
-                        blurRadius: 2,
-                        offset: const Offset(0, 1),
-                      ),
-                    ],
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.end,
@@ -327,60 +320,64 @@ class _DMDetailScreenState extends State<DMDetailScreen> {
   Widget _buildInputArea() {
     final l10n = AppLocalizations.of(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final backgroundColor = isDark ? const Color(0xFF202C33) : const Color(0xFFF0F2F5);
+    final bgColor = isDark ? const Color(0xFF1A1A1A) : Colors.white;
+    final inputBgColor = isDark ? const Color(0xFF2C2C2E) : const Color(0xFFF5F5F5);
+    final textColor = isDark ? Colors.white : Colors.black;
     
     return Container(
-      padding: EdgeInsets.only(
-        left: 8,
-        right: 8,
-        top: 8,
-        bottom: MediaQuery.of(context).padding.bottom + 8,
-      ),
-      decoration: BoxDecoration(
-        color: backgroundColor,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 4,
-            offset: const Offset(0, -1),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Container(
-              decoration: BoxDecoration(
-                color: isDark ? const Color(0xFF2A3942) : Colors.white,
-                borderRadius: BorderRadius.circular(24),
+      color: bgColor,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      child: SafeArea(
+        top: false,
+        child: Row(
+          children: [
+            IconButton(
+              icon: Icon(
+                Icons.add,
+                color: isDark ? Colors.white : Colors.black,
               ),
-              child: TextField(
-                controller: _textController,
-                focusNode: _focusNode,
-                onChanged: (val) => setState(() => _canSend = val.trim().isNotEmpty),
-                decoration: InputDecoration(
-                  hintText: l10n.chat_hint,
-                  hintStyle: const TextStyle(fontSize: 15),
-                  border: InputBorder.none,
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              onPressed: () {
+                // DM doesn't support attachments yet in this app, 
+                // but we show the icon for UI consistency.
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('DMでの添付ファイルは現在サポートされていません')),
+                );
+              },
+            ),
+            Expanded(
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                decoration: BoxDecoration(
+                  color: inputBgColor,
+                  borderRadius: BorderRadius.circular(28),
                 ),
-                maxLines: 5,
-                minLines: 1,
-                style: TextStyle(color: isDark ? Colors.white : Colors.black),
+                child: TextField(
+                  controller: _textController,
+                  focusNode: _focusNode,
+                  onChanged: (val) => setState(() => _canSend = val.trim().isNotEmpty),
+                  decoration: InputDecoration(
+                    hintText: l10n.chat_hint,
+                    hintStyle: TextStyle(color: textColor.withValues(alpha: 0.5)),
+                    border: InputBorder.none,
+                    counterText: '',
+                  ),
+                  maxLines: 5,
+                  minLines: 1,
+                  style: TextStyle(color: textColor, fontSize: 14),
+                ),
               ),
             ),
-          ),
-          const SizedBox(width: 8),
-          Material(
-            color: _canSend ? const Color(0xFF00A884) : Colors.grey,
-            shape: const CircleBorder(),
-            elevation: 1,
-            child: IconButton(
-              icon: const Icon(Icons.send, color: Colors.white),
-              onPressed: _canSend ? _handleSend : null,
+            const SizedBox(width: 8),
+            GestureDetector(
+              onTap: _canSend ? _handleSend : null,
+              child: Icon(
+                Icons.send,
+                color: _canSend ? Colors.blue : Colors.grey.shade400,
+                size: 28,
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

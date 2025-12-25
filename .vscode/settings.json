@@ -1,0 +1,9 @@
+{
+  "C_Cpp.intelliSenseEngine": "Disabled",
+  "files.exclude": {
+    "**/windows/**": true
+  },
+  "search.exclude": {
+    "**/windows/**": true
+  }
+}

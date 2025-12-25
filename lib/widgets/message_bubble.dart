@@ -544,7 +544,7 @@ class MessageBubble extends StatelessWidget {
                 ...hashtags.map((tag) => ListTile(
                   leading: Icon(Icons.tag, color: theme.colorScheme.primary),
                   title: Text(
-                    '「$tag」で投稿する',
+                    l10n.post_with_tag(tag),
                     style: theme.textTheme.bodyLarge?.copyWith(color: onBg),
                   ),
                   onTap: () {

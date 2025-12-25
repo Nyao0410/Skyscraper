@@ -17,7 +17,7 @@ class ChatScreen extends StatefulWidget {
   final bool isLoadingMore;
   final Function() onRefresh;
   final Function() onLoadMore;
-  final Function(String text, {List<XFile>? images, PostItem? replyTo, PostItem? quoteOf}) onSendMessage;
+  final Function(String text, {List<XFile>? images, XFile? video, PostItem? replyTo, PostItem? quoteOf}) onSendMessage;
   final Function(PostItem item)? onLike;
   final Function(PostItem item)? onUnlike;
   final Function(PostItem item)? onRepost;
@@ -50,6 +50,7 @@ class _ChatScreenState extends State<ChatScreen> {
   final _focusNode = FocusNode();
   final _picker = ImagePicker();
   final List<XFile> _selectedImages = [];
+  XFile? _selectedVideo;
   final int _maxChars = 300;
   bool _canSend = false;
   int _remaining = 300;
@@ -67,7 +68,7 @@ class _ChatScreenState extends State<ChatScreen> {
   void _onTextChanged() {
     final len = _textController.text.length;
     final remaining = (_maxChars - len).clamp(0, _maxChars);
-    final canSend = (_textController.text.trim().isNotEmpty || _selectedImages.isNotEmpty) && len <= _maxChars;
+    final canSend = (_textController.text.trim().isNotEmpty || _selectedImages.isNotEmpty || _selectedVideo != null) && len <= _maxChars;
     if (remaining != _remaining || canSend != _canSend) {
       setState(() {
         _remaining = remaining;
@@ -84,6 +85,12 @@ class _ChatScreenState extends State<ChatScreen> {
       );
       return;
     }
+    if (_selectedVideo != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('動画と画像は同時に添付できません'))
+      );
+      return;
+    }
     final images = await _picker.pickMultiImage();
     if (images.isNotEmpty) {
       setState(() {
@@ -94,6 +101,57 @@ class _ChatScreenState extends State<ChatScreen> {
       });
       _onTextChanged();
     }
+  }
+
+  Future<void> _pickVideo() async {
+    if (_selectedImages.isNotEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('画像と動画は同時に添付できません'))
+      );
+      return;
+    }
+    final video = await _picker.pickVideo(source: ImageSource.gallery);
+    if (video != null) {
+      setState(() {
+        _selectedVideo = video;
+      });
+      _onTextChanged();
+    }
+  }
+
+  void _showAttachmentMenu() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: isDark ? const Color(0xFF1A1A1A) : Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.image, color: Colors.blue),
+              title: const Text('画像を選択'),
+              onTap: () {
+                Navigator.pop(context);
+                _pickImages();
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.videocam, color: Colors.red),
+              title: const Text('動画を選択'),
+              onTap: () {
+                Navigator.pop(context);
+                _pickVideo();
+              },
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
   }
 
   void _onScroll() {
@@ -137,17 +195,19 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   void _handleSend() {
-    final text = _textController.text.trim();
-    if (text.isEmpty && _selectedImages.isEmpty) return;
+    if (!_canSend) return;
+    final text = _textController.text;
     widget.onSendMessage(
       text,
       images: _selectedImages.isEmpty ? null : List.from(_selectedImages),
+      video: _selectedVideo,
       replyTo: _replyTo,
       quoteOf: _quoteOf,
     );
     _textController.clear();
     setState(() {
       _selectedImages.clear();
+      _selectedVideo = null;
       _replyTo = null;
       _quoteOf = null;
     });
@@ -502,11 +562,48 @@ class _ChatScreenState extends State<ChatScreen> {
                   ),
                 ),
               ),
+            if (_selectedVideo != null)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8.0),
+                child: Stack(
+                  children: [
+                    Container(
+                      height: 150,
+                      width: double.infinity,
+                      decoration: BoxDecoration(
+                        color: Colors.black,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Center(
+                        child: Icon(Icons.videocam, color: Colors.white, size: 48),
+                      ),
+                    ),
+                    Positioned(
+                      top: 4,
+                      right: 4,
+                      child: GestureDetector(
+                        onTap: () {
+                          setState(() => _selectedVideo = null);
+                          _onTextChanged();
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.all(4),
+                          decoration: const BoxDecoration(
+                            color: Colors.black54,
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(Icons.close, size: 16, color: Colors.white),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             Row(
               children: [
                 IconButton(
-                  icon: const Icon(Icons.image, color: Colors.blue),
-                  onPressed: _pickImages,
+                  icon: Icon(Icons.add, color: isDark ? Colors.white : Colors.black),
+                  onPressed: _showAttachmentMenu,
                 ),
                 Expanded(
                   child: Container(
@@ -537,6 +634,14 @@ class _ChatScreenState extends State<ChatScreen> {
                       ),
                       onSubmitted: (_) => _handleSend(),
                     ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  '$_remaining',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: _remaining < 20 ? Colors.red : textColor.withValues(alpha: 0.5),
                   ),
                 ),
                 const SizedBox(width: 8),

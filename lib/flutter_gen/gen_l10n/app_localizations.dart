@@ -274,7 +274,8 @@ class AppLocalizations {
   String get unrepost => _isEn ? 'Undo Repost' : 'リポストを取り消す';
   String get quote => _isEn ? 'Quote' : '引用';
   String get reply => _isEn ? 'Reply' : '返信';
-  String get delete_local => _isEn ? 'Delete (local)' : 'ローカルで削除';
+  String post_with_tag(String tag) => _isEn ? 'Post with "$tag"' : '「$tag」で投稿する';
+  String get delete_local => _isEn ? 'Delete' : '削除';
   String get new_post_max_images => _isEn ? 'Maximum 4 images allowed' : '画像は最大4枚までです';
   String get profile_edit => _isEn ? 'Edit Profile' : 'プロフィールを編集';
   String get profile_unfollow => _isEn ? 'Unfollow' : 'フォローを外す';

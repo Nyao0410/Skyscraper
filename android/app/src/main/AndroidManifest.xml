@@ -10,7 +10,7 @@
         </intent>
     </queries>
     <application
-        android:label="bsky_client_beta1"
+        android:label="Skyscraper"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity

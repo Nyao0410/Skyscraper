@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 import 'package:bluesky/app_bsky_embed_images.dart';
+import 'package:bluesky/app_bsky_embed_video.dart';
 import '../services/bluesky_service.dart';
 import '../services/database_service.dart';
 import '../utils/avatar_provider.dart';
@@ -39,6 +40,7 @@ class _NewPostScreenState extends State<NewPostScreen> {
   final _db = DatabaseService();
   final _picker = ImagePicker();
   final List<XFile> _selectedImages = [];
+  XFile? _selectedVideo;
   DateTime? _scheduledDate;
   bool _isPosting = false;
 
@@ -52,12 +54,23 @@ class _NewPostScreenState extends State<NewPostScreen> {
       _scheduledDate = widget.scheduledAt;
     }
   }
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
 
   Future<void> _pickImages() async {
     final l10n = AppLocalizations.of(context);
     if (_selectedImages.length >= 4) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(l10n.post_image_limit))
+      );
+      return;
+    }
+    if (_selectedVideo != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('動画と画像は同時に添付できません'))
       );
       return;
     }
@@ -70,6 +83,56 @@ class _NewPostScreenState extends State<NewPostScreen> {
         }
       });
     }
+  }
+
+  Future<void> _pickVideo() async {
+    if (_selectedImages.isNotEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('画像と動画は同時に添付できません'))
+      );
+      return;
+    }
+    final video = await _picker.pickVideo(source: ImageSource.gallery);
+    if (video != null) {
+      setState(() {
+        _selectedVideo = video;
+      });
+    }
+  }
+
+  void _showAttachmentMenu() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: isDark ? const Color(0xFF1A1A1A) : Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.image, color: Colors.blue),
+              title: const Text('画像を選択'),
+              onTap: () {
+                Navigator.pop(context);
+                _pickImages();
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.videocam, color: Colors.red),
+              title: const Text('動画を選択'),
+              onTap: () {
+                Navigator.pop(context);
+                _pickVideo();
+              },
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
   }
 
   Future<void> _selectSchedule() async {
@@ -124,7 +187,7 @@ class _NewPostScreenState extends State<NewPostScreen> {
   Future<void> _post() async {
     final l10n = AppLocalizations.of(context);
     final text = _controller.text.trim();
-    if (text.isEmpty && _selectedImages.isEmpty) return;
+    if (text.isEmpty && _selectedImages.isEmpty && _selectedVideo == null) return;
 
     setState(() => _isPosting = true);
     try {
@@ -138,6 +201,13 @@ class _NewPostScreenState extends State<NewPostScreen> {
         }
       }
 
+      EmbedVideo? uploadedVideo;
+      if (_selectedVideo != null) {
+        final bytes = await _selectedVideo!.readAsBytes();
+        final blob = await _service.uploadBlob(bytes);
+        uploadedVideo = EmbedVideo(video: blob);
+      }
+
       if (_scheduledDate != null) {
         if (widget.draftId != null) {
           await _db.updateDraft(widget.draftId!, text, scheduledAt: _scheduledDate);
@@ -149,19 +219,19 @@ class _NewPostScreenState extends State<NewPostScreen> {
           Navigator.pop(context, true);
         }
       } else if (widget.replyTo != null) {
-        await _service.reply(widget.replyTo!, text, images: uploadedImages);
+        await _service.reply(widget.replyTo!, text, images: uploadedImages, video: uploadedVideo);
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.post_reply_success)));
           Navigator.pop(context, true);
         }
       } else if (widget.quoteOf != null) {
-        await _service.quote(widget.quoteOf!, text, images: uploadedImages);
+        await _service.quote(widget.quoteOf!, text, images: uploadedImages, video: uploadedVideo);
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.post_quote_success)));
           Navigator.pop(context, true);
         }
       } else {
-        await _service.post(text, images: uploadedImages);
+        await _service.post(text, images: uploadedImages, video: uploadedVideo);
         if (widget.draftId != null) {
           // mark existing draft as sent
           await _db.markAsSent(widget.draftId!);
@@ -297,6 +367,40 @@ class _NewPostScreenState extends State<NewPostScreen> {
                         },
                       ),
                     ),
+                  if (_selectedVideo != null)
+                    Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: Stack(
+                        children: [
+                          Container(
+                            height: 150,
+                            width: double.infinity,
+                            decoration: BoxDecoration(
+                              color: Colors.black,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: const Center(
+                              child: Icon(Icons.videocam, color: Colors.white, size: 48),
+                            ),
+                          ),
+                          Positioned(
+                            top: 4,
+                            right: 4,
+                            child: GestureDetector(
+                              onTap: () => setState(() => _selectedVideo = null),
+                              child: Container(
+                                padding: const EdgeInsets.all(4),
+                                decoration: const BoxDecoration(
+                                  color: Colors.black54,
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(Icons.close, size: 16, color: Colors.white),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                 ],
               ),
             ),
@@ -308,8 +412,8 @@ class _NewPostScreenState extends State<NewPostScreen> {
             child: Row(
               children: [
                 IconButton(
-                  icon: Icon(Icons.image, color: theme.colorScheme.primary),
-                  onPressed: _pickImages,
+                  icon: Icon(Icons.add, color: theme.colorScheme.primary),
+                  onPressed: _showAttachmentMenu,
                 ),
                 if (widget.replyTo == null && widget.quoteOf == null)
                   IconButton(
@@ -330,11 +434,17 @@ class _NewPostScreenState extends State<NewPostScreen> {
                   ),
                 ],
                 const Spacer(),
-                Text(
-                  '${_controller.text.length}/300',
-                  style: TextStyle(
-                    color: _controller.text.length > 300 ? theme.colorScheme.error : theme.colorScheme.onSurfaceVariant,
-                  ),
+                ValueListenableBuilder<TextEditingValue>(
+                  valueListenable: _controller,
+                  builder: (context, value, _) {
+                    final len = value.text.length;
+                    return Text(
+                      '$len/300',
+                      style: TextStyle(
+                        color: len > 300 ? theme.colorScheme.error : theme.colorScheme.onSurfaceVariant,
+                      ),
+                    );
+                  },
                 ),
               ],
             ),

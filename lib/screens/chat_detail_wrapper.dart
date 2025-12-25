@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:bluesky/app_bsky_embed_images.dart';
+import 'package:bluesky/app_bsky_embed_video.dart';
 import '../services/bluesky_service.dart';
 import '../models/post_item.dart';
 import '../utils/feed_utils.dart';
@@ -108,7 +109,7 @@ class _ChatDetailWrapperState extends State<ChatDetailWrapper> {
     }
   }
 
-  Future<void> _handleSendMessage(String text, {List<XFile>? images, PostItem? replyTo, PostItem? quoteOf}) async {
+  Future<void> _handleSendMessage(String text, {List<XFile>? images, XFile? video, PostItem? replyTo, PostItem? quoteOf}) async {
     try {
       List<EmbedImagesImage>? uploadedImages;
       if (images != null && images.isNotEmpty) {
@@ -119,12 +120,20 @@ class _ChatDetailWrapperState extends State<ChatDetailWrapper> {
           uploadedImages.add(EmbedImagesImage(image: blob, alt: ''));
         }
       }
+
+      EmbedVideo? uploadedVideo;
+      if (video != null) {
+        final bytes = await video.readAsBytes();
+        final blob = await _service.uploadBlob(bytes);
+        uploadedVideo = EmbedVideo(video: blob);
+      }
+
       if (replyTo != null) {
-        await _service.reply(replyTo, text, images: uploadedImages);
+        await _service.reply(replyTo, text, images: uploadedImages, video: uploadedVideo);
       } else if (quoteOf != null) {
-        await _service.quote(quoteOf, text, images: uploadedImages);
+        await _service.quote(quoteOf, text, images: uploadedImages, video: uploadedVideo);
       } else {
-        await _service.post(text, images: uploadedImages);
+        await _service.post(text, images: uploadedImages, video: uploadedVideo);
       }
       _handleRefresh();
     } catch (e) {

@@ -1,7 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:atproto_core/atproto_core.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../services/bluesky_service.dart';
 import '../flutter_gen/gen_l10n/app_localizations.dart';
@@ -57,13 +56,13 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     final l10n = AppLocalizations.of(context);
     setState(() => _isSaving = true);
     try {
-      Blob? avatarBlob;
+      dynamic avatarBlob;
       if (_newAvatar != null) {
         final bytes = await _newAvatar!.readAsBytes();
         avatarBlob = await _service.uploadBlob(bytes);
       }
 
-      Blob? bannerBlob;
+      dynamic bannerBlob;
       if (_newBanner != null) {
         final bytes = await _newBanner!.readAsBytes();
         bannerBlob = await _service.uploadBlob(bytes);
