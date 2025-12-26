@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
@@ -295,7 +296,9 @@ class _ChatScreenState extends State<ChatScreen> {
           decoration: _backgroundImagePath != null
               ? BoxDecoration(
                   image: DecorationImage(
-                    image: FileImage(File(_backgroundImagePath!)),
+                    image: kIsWeb
+                        ? NetworkImage(_backgroundImagePath!)
+                        : FileImage(File(_backgroundImagePath!)) as ImageProvider,
                     fit: BoxFit.cover,
                     colorFilter: ColorFilter.mode(
                       Colors.black.withValues(alpha: isDark ? 0.6 : 0.3),
@@ -510,11 +513,33 @@ class _ChatScreenState extends State<ChatScreen> {
                 ),
                 child: Row(
                   children: [
-                    CircleAvatar(
-                      radius: 16,
-                      backgroundImage: avatarImageProvider(_replyTo!.avatar),
-                      child: _replyTo!.avatar == null ? const Icon(Icons.person, size: 16) : null,
-                    ),
+                    kIsWeb
+                        ? ClipOval(
+                            child: _replyTo!.avatar != null && _replyTo!.avatar!.isNotEmpty
+                                ? Image.network(
+                                    _replyTo!.avatar!,
+                                    width: 32,
+                                    height: 32,
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (context, error, stackTrace) => Container(
+                                      width: 32,
+                                      height: 32,
+                                      color: Colors.grey[300],
+                                      child: const Icon(Icons.person, size: 16),
+                                    ),
+                                  )
+                                : Container(
+                                    width: 32,
+                                    height: 32,
+                                    color: Colors.grey[300],
+                                    child: const Icon(Icons.person, size: 16),
+                                  ),
+                          )
+                        : CircleAvatar(
+                            radius: 16,
+                            backgroundImage: avatarImageProvider(_replyTo!.avatar),
+                            child: _replyTo!.avatar == null ? const Icon(Icons.person, size: 16) : null,
+                          ),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Column(
@@ -555,11 +580,33 @@ class _ChatScreenState extends State<ChatScreen> {
                 ),
                 child: Row(
                   children: [
-                    CircleAvatar(
-                      radius: 16,
-                      backgroundImage: avatarImageProvider(_quoteOf!.avatar),
-                      child: _quoteOf!.avatar == null ? const Icon(Icons.person, size: 16) : null,
-                    ),
+                    kIsWeb
+                        ? ClipOval(
+                            child: _quoteOf!.avatar != null && _quoteOf!.avatar!.isNotEmpty
+                                ? Image.network(
+                                    _quoteOf!.avatar!,
+                                    width: 32,
+                                    height: 32,
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (context, error, stackTrace) => Container(
+                                      width: 32,
+                                      height: 32,
+                                      color: Colors.grey[300],
+                                      child: const Icon(Icons.person, size: 16),
+                                    ),
+                                  )
+                                : Container(
+                                    width: 32,
+                                    height: 32,
+                                    color: Colors.grey[300],
+                                    child: const Icon(Icons.person, size: 16),
+                                  ),
+                          )
+                        : CircleAvatar(
+                            radius: 16,
+                            backgroundImage: avatarImageProvider(_quoteOf!.avatar),
+                            child: _quoteOf!.avatar == null ? const Icon(Icons.person, size: 16) : null,
+                          ),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Column(
@@ -610,12 +657,19 @@ class _ChatScreenState extends State<ChatScreen> {
                             padding: const EdgeInsets.all(4.0),
                             child: ClipRRect(
                               borderRadius: BorderRadius.circular(8),
-                              child: Image.file(
-                                File(_selectedImages[index].path),
-                                width: 80,
-                                height: 80,
-                                fit: BoxFit.cover,
-                              ),
+                              child: kIsWeb
+                                  ? Image.network(
+                                      _selectedImages[index].path,
+                                      width: 80,
+                                      height: 80,
+                                      fit: BoxFit.cover,
+                                    )
+                                  : Image.file(
+                                      File(_selectedImages[index].path),
+                                      width: 80,
+                                      height: 80,
+                                      fit: BoxFit.cover,
+                                    ),
                             ),
                           ),
                           Positioned(
@@ -627,6 +681,7 @@ class _ChatScreenState extends State<ChatScreen> {
                                 _onTextChanged();
                               },
                               child: Container(
+                                padding: const EdgeInsets.all(4),
                                 decoration: const BoxDecoration(
                                   color: Colors.black54,
                                   shape: BoxShape.circle,

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import '../flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../utils/avatar_provider.dart';
@@ -207,10 +208,34 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
         final user = _userResults[index];
         final avatar = user.avatar;
         return ListTile(
-          leading: CircleAvatar(
-            backgroundImage: avatarImageProvider(avatar),
-            child: avatar == null ? const Icon(Icons.person) : null,
-          ),
+          leading: kIsWeb
+              ? ClipOval(
+                  child: avatar != null && avatar.isNotEmpty
+                      ? Image.network(
+                          avatar,
+                          width: 40,
+                          height: 40,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) => Container(
+                            width: 40,
+                            height: 40,
+                            color: Colors.grey[300],
+                            child: const Icon(Icons.person),
+                          ),
+                        )
+                      : Container(
+                          width: 40,
+                          height: 40,
+                          color: Colors.grey[300],
+                          child: const Icon(Icons.person),
+                        ),
+                )
+              : buildAvatar(
+                  avatar,
+                  size: 40,
+                  backgroundColor: Colors.grey[300],
+                  placeholder: const Icon(Icons.person),
+                ),
           title: Text(user.displayName ?? user.handle),
           subtitle: Text('@${user.handle}'),
           onTap: () {
@@ -244,11 +269,34 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
                   MaterialPageRoute(builder: (context) => ProfileScreen(actor: post.handle)),
                 );
               },
-              child: CircleAvatar(
-                radius: 20,
-                backgroundImage: avatarImageProvider(post.avatar),
-                child: post.avatar == null ? const Icon(Icons.person) : null,
-              ),
+              child: kIsWeb
+                  ? ClipOval(
+                      child: post.avatar != null && post.avatar!.isNotEmpty
+                          ? Image.network(
+                              post.avatar!,
+                              width: 40,
+                              height: 40,
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) => Container(
+                                width: 40,
+                                height: 40,
+                                color: Colors.grey[300],
+                                child: const Icon(Icons.person),
+                              ),
+                            )
+                          : Container(
+                              width: 40,
+                              height: 40,
+                              color: Colors.grey[300],
+                              child: const Icon(Icons.person),
+                            ),
+                    )
+                  : buildAvatar(
+                      post.avatar,
+                      size: 40,
+                      backgroundColor: Colors.grey[300],
+                      placeholder: const Icon(Icons.person),
+                    ),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -279,7 +327,9 @@ class _SearchScreenState extends State<SearchScreen> with SingleTickerProviderSt
                       padding: const EdgeInsets.only(top: 8),
                       child: ClipRRect(
                         borderRadius: BorderRadius.circular(8),
-                        child: CachedNetworkImage(imageUrl: post.media.first.url, fit: BoxFit.cover),
+                        child: kIsWeb
+                            ? Image.network(post.media.first.url, fit: BoxFit.cover)
+                            : CachedNetworkImage(imageUrl: post.media.first.url, fit: BoxFit.cover),
                       ),
                     ),
                 ],

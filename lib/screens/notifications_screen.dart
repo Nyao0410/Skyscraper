@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart' hide Notification;
+import 'package:flutter/foundation.dart' show kIsWeb;
 import '../flutter_gen/gen_l10n/app_localizations.dart';
 import '../utils/avatar_provider.dart';
 import 'package:intl/intl.dart';
@@ -348,13 +349,35 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                 ),
               );
             },
-            child: CircleAvatar(
-              radius: 24,
-              backgroundImage: avatarImageProvider(items.first.author.avatar),
-              child: items.first.author.avatar == null
-                  ? const Icon(Icons.person)
-                  : null,
-            ),
+            child: kIsWeb
+                ? ClipOval(
+                    child: items.first.author.avatar != null && items.first.author.avatar!.isNotEmpty
+                        ? Image.network(
+                            items.first.author.avatar!,
+                            width: 48,
+                            height: 48,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) => Container(
+                              width: 48,
+                              height: 48,
+                              color: Colors.grey[300],
+                              child: const Icon(Icons.person),
+                            ),
+                          )
+                        : Container(
+                            width: 48,
+                            height: 48,
+                            color: Colors.grey[300],
+                            child: const Icon(Icons.person),
+                          ),
+                  )
+                : CircleAvatar(
+                    radius: 24,
+                    backgroundImage: avatarImageProvider(items.first.author.avatar),
+                    child: items.first.author.avatar == null
+                        ? const Icon(Icons.person)
+                        : null,
+                  ),
           ),
           Positioned(
             right: 0,
@@ -388,13 +411,34 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                   shape: BoxShape.circle,
                   border: Border.all(color: LineColors.getBackgroundPrimary(context), width: 2),
                 ),
-                child: CircleAvatar(
-                  radius: 14,
-                  backgroundImage: avatarImageProvider(items[i].author.avatar),
-                  child: items[i].author.avatar == null
-                      ? const Icon(Icons.person, size: 14)
-                      : null,
-                ),
+                child: kIsWeb
+                    ? ClipOval(
+                        child: items[i].author.avatar != null && items[i].author.avatar!.isNotEmpty
+                            ? Image.network(
+                                items[i].author.avatar!,
+                                width: 28,
+                                height: 28,
+                                fit: BoxFit.cover,
+                                errorBuilder: (context, error, stackTrace) => Container(
+                                  width: 28,
+                                  height: 28,
+                                  color: Colors.grey[300],
+                                  child: const Icon(Icons.person, size: 14),
+                                ),
+                              )
+                            : Container(
+                                width: 28,
+                                height: 28,
+                                color: Colors.grey[300],
+                                child: const Icon(Icons.person, size: 14),
+                              ),
+                      )
+                        : buildAvatar(
+                        items[i].author.avatar,
+                        size: 28,
+                        backgroundColor: Colors.blue.shade100,
+                        placeholder: const Icon(Icons.person, size: 14),
+                          ),
               ),
             ),
           Positioned(

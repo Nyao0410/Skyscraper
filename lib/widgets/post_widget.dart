@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/services.dart';
 import '../flutter_gen/gen_l10n/app_localizations.dart';
 import '../models/post_item.dart';
@@ -74,11 +75,34 @@ class _PostWidgetState extends State<PostWidget> {
                       MaterialPageRoute(builder: (context) => ProfileScreen(actor: post.handle)),
                     );
                   },
-                  child: CircleAvatar(
-                    radius: 24,
-                    backgroundImage: avatarImageProvider(post.avatar),
-                    child: post.avatar == null ? const Icon(Icons.person) : null,
-                  ),
+                  child: kIsWeb
+                      ? ClipOval(
+                          child: post.avatar != null && post.avatar!.isNotEmpty
+                              ? Image.network(
+                                  post.avatar!,
+                                  width: 48,
+                                  height: 48,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (context, error, stackTrace) => Container(
+                                    width: 48,
+                                    height: 48,
+                                    color: Colors.grey[300],
+                                    child: const Icon(Icons.person),
+                                  ),
+                                )
+                              : Container(
+                                  width: 48,
+                                  height: 48,
+                                  color: Colors.grey[300],
+                                  child: const Icon(Icons.person),
+                                ),
+                        )
+                      : buildAvatar(
+                          post.avatar,
+                          size: 48,
+                          backgroundColor: Colors.grey[300],
+                          placeholder: const Icon(Icons.person),
+                        ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -207,10 +231,25 @@ class _PostWidgetState extends State<PostWidget> {
                         );
                       },
                       child: quoted.avatar != null
-                          ? CircleAvatar(
-                              radius: 10,
-                              backgroundImage: avatarImageProvider(quoted.avatar),
-                            )
+                          ? kIsWeb
+                              ? ClipOval(
+                                  child: Image.network(
+                                    quoted.avatar!,
+                                    width: 20,
+                                    height: 20,
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (context, error, stackTrace) => Container(
+                                      width: 20,
+                                      height: 20,
+                                      color: Colors.grey[300],
+                                      child: const Icon(Icons.person, size: 12),
+                                    ),
+                                  ),
+                                )
+                              : buildAvatar(
+                                  quoted.avatar,
+                                  size: 20,
+                                )
                           : const Icon(Icons.person, size: 20),
                     ),
                     const SizedBox(width: 8),

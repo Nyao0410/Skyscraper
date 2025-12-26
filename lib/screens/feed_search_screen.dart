@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import '../flutter_gen/gen_l10n/app_localizations.dart';
 import '../utils/avatar_provider.dart';
 import '../services/bluesky_service.dart';
@@ -144,10 +145,32 @@ class _FeedSearchScreenState extends State<FeedSearchScreen> with SingleTickerPr
                         itemBuilder: (context, index) {
                           final feed = _feedResults[index];
                           return ListTile(
-                            leading: CircleAvatar(
-                              backgroundImage: avatarImageProvider(feed.avatar),
-                              child: feed.avatar == null ? const Icon(Icons.rss_feed) : null,
-                            ),
+                            leading: kIsWeb
+                                ? ClipOval(
+                                    child: feed.avatar != null && feed.avatar!.isNotEmpty
+                                        ? Image.network(
+                                            feed.avatar!,
+                                            width: 40,
+                                            height: 40,
+                                            fit: BoxFit.cover,
+                                            errorBuilder: (context, error, stackTrace) => Container(
+                                              width: 40,
+                                              height: 40,
+                                              color: Colors.grey[300],
+                                              child: const Icon(Icons.rss_feed),
+                                            ),
+                                          )
+                                        : Container(
+                                            width: 40,
+                                            height: 40,
+                                            color: Colors.grey[300],
+                                            child: const Icon(Icons.rss_feed),
+                                          ),
+                                  )
+                                : CircleAvatar(
+                                    backgroundImage: avatarImageProvider(feed.avatar),
+                                    child: feed.avatar == null ? const Icon(Icons.rss_feed) : null,
+                                  ),
                             title: Text(feed.displayName),
                             subtitle: Text(
                               feed.description ?? '',
@@ -172,10 +195,32 @@ class _FeedSearchScreenState extends State<FeedSearchScreen> with SingleTickerPr
                   itemBuilder: (context, index) {
                     final list = _myLists[index];
                     return ListTile(
-                      leading: CircleAvatar(
-                        backgroundImage: avatarImageProvider(list.avatar),
-                        child: list.avatar == null ? const Icon(Icons.list) : null,
-                      ),
+                      leading: kIsWeb
+                          ? ClipOval(
+                              child: list.avatar != null && list.avatar!.isNotEmpty
+                                  ? Image.network(
+                                      list.avatar!,
+                                      width: 40,
+                                      height: 40,
+                                      fit: BoxFit.cover,
+                                      errorBuilder: (context, error, stackTrace) => Container(
+                                        width: 40,
+                                        height: 40,
+                                        color: Colors.grey[300],
+                                        child: const Icon(Icons.list),
+                                      ),
+                                    )
+                                  : Container(
+                                      width: 40,
+                                      height: 40,
+                                      color: Colors.grey[300],
+                                      child: const Icon(Icons.list),
+                                    ),
+                            )
+                          : CircleAvatar(
+                              backgroundImage: avatarImageProvider(list.avatar),
+                              child: list.avatar == null ? const Icon(Icons.list) : null,
+                            ),
                       title: Text(list.name),
                       subtitle: Text(
                         list.description ?? '',

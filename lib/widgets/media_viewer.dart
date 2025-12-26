@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:photo_view/photo_view.dart';
 import 'package:photo_view/photo_view_gallery.dart';
 import '../models/post_item.dart';
 
-class MediaViewer extends StatelessWidget {
+class MediaViewer extends StatefulWidget {
   final List<MediaItem> media;
   final int initialIndex;
   final String? heroTagPrefix;
@@ -16,6 +17,21 @@ class MediaViewer extends StatelessWidget {
   });
 
   @override
+  State<MediaViewer> createState() => _MediaViewerState();
+}
+
+class _MediaViewerState extends State<MediaViewer> {
+  late int _currentIndex;
+  late PageController _pageController;
+
+  @override
+  void initState() {
+    super.initState();
+    _currentIndex = widget.initialIndex;
+    _pageController = PageController(initialPage: widget.initialIndex);
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.black,
@@ -26,26 +42,58 @@ class MediaViewer extends StatelessWidget {
       ),
       body: Stack(
         children: [
-          PhotoViewGallery.builder(
-            scrollPhysics: const BouncingScrollPhysics(),
-            builder: (BuildContext context, int index) {
-              final item = media[index];
-              final heroTag = heroTagPrefix != null ? '$heroTagPrefix-${item.url}' : item.url;
-              return PhotoViewGalleryPageOptions(
-                imageProvider: NetworkImage(item.url),
-                initialScale: PhotoViewComputedScale.contained,
-                heroAttributes: PhotoViewHeroAttributes(tag: heroTag),
-              );
-            },
-            itemCount: media.length,
-            loadingBuilder: (context, event) => const Center(
-              child: CircularProgressIndicator(),
-            ),
-            pageController: PageController(initialPage: initialIndex),
-            onPageChanged: (index) {
-              // Could update state if we wanted to show index
-            },
-          ),
+          kIsWeb
+              ? PageView.builder(
+                  controller: _pageController,
+                  itemCount: widget.media.length,
+                  onPageChanged: (index) {
+                    setState(() {
+                      _currentIndex = index;
+                    });
+                  },
+                  itemBuilder: (context, index) {
+                    final item = widget.media[index];
+                    return InteractiveViewer(
+                      minScale: 0.5,
+                      maxScale: 4.0,
+                      child: Center(
+                        child: Image.network(
+                          item.url,
+                          fit: BoxFit.contain,
+                          loadingBuilder: (context, child, loadingProgress) {
+                            if (loadingProgress == null) return child;
+                            return const Center(child: CircularProgressIndicator());
+                          },
+                          errorBuilder: (context, error, stackTrace) => const Center(
+                            child: Icon(Icons.broken_image, color: Colors.white, size: 50),
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                )
+              : PhotoViewGallery.builder(
+                  scrollPhysics: const BouncingScrollPhysics(),
+                  builder: (BuildContext context, int index) {
+                    final item = widget.media[index];
+                    final heroTag = widget.heroTagPrefix != null ? '${widget.heroTagPrefix}-${item.url}' : item.url;
+                    return PhotoViewGalleryPageOptions(
+                      imageProvider: NetworkImage(item.url),
+                      initialScale: PhotoViewComputedScale.contained,
+                      heroAttributes: PhotoViewHeroAttributes(tag: heroTag),
+                    );
+                  },
+                  itemCount: widget.media.length,
+                  loadingBuilder: (context, event) => const Center(
+                    child: CircularProgressIndicator(),
+                  ),
+                  pageController: _pageController,
+                  onPageChanged: (index) {
+                    setState(() {
+                      _currentIndex = index;
+                    });
+                  },
+                ),
           Positioned(
             bottom: 0,
             left: 0,
@@ -68,15 +116,15 @@ class MediaViewer extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    if (media.length > 1)
+                    if (widget.media.length > 1)
                       Padding(
                         padding: const EdgeInsets.only(bottom: 8.0),
                         child: Text(
-                          '${initialIndex + 1} / ${media.length}',
+                          '${_currentIndex + 1} / ${widget.media.length}',
                           style: const TextStyle(color: Colors.white70, fontSize: 12),
                         ),
                       ),
-                    _AltTextWidget(alt: media[initialIndex].alt),
+                    _AltTextWidget(alt: widget.media[_currentIndex].alt),
                   ],
                 ),
               ),

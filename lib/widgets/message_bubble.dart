@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/services.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../flutter_gen/gen_l10n/app_localizations.dart';
@@ -404,10 +405,25 @@ class MessageBubble extends StatelessWidget {
                 Row(
                   children: [
                     if (quoted.avatar != null)
-                      CircleAvatar(
-                        radius: 8,
-                        backgroundImage: avatarImageProvider(quoted.avatar),
-                      )
+                      kIsWeb
+                          ? ClipOval(
+                              child: Image.network(
+                                quoted.avatar!,
+                                width: 16,
+                                height: 16,
+                                fit: BoxFit.cover,
+                                errorBuilder: (context, error, stackTrace) => Container(
+                                  width: 16,
+                                  height: 16,
+                                  color: Colors.grey[300],
+                                  child: const Icon(Icons.person, size: 10),
+                                ),
+                              ),
+                            )
+                          : buildAvatar(
+                              quoted.avatar,
+                              size: 16,
+                            )
                     else
                       const Icon(Icons.account_circle, size: 16, color: Colors.grey),
                     const SizedBox(width: 4),
@@ -435,17 +451,27 @@ class MessageBubble extends StatelessWidget {
                     child: Wrap(
                       spacing: 4,
                       runSpacing: 4,
-                      children: quoted.media.take(2).map((m) => Container(
-                        width: 40,
-                        height: 40,
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(4),
-                          image: DecorationImage(
-                            image: CachedNetworkImageProvider(m.url),
-                            fit: BoxFit.cover,
-                          ),
-                        ),
-                      )).toList(),
+                      children: quoted.media.take(2).map((m) => kIsWeb
+                          ? ClipRRect(
+                              borderRadius: BorderRadius.circular(4),
+                              child: Image.network(
+                                m.url,
+                                width: 40,
+                                height: 40,
+                                fit: BoxFit.cover,
+                              ),
+                            )
+                          : Container(
+                              width: 40,
+                              height: 40,
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(4),
+                                image: DecorationImage(
+                                  image: CachedNetworkImageProvider(m.url),
+                                  fit: BoxFit.cover,
+                                ),
+                              ),
+                            )).toList(),
                     ),
                   ),
               ],
@@ -491,10 +517,16 @@ class MessageBubble extends StatelessWidget {
         child: isValidUrl
             ? Transform.scale(
                 scale: 1.2, // 内部の画像を20%拡大
-                child: Image(
-                  image: provider,
-                  fit: BoxFit.cover,
-                ),
+                child: kIsWeb
+                    ? Image.network(
+                        avatarUrl!,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) => const Icon(Icons.person, color: Colors.white),
+                      )
+                    : Image(
+                        image: provider,
+                        fit: BoxFit.cover,
+                      ),
               )
             : const Icon(Icons.person, color: Colors.white),
       ),
@@ -663,26 +695,38 @@ class MessageBubble extends StatelessWidget {
             ),
             child: Hero(
               tag: heroTag,
-              child: CachedNetworkImage(
-                imageUrl: item.url,
-                fit: BoxFit.cover,
-                width: double.infinity,
-                memCacheWidth: 800,
-                placeholder: (context, url) => Container(
-                  height: 150,
-                  width: maxWidth,
-                  color: Colors.grey.shade200,
-                  child: const Center(
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  ),
-                ),
-                errorWidget: (context, url, error) => Container(
-                  padding: const EdgeInsets.all(20),
-                  width: maxWidth,
-                  color: Colors.grey.shade200,
-                  child: const Icon(Icons.broken_image, color: Colors.grey),
-                ),
-              ),
+              child: kIsWeb
+                  ? Image.network(
+                      item.url,
+                      fit: BoxFit.cover,
+                      width: double.infinity,
+                      errorBuilder: (context, error, stackTrace) => Container(
+                        padding: const EdgeInsets.all(20),
+                        width: maxWidth,
+                        color: Colors.grey.shade200,
+                        child: const Icon(Icons.broken_image, color: Colors.grey),
+                      ),
+                    )
+                  : CachedNetworkImage(
+                      imageUrl: item.url,
+                      fit: BoxFit.cover,
+                      width: double.infinity,
+                      memCacheWidth: 800,
+                      placeholder: (context, url) => Container(
+                        height: 150,
+                        width: maxWidth,
+                        color: Colors.grey.shade200,
+                        child: const Center(
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        ),
+                      ),
+                      errorWidget: (context, url, error) => Container(
+                        padding: const EdgeInsets.all(20),
+                        width: maxWidth,
+                        color: Colors.grey.shade200,
+                        child: const Icon(Icons.broken_image, color: Colors.grey),
+                      ),
+                    ),
             ),
           ),
         ),

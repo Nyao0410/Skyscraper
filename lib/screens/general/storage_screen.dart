@@ -1,4 +1,4 @@
-import 'dart:io' if (dart.library.html) '../../utils/io_stub.dart';
+import '../../utils/io_stub.dart' if (dart.library.io) 'dart:io' as io;
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import '../../flutter_gen/gen_l10n/app_localizations.dart';
@@ -49,8 +49,8 @@ class _StorageScreenState extends State<StorageScreen> {
       // Calculate temp dir size
       if (tempDir.existsSync()) {
         await for (final file in tempDir.list(recursive: true, followLinks: false)) {
-          if (file is File) {
-            final l = await file.length();
+          if (file is io.File) {
+            final int l = await (file as dynamic).length();
             totalSize += l;
           }
         }
@@ -59,8 +59,8 @@ class _StorageScreenState extends State<StorageScreen> {
       // Calculate avatar cache in documents (avatar_*)
       if (appDir.existsSync()) {
         await for (final file in appDir.list(recursive: false)) {
-          if (file is File && file.path.contains('avatar_')) {
-            final l = await file.length();
+          if (file is io.File && file.path.contains('avatar_')) {
+            final int l = await (file as dynamic).length();
             totalSize += l;
           }
         }

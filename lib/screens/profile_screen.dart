@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import '../flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../utils/avatar_provider.dart';
@@ -241,10 +242,34 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
     final String? creator = item.creator?.handle;
 
     return ListTile(
-      leading: CircleAvatar(
-        backgroundImage: avatarImageProvider(avatar),
-        child: avatar == null ? const Icon(Icons.rss_feed) : null,
-      ),
+      leading: kIsWeb
+          ? ClipOval(
+              child: avatar != null && avatar.isNotEmpty
+                  ? Image.network(
+                      avatar,
+                      width: 40,
+                      height: 40,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) => Container(
+                        width: 40,
+                        height: 40,
+                        color: Colors.grey[300],
+                        child: const Icon(Icons.rss_feed),
+                      ),
+                    )
+                  : Container(
+                      width: 40,
+                      height: 40,
+                      color: Colors.grey[300],
+                      child: const Icon(Icons.rss_feed),
+                    ),
+            )
+          : buildAvatar(
+              avatar,
+              size: 40,
+              backgroundColor: Colors.grey[300],
+              placeholder: const Icon(Icons.rss_feed),
+            ),
       title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
       subtitle: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -284,7 +309,9 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
           fit: StackFit.expand,
           children: [
             if (_profile.banner != null)
-              CachedNetworkImage(imageUrl: _profile.banner!, fit: BoxFit.cover)
+              kIsWeb
+                  ? Image.network(_profile.banner!, fit: BoxFit.cover)
+                  : CachedNetworkImage(imageUrl: _profile.banner!, fit: BoxFit.cover)
             else
               Container(
                 decoration: BoxDecoration(
@@ -321,12 +348,34 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                       shape: BoxShape.circle,
                       border: Border.all(color: lineGreen, width: 3),
                     ),
-                    child: CircleAvatar(
-                      radius: 50,
-                      backgroundColor: isDark ? Colors.grey[900] : Colors.grey[200],
-                      backgroundImage: avatarImageProvider(_profile.avatar),
-                      child: _profile.avatar == null ? const Icon(Icons.person, size: 50, color: Colors.white) : null,
-                    ),
+                    child: kIsWeb
+                        ? ClipOval(
+                            child: _profile.avatar != null && _profile.avatar!.isNotEmpty
+                                ? Image.network(
+                                    _profile.avatar!,
+                                    width: 100,
+                                    height: 100,
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (context, error, stackTrace) => Container(
+                                      width: 100,
+                                      height: 100,
+                                      color: isDark ? Colors.grey[900] : Colors.grey[200],
+                                      child: const Icon(Icons.person, size: 50, color: Colors.white),
+                                    ),
+                                  )
+                                : Container(
+                                    width: 100,
+                                    height: 100,
+                                    color: isDark ? Colors.grey[900] : Colors.grey[200],
+                                    child: const Icon(Icons.person, size: 50, color: Colors.white),
+                                  ),
+                          )
+                        : buildAvatar(
+                            _profile.avatar,
+                            size: 100,
+                            backgroundColor: isDark ? Colors.grey[900] : Colors.grey[200],
+                            placeholder: const Icon(Icons.person, size: 50, color: Colors.white),
+                          ),
                   ),
                 ],
               ),
@@ -639,10 +688,34 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                     itemBuilder: (context, index) {
                       final user = users[index];
                       return ListTile(
-                        leading: CircleAvatar(
-                          backgroundImage: avatarImageProvider(user.avatar),
-                          child: user.avatar == null ? const Icon(Icons.person) : null,
-                        ),
+                        leading: kIsWeb
+                            ? ClipOval(
+                                child: user.avatar != null && user.avatar!.isNotEmpty
+                                    ? Image.network(
+                                        user.avatar!,
+                                        width: 40,
+                                        height: 40,
+                                        fit: BoxFit.cover,
+                                        errorBuilder: (context, error, stackTrace) => Container(
+                                          width: 40,
+                                          height: 40,
+                                          color: Colors.grey[300],
+                                          child: const Icon(Icons.person),
+                                        ),
+                                      )
+                                    : Container(
+                                        width: 40,
+                                        height: 40,
+                                        color: Colors.grey[300],
+                                        child: const Icon(Icons.person),
+                                      ),
+                              )
+                            : buildAvatar(
+                                user.avatar,
+                                size: 40,
+                                backgroundColor: Colors.grey[300],
+                                placeholder: const Icon(Icons.person),
+                              ),
                         title: Text(user.displayName ?? user.handle),
                         subtitle: Text('@${user.handle}'),
                         onTap: () {

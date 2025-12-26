@@ -1,5 +1,6 @@
 // ignore_for_file: use_build_context_synchronously, deprecated_member_use
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import '../flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:intl/intl.dart';
 import 'package:image_picker/image_picker.dart';
@@ -340,12 +341,19 @@ class _NewPostScreenState extends State<NewPostScreen> {
                                 padding: const EdgeInsets.all(4.0),
                                 child: ClipRRect(
                                   borderRadius: BorderRadius.circular(8),
-                                  child: Image.file(
-                                    File(_selectedImages[index].path),
-                                    width: 100,
-                                    height: 100,
-                                    fit: BoxFit.cover,
-                                  ),
+                                  child: kIsWeb
+                                      ? Image.network(
+                                          _selectedImages[index].path,
+                                          width: 100,
+                                          height: 100,
+                                          fit: BoxFit.cover,
+                                        )
+                                      : Image.file(
+                                          File(_selectedImages[index].path),
+                                          width: 100,
+                                          height: 100,
+                                          fit: BoxFit.cover,
+                                        ),
                                 ),
                               ),
                               Positioned(
@@ -501,10 +509,11 @@ class _NewPostScreenState extends State<NewPostScreen> {
                       children: [
                         Row(
                           children: [
-                            CircleAvatar(
-                              radius: 10,
-                              backgroundImage: avatarImageProvider(post.avatar),
-                              child: post.avatar == null ? const Icon(Icons.person, size: 12) : null,
+                            buildAvatar(
+                              post.avatar,
+                              size: 20,
+                              backgroundColor: Colors.grey[300],
+                              placeholder: const Icon(Icons.person, size: 12),
                             ),
                             const SizedBox(width: 8),
                             Text(
@@ -567,11 +576,12 @@ class _NewPostScreenState extends State<NewPostScreen> {
             const SizedBox(height: 8),
             Row(
               children: [
-                CircleAvatar(
-                  radius: 10,
-                  backgroundImage: avatarImageProvider(post.avatar),
-                  child: post.avatar == null ? const Icon(Icons.person, size: 12) : null,
-                ),
+                    buildAvatar(
+                      post.avatar,
+                      size: 20,
+                      backgroundColor: Colors.grey[300],
+                      placeholder: const Icon(Icons.person, size: 12),
+                    ),
                 const SizedBox(width: 8),
                 Text(
                   post.author,

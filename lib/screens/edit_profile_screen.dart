@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:image_picker/image_picker.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../services/bluesky_service.dart';
@@ -126,9 +127,13 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                   fit: StackFit.expand,
                   children: [
                     if (_newBanner != null)
-                      Image.file(File(_newBanner!.path), fit: BoxFit.cover)
+                      kIsWeb
+                          ? Image.network(_newBanner!.path, fit: BoxFit.cover)
+                          : Image.file(File(_newBanner!.path), fit: BoxFit.cover)
                     else if (widget.profile.banner != null)
-                      CachedNetworkImage(imageUrl: widget.profile.banner!, fit: BoxFit.cover)
+                      kIsWeb
+                          ? Image.network(widget.profile.banner!, fit: BoxFit.cover)
+                          : CachedNetworkImage(imageUrl: widget.profile.banner!, fit: BoxFit.cover)
                     else
                       const Icon(Icons.add_a_photo, size: 40, color: Colors.white),
                     Container(color: Colors.black26),
@@ -150,18 +155,47 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                         shape: BoxShape.circle,
                         border: Border.all(color: Theme.of(context).scaffoldBackgroundColor, width: 4),
                       ),
-                      child: CircleAvatar(
-                        radius: 50,
-                        backgroundColor: isDark ? Colors.grey[900] : Colors.grey[200],
-                        backgroundImage: _newAvatar != null
-                            ? FileImage(File(_newAvatar!.path))
-                            : (widget.profile.avatar != null
-                                ? NetworkImage(widget.profile.avatar!)
-                                : null) as ImageProvider?,
-                        child: (_newAvatar == null && widget.profile.avatar == null)
-                            ? const Icon(Icons.person, size: 50)
-                            : null,
-                      ),
+                      child: kIsWeb
+                          ? ClipOval(
+                              child: _newAvatar != null
+                                  ? Image.network(
+                                      _newAvatar!.path,
+                                      width: 100,
+                                      height: 100,
+                                      fit: BoxFit.cover,
+                                    )
+                                  : (widget.profile.avatar != null
+                                      ? Image.network(
+                                          widget.profile.avatar!,
+                                          width: 100,
+                                          height: 100,
+                                          fit: BoxFit.cover,
+                                          errorBuilder: (context, error, stackTrace) => Container(
+                                            width: 100,
+                                            height: 100,
+                                            color: isDark ? Colors.grey[900] : Colors.grey[200],
+                                            child: const Icon(Icons.person, size: 50),
+                                          ),
+                                        )
+                                      : Container(
+                                          width: 100,
+                                          height: 100,
+                                          color: isDark ? Colors.grey[900] : Colors.grey[200],
+                                          child: const Icon(Icons.person, size: 50),
+                                        )),
+                            )
+                          : CircleAvatar(
+                              radius: 50,
+                              backgroundColor: isDark ? Colors.grey[900] : Colors.grey[200],
+                              backgroundImage: _newAvatar != null
+                                  ? FileImage(File(_newAvatar!.path))
+                                  : (widget.profile.avatar != null
+                                      ? NetworkImage(widget.profile.avatar!)
+                                      : null) as ImageProvider?,
+                              child: (_newAvatar == null && widget.profile.avatar == null)
+                                  ? const Icon(Icons.person, size: 50)
+                                  : null,
+                            ),
                     ),
                     Container(
                       width: 100,

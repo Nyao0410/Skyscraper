@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import '../flutter_gen/gen_l10n/app_localizations.dart';
 import '../utils/avatar_provider.dart';
 import '../services/bluesky_service.dart';
@@ -123,12 +124,34 @@ class _HomeScreenState extends State<HomeScreen> {
                     shape: BoxShape.circle,
                     border: Border.all(color: lineGreen, width: 2),
                   ),
-                  child: CircleAvatar(
-                    radius: 50,
-                    backgroundColor: Colors.grey[300],
-                    backgroundImage: avatarImageProvider(avatarUrl),
-                    child: avatarUrl == null ? const Icon(Icons.person, size: 50, color: Colors.white) : null,
-                  ),
+                  child: kIsWeb
+                      ? ClipOval(
+                          child: avatarUrl != null && avatarUrl.isNotEmpty
+                              ? Image.network(
+                                  avatarUrl,
+                                  width: 100,
+                                  height: 100,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (context, error, stackTrace) => Container(
+                                    width: 100,
+                                    height: 100,
+                                    color: Colors.grey[300],
+                                    child: const Icon(Icons.person, size: 50, color: Colors.white),
+                                  ),
+                                )
+                              : Container(
+                                  width: 100,
+                                  height: 100,
+                                  color: Colors.grey[300],
+                                  child: const Icon(Icons.person, size: 50, color: Colors.white),
+                                ),
+                        )
+                      : CircleAvatar(
+                          radius: 50,
+                          backgroundColor: Colors.grey[300],
+                          backgroundImage: avatarImageProvider(avatarUrl),
+                          child: avatarUrl == null ? const Icon(Icons.person, size: 50, color: Colors.white) : null,
+                        ),
                 ),
                 const SizedBox(height: 16),
                 Text(

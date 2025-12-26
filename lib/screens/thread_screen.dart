@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+// removed unused kIsWeb import (avatar rendering uses buildAvatar helper)
 import '../flutter_gen/gen_l10n/app_localizations.dart';
 import '../utils/avatar_provider.dart';
 // url_launcher not used in this file; remove unused import
@@ -304,10 +305,9 @@ class _ThreadScreenState extends State<ThreadScreen> {
                     MaterialPageRoute(builder: (context) => ProfileScreen(actor: post.handle)),
                   );
                 },
-                child: CircleAvatar(
-                  radius: 24,
-                  backgroundImage: avatarImageProvider(post.avatar),
-                  child: post.avatar == null ? const Icon(Icons.person) : null,
+                child: buildAvatar(
+                  post.avatar,
+                  size: 48,
                 ),
               ),
               const SizedBox(width: 12),
@@ -470,7 +470,7 @@ class _ThreadScreenState extends State<ThreadScreen> {
                   );
                 },
                 child: quoted.avatar != null
-                  ? CircleAvatar(radius: 10, backgroundImage: avatarImageProvider(quoted.avatar))
+                  ? buildAvatar(quoted.avatar, size: 20)
                   : const Icon(Icons.person, size: 20),
               ),
               const SizedBox(width: 8),

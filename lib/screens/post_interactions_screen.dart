@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import '../flutter_gen/gen_l10n/app_localizations.dart';
 import '../models/actor_item.dart';
 import '../models/post_item.dart';
@@ -100,10 +101,32 @@ class _ActorList extends StatelessWidget {
           itemBuilder: (context, index) {
             final actor = actors[index];
             return ListTile(
-              leading: CircleAvatar(
-                backgroundImage: avatarImageProvider(actor.avatar),
-                child: actor.avatar == null ? const Icon(Icons.person) : null,
-              ),
+              leading: kIsWeb
+                  ? ClipOval(
+                      child: actor.avatar != null && actor.avatar!.isNotEmpty
+                          ? Image.network(
+                              actor.avatar!,
+                              width: 40,
+                              height: 40,
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) => Container(
+                                width: 40,
+                                height: 40,
+                                color: Colors.grey[300],
+                                child: const Icon(Icons.person),
+                              ),
+                            )
+                          : Container(
+                              width: 40,
+                              height: 40,
+                              color: Colors.grey[300],
+                              child: const Icon(Icons.person),
+                            ),
+                    )
+                  : CircleAvatar(
+                      backgroundImage: avatarImageProvider(actor.avatar),
+                      child: actor.avatar == null ? const Icon(Icons.person) : null,
+                    ),
               title: Text(actor.displayName ?? actor.handle, style: const TextStyle(fontWeight: FontWeight.bold)),
               subtitle: Text('@${actor.handle}'),
               onTap: () {

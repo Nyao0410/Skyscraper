@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import '../utils/avatar_provider.dart';
 import '../services/bluesky_service.dart';
 import 'search_screen.dart';
@@ -178,13 +179,31 @@ class _TalkListScreenState extends State<TalkListScreen> with SingleTickerProvid
                                 : '--:--';
 
                             return ListTile(
-                              leading: CircleAvatar(
-                                backgroundColor: Colors.blue.shade100,
-                                backgroundImage: avatarImageProvider(avatarUrl),
-                                child: (avatarUrl == null || avatarUrl.isEmpty)
-                                    ? const Icon(Icons.person, color: Colors.blue)
-                                    : null,
-                              ),
+                              leading: kIsWeb
+                                  ? ClipOval(
+                                      child: Container(
+                                        width: 40,
+                                        height: 40,
+                                        color: Colors.blue.shade100,
+                                        child: (avatarUrl != null && avatarUrl.isNotEmpty)
+                                            ? Image.network(
+                                                avatarUrl,
+                                                width: 40,
+                                                height: 40,
+                                                fit: BoxFit.cover,
+                                                errorBuilder: (context, error, stackTrace) =>
+                                                    const Icon(Icons.person, color: Colors.blue),
+                                              )
+                                            : const Icon(Icons.person, color: Colors.blue),
+                                      ),
+                                    )
+                                  : CircleAvatar(
+                                      backgroundColor: Colors.blue.shade100,
+                                      backgroundImage: avatarImageProvider(avatarUrl),
+                                      child: (avatarUrl == null || avatarUrl.isEmpty)
+                                          ? const Icon(Icons.person, color: Colors.blue)
+                                          : null,
+                                    ),
                               title: Text(convo != null ? (convo['participant_handle'] ?? l10n.unknown) : (feed['name'] ?? l10n.unknown),
                                   style: const TextStyle(fontWeight: FontWeight.bold)),
                               subtitle: Text(
@@ -219,13 +238,34 @@ class _TalkListScreenState extends State<TalkListScreen> with SingleTickerProvid
                               : '--:--';
 
                           return ListTile(
-                            leading: CircleAvatar(
-                              backgroundColor: Colors.blue.shade100,
-                              backgroundImage: avatarImageProvider(avatarUrl),
-                              child: (avatarUrl == null || avatarUrl.isEmpty)
-                                  ? Text((feed['name'] ?? '')[0], style: const TextStyle(color: Colors.blue))
-                                  : null,
-                            ),
+                            leading: kIsWeb
+                                ? ClipOval(
+                                    child: Container(
+                                      width: 40,
+                                      height: 40,
+                                      color: Colors.blue.shade100,
+                                      child: (avatarUrl != null && avatarUrl.isNotEmpty)
+                                          ? Image.network(
+                                              avatarUrl,
+                                              width: 40,
+                                              height: 40,
+                                              fit: BoxFit.cover,
+                                              errorBuilder: (context, error, stackTrace) => Text(
+                                                  (feed['name'] ?? '')[0],
+                                                  style: const TextStyle(color: Colors.blue)),
+                                            )
+                                          : Text((feed['name'] ?? '')[0],
+                                              style: const TextStyle(color: Colors.blue)),
+                                    ),
+                                  )
+                                : CircleAvatar(
+                                    backgroundColor: Colors.blue.shade100,
+                                    backgroundImage: avatarImageProvider(avatarUrl),
+                                    child: (avatarUrl == null || avatarUrl.isEmpty)
+                                        ? Text((feed['name'] ?? '')[0],
+                                            style: const TextStyle(color: Colors.blue))
+                                        : null,
+                                  ),
                             title: Text(feed['name'] ?? l10n.unknown,
                                 style: const TextStyle(fontWeight: FontWeight.bold)),
                             subtitle: Text(
@@ -285,14 +325,32 @@ class _TalkListScreenState extends State<TalkListScreen> with SingleTickerProvid
             : '--:--';
 
         return ListTile(
-          leading: CircleAvatar(
-            backgroundColor: Colors.blue.shade100,
-            backgroundImage: avatarImageProvider(avatarUrl),
-            child: (avatarUrl == null || avatarUrl.isEmpty)
-                ? const Icon(Icons.person, color: Colors.blue)
-                : null,
-          ),
-            title: Text(convo['participant_handle'] ?? l10n.unknown,
+          leading: kIsWeb
+              ? ClipOval(
+                  child: Container(
+                    width: 40,
+                    height: 40,
+                    color: Colors.blue.shade100,
+                    child: (avatarUrl != null && avatarUrl.isNotEmpty)
+                        ? Image.network(
+                            avatarUrl,
+                            width: 40,
+                            height: 40,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) =>
+                                const Icon(Icons.person, color: Colors.blue),
+                          )
+                        : const Icon(Icons.person, color: Colors.blue),
+                  ),
+                )
+              : CircleAvatar(
+                  backgroundColor: Colors.blue.shade100,
+                  backgroundImage: avatarImageProvider(avatarUrl),
+                  child: (avatarUrl == null || avatarUrl.isEmpty)
+                      ? const Icon(Icons.person, color: Colors.blue)
+                      : null,
+                ),
+          title: Text(convo['participant_handle'] ?? l10n.unknown,
               style: const TextStyle(fontWeight: FontWeight.bold)),
           subtitle: Text(
             convo['last_message'] ?? '',

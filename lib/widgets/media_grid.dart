@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:cached_network_image/cached_network_image.dart';
 import '../models/post_item.dart';
 import 'media_viewer.dart';
@@ -136,20 +137,30 @@ class _MediaGridState extends State<MediaGrid> {
       onTap: () => _openViewer(context, [item], 0),
       child: Hero(
         tag: heroTag,
-        child: CachedNetworkImage(
-          imageUrl: item.url,
-          fit: BoxFit.contain,
-          placeholder: (context, url) => Container(
-            color: Colors.grey.shade200,
-            height: 200,
-            child: const Center(child: CircularProgressIndicator(strokeWidth: 2)),
-          ),
-          errorWidget: (context, url, error) => Container(
-            color: Colors.grey.shade200,
-            height: 200,
-            child: const Icon(Icons.broken_image, color: Colors.grey),
-          ),
-        ),
+        child: kIsWeb
+            ? Image.network(
+                item.url,
+                fit: BoxFit.contain,
+                errorBuilder: (context, error, stackTrace) => Container(
+                  color: Colors.grey.shade200,
+                  height: 200,
+                  child: const Icon(Icons.broken_image, color: Colors.grey),
+                ),
+              )
+            : CachedNetworkImage(
+                imageUrl: item.url,
+                fit: BoxFit.contain,
+                placeholder: (context, url) => Container(
+                  color: Colors.grey.shade200,
+                  height: 200,
+                  child: const Center(child: CircularProgressIndicator(strokeWidth: 2)),
+                ),
+                errorWidget: (context, url, error) => Container(
+                  color: Colors.grey.shade200,
+                  height: 200,
+                  child: const Icon(Icons.broken_image, color: Colors.grey),
+                ),
+              ),
       ),
     );
   }
@@ -165,18 +176,27 @@ class _MediaGridState extends State<MediaGrid> {
         children: [
           Hero(
             tag: heroTag,
-            child: CachedNetworkImage(
-              imageUrl: item.url,
-              fit: BoxFit.cover,
-              placeholder: (context, url) => Container(
-                color: Colors.grey.shade200,
-                child: const Center(child: CircularProgressIndicator(strokeWidth: 2)),
-              ),
-              errorWidget: (context, url, error) => Container(
-                color: Colors.grey.shade200,
-                child: const Icon(Icons.broken_image, color: Colors.grey),
-              ),
-            ),
+            child: kIsWeb
+                ? Image.network(
+                    item.url,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) => Container(
+                      color: Colors.grey.shade200,
+                      child: const Icon(Icons.broken_image, color: Colors.grey),
+                    ),
+                  )
+                : CachedNetworkImage(
+                    imageUrl: item.url,
+                    fit: BoxFit.cover,
+                    placeholder: (context, url) => Container(
+                      color: Colors.grey.shade200,
+                      child: const Center(child: CircularProgressIndicator(strokeWidth: 2)),
+                    ),
+                    errorWidget: (context, url, error) => Container(
+                      color: Colors.grey.shade200,
+                      child: const Icon(Icons.broken_image, color: Colors.grey),
+                    ),
+                  ),
           ),
           if (item.type == MediaType.video)
             const Center(

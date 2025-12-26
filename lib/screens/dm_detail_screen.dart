@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:image_picker/image_picker.dart';
 import '../flutter_gen/gen_l10n/app_localizations.dart';
 import '../utils/avatar_provider.dart';
@@ -143,7 +144,9 @@ class _DMDetailScreenState extends State<DMDetailScreen> {
           decoration: _backgroundImagePath != null
               ? BoxDecoration(
                   image: DecorationImage(
-                    image: FileImage(File(_backgroundImagePath!)),
+                    image: kIsWeb
+                        ? NetworkImage(_backgroundImagePath!)
+                        : FileImage(File(_backgroundImagePath!)) as ImageProvider,
                     fit: BoxFit.cover,
                     colorFilter: ColorFilter.mode(
                       Colors.black.withValues(alpha: isDark ? 0.6 : 0.3),
@@ -191,11 +194,34 @@ class _DMDetailScreenState extends State<DMDetailScreen> {
           : null,
       title: Row(
         children: [
-          CircleAvatar(
-            radius: 16,
-            backgroundImage: avatarImageProvider(widget.participantAvatar),
-            child: widget.participantAvatar == null ? const Icon(Icons.person, size: 16) : null,
-          ),
+          kIsWeb
+              ? ClipOval(
+                  child: widget.participantAvatar != null && widget.participantAvatar!.isNotEmpty
+                      ? Image.network(
+                          widget.participantAvatar!,
+                          width: 32,
+                          height: 32,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) => Container(
+                            width: 32,
+                            height: 32,
+                            color: Colors.grey[300],
+                            child: const Icon(Icons.person, size: 16),
+                          ),
+                        )
+                      : Container(
+                          width: 32,
+                          height: 32,
+                          color: Colors.grey[300],
+                          child: const Icon(Icons.person, size: 16),
+                        ),
+                )
+              : buildAvatar(
+                  widget.participantAvatar,
+                  size: 32,
+                  backgroundColor: Colors.grey[300],
+                  placeholder: const Icon(Icons.person, size: 16),
+                ),
           const SizedBox(width: 12),
           Expanded(
             child: Text(
@@ -327,11 +353,34 @@ class _DMDetailScreenState extends State<DMDetailScreen> {
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
           if (!isMe) ...[
-            CircleAvatar(
-              radius: 14,
-              backgroundImage: avatarImageProvider(widget.participantAvatar),
-              child: widget.participantAvatar == null ? const Icon(Icons.person, size: 14) : null,
-            ),
+            kIsWeb
+                ? ClipOval(
+                    child: widget.participantAvatar != null && widget.participantAvatar!.isNotEmpty
+                        ? Image.network(
+                            widget.participantAvatar!,
+                            width: 28,
+                            height: 28,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) => Container(
+                              width: 28,
+                              height: 28,
+                              color: Colors.grey[300],
+                              child: const Icon(Icons.person, size: 14),
+                            ),
+                          )
+                        : Container(
+                            width: 28,
+                            height: 28,
+                            color: Colors.grey[300],
+                            child: const Icon(Icons.person, size: 14),
+                          ),
+                  )
+                : buildAvatar(
+                    widget.participantAvatar,
+                    size: 28,
+                    backgroundColor: Colors.grey[300],
+                    placeholder: const Icon(Icons.person, size: 14),
+                  ),
             const SizedBox(width: 8),
           ],
           Flexible(
